@@ -1,0 +1,142 @@
+image: docker:latest
+
+variables:
+  REPLICAS: 1
+
+stages:
+  - build
+  - deploy
+  - .post
+
+### Build Image
+
+.build-image:
+  tags:
+    - builder
+  before_script:
+    - if [ -z "$APP" ]; then echo "APP variable is empty! Exiting..."; exit 1; fi
+    - apk add --no-cache bash
+    - |
+      # Создаем .env файл для Vite из переменных окружения
+      ENV_FILE="./envs/${APP}.env"
+      if [ -f "$ENV_FILE" ]; then
+        echo "Creating .env file from $ENV_FILE"
+        # Копируем только VITE_ переменные в .env для сборки
+        grep '^VITE_' "$ENV_FILE" > .env || touch .env
+        echo "Build .env file contents:"
+        cat .env
+      else
+        echo "Warning: Environment file $ENV_FILE not found"
+        touch .env
+      fi
+  script:
+    - DOCKER_IMAGE="${CI_REGISTRY}/${CI_PROJECT_PATH}/${APP}"
+    - COMMIT_REF_NAME=$(echo ${CI_COMMIT_REF_NAME} | sed 's/\//-/g')
+    - IMAGE_TAG="${COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}"
+    - echo "Building $DOCKER_IMAGE:$IMAGE_TAG"
+    - echo "IMAGE_TAG=$IMAGE_TAG" >> build.env
+    - echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> build.env
+    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
+    - docker build -t $DOCKER_IMAGE:$IMAGE_TAG -f docker/${APP}.Dockerfile .
+    - docker push $DOCKER_IMAGE:$IMAGE_TAG
+  artifacts:
+    reports:
+      dotenv: build.env
+
+build image miniapp dev:
+  stage: build
+  when: manual
+  extends: .build-image
+  variables:
+    APP: "miniapp-dev"
+
+build image miniapp prod:
+  stage: build
+  when: manual
+  extends: .build-image
+  variables:
+    APP: "miniapp-prod"
+
+### Deploy container
+
+.deploy-container:
+  tags:
+    - deployer
+  before_script:
+    - if [ -z "$APP" ]; then echo "APP variable is empty! Exiting..."; exit 1; fi
+    - apk add --no-cache curl jq bash
+    - touch final.env
+    - |
+      # Загружаем переменные из соответствующего файла для деплоя
+      ENV_FILE="./envs/${APP}.env"
+      if [ -f "$ENV_FILE" ]; then
+        echo "Loading environment from $ENV_FILE for deployment"
+        while IFS='=' read -r key value || [[ -n "$key" ]]; do
+          if [ -n "$key" ] && [ "${key:0:1}" != "#" ]; then
+            # Очищаем ключ и значение от пробелов
+            key=$(echo "$key" | xargs)
+            value=$(echo "$value" | xargs)
+            # Удаляем существующую запись и добавляем новую
+            sed -i "/^${key}=/d" final.env
+            echo "$key=$value" >> final.env
+          fi
+        done < "$ENV_FILE"
+      else
+        echo "Warning: $ENV_FILE not found"
+      fi
+    - echo "Final environment variables for deployment:"
+    - cat final.env
+  script:
+    - echo "Deploying $DOCKER_IMAGE:$IMAGE_TAG"
+    - echo "Forwarding next ports:$PORT_FORWARDS"
+    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
+    - docker pull $DOCKER_IMAGE:$IMAGE_TAG
+    - |
+      for i in $(seq 1 ${REPLICAS}); do
+        APP_NAME="${APP}-${i}"
+        if [ "$REPLICAS" -eq 1 ]; then
+          APP_NAME="${APP}"
+        fi
+
+        PORT_FLAGS=""
+        if [ -n "${PORT_FORWARDS:-}" ]; then
+          for PORT in $(echo "$PORT_FORWARDS" | tr ',' ' '); do
+            PORT=$(echo "$PORT" | sed 's/[[:space:]]//g')
+            PORT_FLAGS="$PORT_FLAGS -p $PORT"
+          done
+        fi
+
+        echo "Stopping and removing old container: ${APP_NAME}"
+        docker stop ${APP_NAME} || true
+        docker rm ${APP_NAME} || true
+
+        echo "Starting new container: ${APP_NAME}"
+        docker run --env-file final.env --network root_owl-net $PORT_FLAGS -d --name ${APP_NAME} $DOCKER_IMAGE:$IMAGE_TAG
+      done
+
+deploy container miniapp dev:
+  stage: deploy
+  when: manual
+  dependencies:
+    - "build image miniapp dev"
+  extends: .deploy-container
+  variables:
+    APP: "miniapp-dev"
+
+deploy container miniapp prod:
+  stage: deploy
+  when: manual
+  dependencies:
+    - "build image miniapp prod"
+  extends: .deploy-container
+  variables:
+    APP: "miniapp-prod"
+
+cleanup:
+  stage: .post
+  when: manual
+  tags:
+    - builder
+  script:
+    - docker image prune -a -f --filter "label!=keep=true"
+    - docker container prune -f --filter "label!=keep=true"
