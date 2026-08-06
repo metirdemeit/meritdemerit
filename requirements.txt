@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
-tortoise-orm==0.21.7
+tortoise-orm==0.25.4
 aerich
 asyncpg
 python-dotenv
