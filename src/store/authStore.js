@@ -54,11 +54,7 @@ export const useAuthStore = create((set) => ({
 
       localStorage.setItem('access_token', data.access_token);
 
-      set({
-        user: data.user,
-        isAuthenticated: true,
-        loading: false,
-      });
+      await get().fetchProfile();
 
       toast.success('Вход выполнен');
       return true;
