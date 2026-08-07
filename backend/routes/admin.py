@@ -331,11 +331,12 @@ async def update_student(student_id: int, student_data: StudentUpdate):
     # Handle class_name separately
     if "class_name" in update_data:
         class_name = update_data.pop("class_name")
-        school_class, created = await Class.get_or_create(
-            name=class_name,
-            defaults={"name": class_name}
-        )
-        update_data["school_class_id"] = school_class.id
+        if class_name and class_name.strip():
+            school_class, created = await Class.get_or_create(
+                name=class_name.strip(),
+                defaults={"name": class_name.strip()}
+            )
+            update_data["school_class_id"] = school_class.id
     
     await student.update_from_dict(update_data)
     await student.save()
