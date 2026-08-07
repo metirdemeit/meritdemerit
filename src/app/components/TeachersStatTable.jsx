@@ -16,8 +16,9 @@ import { Visibility } from '@mui/icons-material';
 export default function TeachersStatTable({ teachersStats = [] }) {
   const [showFull, setShowFull] = useState(false);
   
-  const displayStats = showFull ? teachersStats : teachersStats.slice(0, 10);
-  const hasMore = teachersStats.length > 10;
+  const statsList = Array.isArray(teachersStats) ? teachersStats : [];
+  const displayStats = showFull ? statsList : statsList.slice(0, 10);
+  const hasMore = statsList.length > 10;
 
   return (
     <TableContainer sx={{ background: 'transparent', boxShadow: 'none' }}>

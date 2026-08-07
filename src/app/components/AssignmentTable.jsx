@@ -49,7 +49,9 @@ export default function AssignmentTable({
     return '#666';
   };
 
-  const paginatedAssignments = assignments.slice(
+  const assignmentList = Array.isArray(assignments) ? assignments : (assignments?.items || []);
+
+  const paginatedAssignments = assignmentList.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
@@ -132,7 +134,7 @@ export default function AssignmentTable({
             <TablePagination
               rowsPerPageOptions={[10, 20, 50]}
               colSpan={onDelete ? 7 : 6}
-              count={assignments.length}
+              count={assignmentList.length}
               rowsPerPage={rowsPerPage}
               page={page}
               SelectProps={{

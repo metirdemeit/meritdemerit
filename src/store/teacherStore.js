@@ -30,7 +30,8 @@ export const useTeacherStore = create((set, get) => ({
   fetchHistory: async ({ page = 1, size = 5 } = {}) => {
     try {
       const data = await api.get(`/teacher/me/history?page=${page}&size=${size}`);
-      set({ history: data || [] });
+      const items = Array.isArray(data) ? data : (data?.items || []);
+      set({ history: items });
       return data;
     } catch (err) {
       if (import.meta.env.DEV) console.error('teacher.fetchHistory failed', err);

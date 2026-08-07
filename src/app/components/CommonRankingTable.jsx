@@ -16,8 +16,9 @@ import { Visibility } from '@mui/icons-material';
 export default function CommonRankingTable({ rankings = [] }) {
   const [showFull, setShowFull] = useState(false);
   
-  const displayRankings = showFull ? rankings : rankings.slice(0, 10);
-  const hasMore = rankings.length > 10;
+  const rankingsList = Array.isArray(rankings) ? rankings : [];
+  const displayRankings = showFull ? rankingsList : rankingsList.slice(0, 10);
+  const hasMore = rankingsList.length > 10;
 
   return (
     <TableContainer sx={{ background: 'transparent', boxShadow: 'none' }}>

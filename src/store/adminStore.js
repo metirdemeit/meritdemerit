@@ -118,7 +118,8 @@ export const useAdminStore = create((set, get) => ({
     const url = filterId ? `/admin/history/${filterId}` : '/admin/history';
     try {
       const data = await api.get(url);
-      set({ history: data || [] });
+      const items = Array.isArray(data) ? data : (data?.items || []);
+      set({ history: items });
       return data;
     } catch (err) {
       if (import.meta.env.DEV) console.error('fetchHistory failed', err);
