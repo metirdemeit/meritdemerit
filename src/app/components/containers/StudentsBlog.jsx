@@ -252,7 +252,7 @@ export function StudentsBlog() {
                  <CircularProgress sx={{ color: '#9266FF' }} />
                </Box>
              ) : (
-               <Box sx={styles.classesBox}>
+               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
                  {classes
                    .filter((c) => c.name?.toLowerCase().includes(searchQuery.toLowerCase()))
                    .map((c) => (
