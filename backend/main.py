@@ -58,11 +58,12 @@ app.middleware("http")(log_requests)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 app.include_router(common.router, prefix="", tags=["Common"])
 app.include_router(webapp_auth.router, prefix="/auth", tags=["WebApp Auth"])

@@ -471,9 +471,10 @@ async def search_teachers(q: str = Query(..., min_length=1)):
     Search for teachers by first or last name.
     """
     teachers = await Teacher.filter(
-        Q(first_name__icontains=q) 
+        Q(first_name__icontains=q) | Q(last_name__icontains=q)
     )
     return await Teacher_Pydantic.from_queryset(teachers)
+
 
 # --- Assignment ---
 

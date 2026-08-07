@@ -93,9 +93,10 @@ async def search_students(q: str = Query(..., min_length=1)):
     Search for students by first or last name (public endpoint).
     """
     students = await Student.filter(
-        Q(first_name__icontains=q) 
+        Q(first_name__icontains=q) | Q(last_name__icontains=q)
     ).prefetch_related("school_class")
     return [await StudentWithClassResponse.from_student(student) for student in students]
+
 
 @router.get("/students/{student_id}", response_model=StudentWithClassResponse, summary="Get student by ID")
 async def get_student_by_id(student_id: int):
