@@ -48,7 +48,7 @@ apiClient.interceptors.response.use(
       window.dispatchEvent(new Event('unauthorized'));
     } else if (!error.config?.skipErrorToast) {
       toast.error(
-        error.response?.data?.message || 'Ошибка сети'
+        error.response?.data?.detail || error.response?.data?.message || 'Ошибка сети'
       );
     }
 
