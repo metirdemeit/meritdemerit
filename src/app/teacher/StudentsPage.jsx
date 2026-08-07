@@ -295,7 +295,7 @@ export function StudentsPage() {
                     No classes found.
                   </Alert>
                 ) : (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1.5, mt: 1 }}>
                     {classes.map(classItem => (
                       <ClassCard key={classItem.id} classItem={classItem} onClick={() => handleClassSelect(classItem.id)} />
                     ))}

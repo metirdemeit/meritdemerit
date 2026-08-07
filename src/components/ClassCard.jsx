@@ -1,59 +1,40 @@
-import { Card, CardContent, Typography, Box } from '@mui/material';
-import { School } from '@mui/icons-material';
+import { Card, Typography, Box } from '@mui/material';
 
 const ClassCard = ({ classItem, onClick }) => {
   return (
     <Card
       onClick={onClick}
       sx={{
-        borderRadius: 2,
-        background: 'linear-gradient(135deg, #1A1932 0%, #0E0D2A 100%)',
-        border: '1px solid rgba(146, 102, 255, 0.25)',
+        aspectRatio: '1 / 1',
+        borderRadius: '14px',
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(146, 102, 255, 0.2)',
         color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         cursor: 'pointer',
-        transition: 'all 0.2s ease',
+        transition: 'all 0.15s ease',
+        boxShadow: 'none',
         '&:hover': {
-          border: '1px solid rgba(146, 102, 255, 0.7)',
-          boxShadow: '0 4px 20px rgba(146, 102, 255, 0.25)',
-          transform: 'translateY(-2px)',
+          border: '1px solid rgba(146, 102, 255, 0.6)',
+          background: 'rgba(146, 102, 255, 0.08)',
         },
         '&:active': {
-          transform: 'scale(0.98)',
+          transform: 'scale(0.96)',
         },
       }}
     >
-      <CardContent sx={{ p: '14px !important', display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Box
-          sx={{
-            width: 44,
-            height: 44,
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
-          <School sx={{ fontSize: 22, color: 'white' }} />
-        </Box>
-        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Typography
-            variant="h6"
-            sx={{ color: '#F4F4FF', fontWeight: 600, lineHeight: 1.2 }}
-          >
-            {classItem.name}
-          </Typography>
-          {classItem.studentsCount != null && (
-            <Typography variant="caption" sx={{ color: '#5A5984' }}>
-              {classItem.studentsCount} students
-            </Typography>
-          )}
-        </Box>
-      </CardContent>
+      <Typography
+        variant="h6"
+        sx={{ color: '#E0DFFF', fontWeight: 500, fontSize: '1.1rem' }}
+      >
+        {classItem.name}
+      </Typography>
     </Card>
   );
 };
 
 export default ClassCard;
+
 
