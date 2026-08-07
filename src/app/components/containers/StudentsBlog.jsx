@@ -111,7 +111,7 @@ export function StudentsBlog() {
         first_name: user.first_name || '',
         last_name: user.last_name || '',
         password: '',
-        class_name: user.class_name || '',
+        class_name: user.class_name || user.school_class?.name || '',
       });
     } else {
       setEditingUser(null);
