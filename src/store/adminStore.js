@@ -46,7 +46,7 @@ export const useAdminStore = create((set, get) => ({
 
   searchTeachers: async (query) => {
     if (!query?.trim()) return [];
-    const data = await api.get(`/teachers/search?q=${encodeURIComponent(query)}`);
+    const data = await api.get(`/admin/search?q=${encodeURIComponent(query)}`);
     set({ teachers: data || [] });
     return data;
   },
@@ -157,7 +157,7 @@ export const useAdminStore = create((set, get) => ({
 
   fetchAdminRanking: async () => {
     try {
-      const data = await api.get('/admin/ranking');
+      const data = await api.get('/ranking');
       set({ rankings: data || [] });
       return data;
     } catch (err) {
@@ -168,6 +168,6 @@ export const useAdminStore = create((set, get) => ({
 
   // === WORKFLOW ===
   assignPoints: async (payload) => {
-    await api.post('/admin/workflow/assign', payload);
+    await api.post('/admin/assign', payload);
   },
 }));

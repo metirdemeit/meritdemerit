@@ -19,19 +19,20 @@ import { useEffect, useState } from 'react';
  * - Пользователь должен закрыть и открыть mini app заново
  */
 export function App({ telegramReady = false }) {
-  const { user, fetchUser } = useAuthStore();
+  const { user, initialize } = useAuthStore();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        await fetchUser();
+        await initialize();
       } finally {
         setLoading(false);
       }
     };
     checkAuth();
-  }, [fetchUser]);
+  }, [initialize]);
+
 
   // Если Telegram SDK не инициализирован → fallback режим
   // Это происходит при reload в Telegram WebApp

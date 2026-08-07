@@ -51,11 +51,11 @@ export const useTeacherStore = create((set, get) => ({
 
   deleteHistoryRecord: async (historyId) => {
     if (!historyId) return null;
-    return await api.del(`/admin/history/${historyId}`);
+    return await api.del(`/teacher/me/history/${historyId}`);
   },
 
   // === WORKFLOW ===
   assignPoints: async (assignmentData) => {
-    return await api.post('/teachers/workflow/assign', assignmentData);
+    return await api.post('/teacher/workflow/assign', assignmentData);
   },
 }));

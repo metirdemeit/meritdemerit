@@ -16,8 +16,8 @@ export const useStudentStore = create((set, get) => ({
   fetchProfile: async (studentId, force = false) => {
     if (get().profile && !force) return get().profile;
 
-    const id = get()._resolveStudentId(studentId);
-    const data = await api.get(`/students/${id}`);
+    const endpoint = studentId ? `/students/${studentId}` : '/students/me';
+    const data = await api.get(endpoint);
     set({ profile: data || null });
     return data;
   },
