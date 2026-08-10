@@ -4,22 +4,7 @@ import { persist } from 'zustand/middleware';
 export const useDetentionStore = create(
   persist(
     (set, get) => ({
-      detentions: [
-        {
-          id: 'det-1',
-          student_id: 101,
-          student_name: 'Алихан Смаилов',
-          class_name: '10-A',
-          current_points: 15,
-          start_date: new Date().toISOString().split('T')[0],
-          end_date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-          status: 'active', // 'pending' | 'active' | 'completed' | 'deferred' | 'cancelled'
-          probation_end_date: null,
-          probation_points_gained: 0,
-          notes: 'Авто-триггер: Снижение баллов до 15 (<20).',
-          created_at: new Date().toISOString(),
-        },
-      ],
+      detentions: [],
 
       examWeeks: [
         {

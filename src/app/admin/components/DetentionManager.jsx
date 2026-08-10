@@ -40,6 +40,7 @@ import {
   Schedule,
 } from '@mui/icons-material';
 import { useDetentionStore } from '../../../store/detentionStore';
+import { useAdminStore } from '../../../store/adminStore';
 import toast from 'react-hot-toast';
 
 export default function DetentionManager() {
@@ -53,6 +54,12 @@ export default function DetentionManager() {
     deleteExamWeek,
     getStudentDetentionCount,
   } = useDetentionStore();
+
+  const { students, fetchStudents } = useAdminStore();
+
+  React.useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
 
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [openExamDialog, setOpenExamDialog] = useState(false);
@@ -283,14 +290,45 @@ export default function DetentionManager() {
         </DialogTitle>
         <DialogContent sx={{ backgroundColor: '#0E0D2A', pt: 2 }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              fullWidth
-              size="small"
-              label="Student Name"
-              value={formData.student_name}
-              onChange={(e) => setFormData({ ...formData, student_name: e.target.value })}
-              sx={fieldStyle}
-            />
+            {students && students.length > 0 ? (
+              <FormControl fullWidth size="small" sx={fieldStyle}>
+                <InputLabel sx={{ color: '#5A5984' }}>Select Student</InputLabel>
+                <Select
+                  value={formData.student_name}
+                  label="Select Student"
+                  onChange={(e) => {
+                    const sel = students.find(
+                      (s) => `${s.first_name || ''} ${s.last_name || ''}`.trim() === e.target.value || s.username === e.target.value
+                    );
+                    setFormData({
+                      ...formData,
+                      student_name: e.target.value,
+                      student_id: sel?.id,
+                      class_name: sel?.class_name || sel?.class || formData.class_name,
+                      current_points: sel?.points !== undefined ? sel?.points : formData.current_points,
+                    });
+                  }}
+                >
+                  {students.map((s) => {
+                    const name = `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.username;
+                    return (
+                      <MenuItem key={s.id} value={name}>
+                        {name} ({s.class_name || 'N/A'}) — {s.points || 0} pts
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              </FormControl>
+            ) : (
+              <TextField
+                fullWidth
+                size="small"
+                label="Student Name"
+                value={formData.student_name}
+                onChange={(e) => setFormData({ ...formData, student_name: e.target.value })}
+                sx={fieldStyle}
+              />
+            )}
             <TextField
               fullWidth
               size="small"

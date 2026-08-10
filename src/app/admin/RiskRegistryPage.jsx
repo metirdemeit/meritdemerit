@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
   Card,
   CardContent,
-  Grid,
   Chip,
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -16,36 +14,53 @@ import {
   Paper,
   Alert,
   Avatar,
-  Divider,
+  CircularProgress,
 } from '@mui/material';
-import {
-  Warning,
-  Assessment,
-  History,
-  TrendingDown,
-  GroupAlert,
-  Report,
-} from '@mui/icons-material';
+import { Report, CheckCircle } from '@mui/icons-material';
 import { useDetentionStore } from '../../store/detentionStore';
 import { useInterventionStore } from '../../store/interventionStore';
+import { useAdminStore } from '../../store/adminStore';
 import { getStudentLevel } from '../../utils/studentLevels';
 
 export default function RiskRegistryPage() {
   const { detentions, getStudentDetentionCount } = useDetentionStore();
   const { interventions } = useInterventionStore();
+  const { students, fetchStudents } = useAdminStore();
 
-  // Моковые данные студентов в группе риска для наглядной демонстрации реестра
-  const [riskStudents] = useState([
-    { id: 101, name: 'Алихан Смаилов', class: '10-A', points: 15, warnings: 2, interventions: 1 },
-    { id: 102, name: 'Данияр Ахметов', class: '10-B', points: 45, warnings: 1, interventions: 1 },
-    { id: 103, name: 'Ернар Сериков', class: '11-A', points: 35, warnings: 2, interventions: 2 },
-    { id: 104, name: 'Аружан Касымова', class: '9-C', points: 25, warnings: 1, interventions: 1 },
-  ]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      await fetchStudents();
+      setLoading(false);
+    };
+    load();
+  }, [fetchStudents]);
+
+  // Фильтруем РЕАЛЬНЫХ студентов в группе риска (< 100 баллов или с детеншнами)
+  const riskStudents = (students || [])
+    .map((s) => {
+      const studentName = `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.username;
+      const pts = s.points !== undefined && s.points !== null ? s.points : 100;
+      const detCount = getStudentDetentionCount(s.id) || getStudentDetentionCount(studentName);
+      const studentInterventions = interventions.filter(
+        (i) => String(i.student_id) === String(s.id) || i.student_name === studentName
+      );
+      return {
+        id: s.id,
+        name: studentName,
+        class: s.class_name || s.class || 'N/A',
+        points: pts,
+        detentions: detCount,
+        warningsCount: studentInterventions.filter((i) => i.level === 'warning').length,
+        interventionsCount: studentInterventions.filter((i) => i.level !== 'warning').length,
+      };
+    })
+    .filter((s) => s.points < 100 || s.detentions > 0 || s.warningsCount > 0 || s.interventionsCount > 0);
 
   // Студенты на перезачисление (≥ 3 детеншнов)
-  const reenrollmentList = riskStudents.filter(
-    (s) => getStudentDetentionCount(s.id) >= 3 || getStudentDetentionCount(s.name) >= 3
-  );
+  const reenrollmentList = riskStudents.filter((s) => s.detentions >= 3);
 
   return (
     <Box sx={{ mt: 1 }}>
@@ -100,7 +115,7 @@ export default function RiskRegistryPage() {
                         {s.name} ({s.class})
                       </Typography>
                       <Typography variant="caption" sx={{ color: '#FF8A80' }}>
-                        Current Points: {s.points} | Detentions: {getStudentDetentionCount(s.id)}
+                        Current Points: {s.points} | Detentions: {s.detentions}
                       </Typography>
                     </Box>
                   </Box>
@@ -133,58 +148,73 @@ export default function RiskRegistryPage() {
         }}
       >
         <CardContent sx={{ p: 0 }}>
-          <TableContainer component={Paper} sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
-            <Table size="small">
-              <TableHead sx={{ backgroundColor: 'rgba(146, 102, 255, 0.1)' }}>
-                <TableRow>
-                  <TableCell sx={{ color: '#9266FF', fontWeight: 600 }}>Student / Class</TableCell>
-                  <TableCell sx={{ color: '#9266FF', fontWeight: 600 }}>Level & Status</TableCell>
-                  <TableCell sx={{ color: '#9266FF', fontWeight: 600 }}>Detentions</TableCell>
-                  <TableCell sx={{ color: '#9266FF', fontWeight: 600 }}>Active Alerts</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {riskStudents.map((s) => {
-                  const lvl = getStudentLevel(s.points);
-                  const detCount = getStudentDetentionCount(s.id) || getStudentDetentionCount(s.name);
-                  return (
-                    <TableRow key={s.id} sx={{ '&:hover': { backgroundColor: 'rgba(146, 102, 255, 0.05)' } }}>
-                      <TableCell sx={{ color: 'white' }}>
-                        <Typography variant="body2" fontWeight={600}>
-                          {s.name}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#5A5984' }}>
-                          Class: {s.class}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={`${lvl.name} (${s.points} pts)`}
-                          size="small"
-                          sx={{
-                            backgroundColor: lvl.bg,
-                            color: lvl.color,
-                            border: `1px solid ${lvl.border}`,
-                            fontWeight: 700,
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ color: '#FF5252', fontWeight: 700 }}>
-                        {detCount} detentions
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={`${s.warnings} warnings / ${s.interventions} interventions`}
-                          size="small"
-                          sx={{ backgroundColor: 'rgba(255, 152, 0, 0.15)', color: '#FF9800' }}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress sx={{ color: '#9266FF' }} />
+            </Box>
+          ) : riskStudents.length === 0 ? (
+            <Box textAlign="center" py={4}>
+              <CheckCircle sx={{ fontSize: 48, color: '#00D377', mb: 1 }} />
+              <Typography variant="body1" sx={{ color: 'white', fontWeight: 600 }}>
+                No students in risk zone!
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                All registered students are currently above 100 points.
+              </Typography>
+            </Box>
+          ) : (
+            <TableContainer component={Paper} sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
+              <Table size="small">
+                <TableHead sx={{ backgroundColor: 'rgba(146, 102, 255, 0.1)' }}>
+                  <TableRow>
+                    <TableCell sx={{ color: '#9266FF', fontWeight: 600 }}>Student / Class</TableCell>
+                    <TableCell sx={{ color: '#9266FF', fontWeight: 600 }}>Level & Status</TableCell>
+                    <TableCell sx={{ color: '#9266FF', fontWeight: 600 }}>Detentions</TableCell>
+                    <TableCell sx={{ color: '#9266FF', fontWeight: 600 }}>Active Alerts</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {riskStudents.map((s) => {
+                    const lvl = getStudentLevel(s.points);
+                    return (
+                      <TableRow key={s.id} sx={{ '&:hover': { backgroundColor: 'rgba(146, 102, 255, 0.05)' } }}>
+                        <TableCell sx={{ color: 'white' }}>
+                          <Typography variant="body2" fontWeight={600}>
+                            {s.name}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: '#5A5984' }}>
+                            Class: {s.class}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={`${lvl.name} (${s.points} pts)`}
+                            size="small"
+                            sx={{
+                              backgroundColor: lvl.bg,
+                              color: lvl.color,
+                              border: `1px solid ${lvl.border}`,
+                              fontWeight: 700,
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ color: '#FF5252', fontWeight: 700 }}>
+                          {s.detentions} detentions
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={`${s.warningsCount} warnings / ${s.interventionsCount} interventions`}
+                            size="small"
+                            sx={{ backgroundColor: 'rgba(255, 152, 0, 0.15)', color: '#FF9800' }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </CardContent>
       </Card>
     </Box>
