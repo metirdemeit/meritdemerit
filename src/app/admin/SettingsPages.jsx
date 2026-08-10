@@ -67,7 +67,7 @@ export function SettingsPages() {
   const [errorStats, setErrorStats] = useState(null);
 
   // Фильтры истории
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: '',
@@ -231,22 +231,24 @@ export function SettingsPages() {
             </Box>
           </Box>
 
-          {/* Модульные вкладки навигации */}
-          <Grid container spacing={1} sx={{ mt: 1 }}>
+          {/* Модульные вкладки навигации (вертикальный стек) */}
+          <Grid container spacing={1.5} direction="column" sx={{ mt: 1 }}>
             {navTabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
-                <Grid item xs={6} key={tab.id}>
+                <Grid item xs={12} key={tab.id}>
                   <Button
                     fullWidth
                     variant={isActive ? 'contained' : 'outlined'}
                     startIcon={tab.icon}
                     onClick={tab.action}
                     sx={{
-                      height: 48,
+                      height: 50,
                       borderRadius: 2,
                       fontWeight: 600,
                       textTransform: 'none',
+                      justifyContent: 'flex-start',
+                      px: 2.5,
                       ...(isActive
                         ? {
                             background: 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)',
