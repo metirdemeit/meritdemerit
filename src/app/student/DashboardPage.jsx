@@ -39,26 +39,38 @@ export function DashboardPage() {
     const loadProfile = async () => {
       setLoadingProfile(true);
       setErrorProfile(null);
-      const data = await fetchProfile();
-      if (!data) {
-        setErrorProfile('Failed to load profile');
+      try {
+        const data = await fetchProfile();
+        if (!data && !user) {
+          setErrorProfile('Failed to load profile');
+        }
+      } catch (err) {
+        if (!user) {
+          setErrorProfile('Failed to load profile');
+        }
+      } finally {
+        setLoadingProfile(false);
       }
-      setLoadingProfile(false);
     };
 
     const loadRankings = async () => {
       setLoadingRankings(true);
       setErrorRankings(null);
-      const data = await fetchRankings();
-      if (!data) {
+      try {
+        const data = await fetchRankings();
+        if (!data) {
+          setErrorRankings('Failed to load rankings');
+        }
+      } catch (err) {
         setErrorRankings('Failed to load rankings');
+      } finally {
+        setLoadingRankings(false);
       }
-      setLoadingRankings(false);
     };
 
     loadProfile();
     loadRankings();
-  }, [fetchProfile, fetchRankings]);
+  }, [fetchProfile, fetchRankings, user]);
 
   if (loadingProfile && !profile) {
     return (

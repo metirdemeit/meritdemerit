@@ -16,10 +16,16 @@ export const useStudentStore = create((set, get) => ({
   fetchProfile: async (studentId, force = false) => {
     if (get().profile && !force) return get().profile;
 
-    const endpoint = studentId ? `/students/${studentId}` : '/students/me';
-    const data = await api.get(endpoint);
-    set({ profile: data || null });
-    return data;
+    try {
+      const endpoint = studentId ? `/students/${studentId}` : '/students/me';
+      const data = await api.get(endpoint);
+      set({ profile: data || null });
+      return data;
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('student.fetchProfile failed', err);
+      set({ profile: null });
+      return null;
+    }
   },
 
   // === HISTORY ===

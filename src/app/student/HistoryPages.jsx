@@ -23,11 +23,16 @@ export function HistoryPages() {
     const loadHistory = async () => {
       setLoading(true);
       setError(null);
-      const data = await fetchHistory({ page, size: pageSize });
-      if (!data) {
+      try {
+        const data = await fetchHistory({ page, size: pageSize });
+        if (!data) {
+          setError('Failed to load history');
+        }
+      } catch (err) {
         setError('Failed to load history');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     loadHistory();
