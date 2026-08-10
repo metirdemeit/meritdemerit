@@ -34,10 +34,16 @@ import {
   Search,
   CalendarToday,
   Clear,
+  Timer,
+  NotificationsActive,
+  Report,
 } from '@mui/icons-material';
 import { useAuthStore } from '../../store/authStore';
 import { useAdminStore } from '../../store/adminStore';
 import toast from 'react-hot-toast';
+import DetentionManager from './components/DetentionManager';
+import InterventionsManager from './components/InterventionsManager';
+import RiskRegistryPage from './RiskRegistryPage';
 import DeleteConfirmationDialog from '../components/dialogs/DeleteConfirmationDialog';
 import AssignmentTable from '../components/AssignmentTable';
 import TeachersStatTable from '../components/TeachersStatTable';
@@ -204,6 +210,9 @@ export function SettingsPages() {
   const navTabs = [
     { id: 'moderation', label: 'Moderation', icon: <History />, action: handleModeration },
     { id: 'statistics', label: 'Statistics', icon: <Assessment />, action: handleStatistics },
+    { id: 'detention', label: 'Detention Management', icon: <Timer />, action: () => setActiveTab('detention') },
+    { id: 'interventions', label: 'Interventions & Alerts', icon: <NotificationsActive />, action: () => setActiveTab('interventions') },
+    { id: 'risk', label: 'Risk Registry & Re-enrollment', icon: <Report />, action: () => setActiveTab('risk') },
   ];
 
   return (
@@ -545,6 +554,15 @@ export function SettingsPages() {
             </Card>
           </Box>
         )}
+
+        {/* Detention Management Tab */}
+        {activeTab === 'detention' && <DetentionManager />}
+
+        {/* Interventions & Alerts Tab */}
+        {activeTab === 'interventions' && <InterventionsManager />}
+
+        {/* Risk Registry & Re-enrollment Tab */}
+        {activeTab === 'risk' && <RiskRegistryPage />}
       </Container>
 
       {/* Delete Confirmation Dialog */}

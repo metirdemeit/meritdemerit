@@ -1,0 +1,450 @@
+import React, { useState } from 'react';
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Button,
+  Grid,
+  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  IconButton,
+  Alert,
+  Tooltip,
+  Stack,
+} from '@mui/material';
+import {
+  Add,
+  EventBusy,
+  CheckCircle,
+  Timer,
+  Warning,
+  Delete,
+  Edit,
+  CalendarMonth,
+  Schedule,
+} from '@mui/icons-material';
+import { useDetentionStore } from '../../../store/detentionStore';
+import toast from 'react-hot-toast';
+
+export default function DetentionManager() {
+  const {
+    detentions,
+    examWeeks,
+    addDetention,
+    updateDetentionStatus,
+    deleteDetention,
+    addExamWeek,
+    deleteExamWeek,
+    getStudentDetentionCount,
+  } = useDetentionStore();
+
+  const [openAddDialog, setOpenAddDialog] = useState(false);
+  const [openExamDialog, setOpenExamDialog] = useState(false);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    student_name: '',
+    class_name: '10-A',
+    current_points: 15,
+    start_date: new Date().toISOString().split('T')[0],
+    end_date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+    notes: '',
+  });
+
+  const [examForm, setExamForm] = useState({
+    title: '',
+    start_date: '',
+    end_date: '',
+  });
+
+  const handleCreateDetention = () => {
+    if (!formData.student_name.trim()) {
+      toast.error('Enter student name');
+      return;
+    }
+    const created = addDetention(formData);
+    toast.success(`Detention assigned for ${created.student_name}`);
+    setOpenAddDialog(false);
+    setFormData({
+      student_name: '',
+      class_name: '10-A',
+      current_points: 15,
+      start_date: new Date().toISOString().split('T')[0],
+      end_date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+      notes: '',
+    });
+  };
+
+  const handleCreateExamWeek = () => {
+    if (!examForm.title || !examForm.start_date || !examForm.end_date) {
+      toast.error('Fill in all exam week fields');
+      return;
+    }
+    addExamWeek(examForm);
+    toast.success(`Exam Week "${examForm.title}" added`);
+    setExamForm({ title: '', start_date: '', end_date: '' });
+  };
+
+  // Студенты с 3+ детеншнами
+  const criticalStudents = Array.from(
+    new Set(detentions.map((d) => d.student_name))
+  ).filter((name) => {
+    const first = detentions.find((d) => d.student_name === name);
+    return first && getStudentDetentionCount(first.student_id || name) >= 3;
+  });
+
+  return (
+    <Box sx={{ mt: 1 }}>
+      {/* Критическое предупреждение при 3-х детеншнах */}
+      {criticalStudents.length > 0 && (
+        <Alert
+          severity="error"
+          icon={<Warning fontSize="inherit" />}
+          sx={{
+            mb: 3,
+            backgroundColor: 'rgba(211, 47, 47, 0.15)',
+            border: '1px solid rgba(211, 47, 47, 0.5)',
+            color: '#FF8A80',
+          }}
+        >
+          <Typography variant="subtitle2" fontWeight={700}>
+            Re-enrollment Review Required!
+          </Typography>
+          Students with 3+ detentions this year: {criticalStudents.join(', ')}. Administration review required!
+        </Alert>
+      )}
+
+      {/* Панель управления и экшены */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
+        <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>
+          Detention Management ({detentions.length})
+        </Typography>
+        <Box display="flex" gap={1}>
+          <Button
+            variant="outlined"
+            startIcon={<CalendarMonth />}
+            onClick={() => setOpenExamDialog(true)}
+            sx={{
+              color: '#9266FF',
+              borderColor: 'rgba(146, 102, 255, 0.4)',
+              textTransform: 'none',
+            }}
+          >
+            Exam Weeks ({examWeeks.length})
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => setOpenAddDialog(true)}
+            sx={{
+              background: 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)',
+              textTransform: 'none',
+            }}
+          >
+            Assign Detention
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Таблица детеншнов */}
+      <Card
+        sx={{
+          background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
+          borderRadius: 2,
+          border: '1px solid rgba(146, 102, 255, 0.2)',
+        }}
+      >
+        <CardContent sx={{ p: 0 }}>
+          <TableContainer component={Paper} sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
+            <Table size="small">
+              <TableHead sx={{ backgroundColor: 'rgba(146, 102, 255, 0.1)' }}>
+                <TableRow>
+                  <TableCell sx={{ color: '#9266FF', fontWeight: 600 }}>Student / Class</TableCell>
+                  <TableCell sx={{ color: '#9266FF', fontWeight: 600 }}>Points</TableCell>
+                  <TableCell sx={{ color: '#9266FF', fontWeight: 600 }}>Detention Period</TableCell>
+                  <TableCell sx={{ color: '#9266FF', fontWeight: 600 }}>Status</TableCell>
+                  <TableCell sx={{ color: '#9266FF', fontWeight: 600 }}>Probation (2w)</TableCell>
+                  <TableCell align="right" sx={{ color: '#9266FF', fontWeight: 600 }}>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {detentions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 3, color: '#b3b3b3' }}>
+                      No detentions assigned.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  detentions.map((item) => {
+                    const count = getStudentDetentionCount(item.student_id || item.student_name);
+                    return (
+                      <TableRow key={item.id} sx={{ '&:hover': { backgroundColor: 'rgba(146, 102, 255, 0.05)' } }}>
+                        <TableCell sx={{ color: 'white' }}>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <Typography variant="body2" fontWeight={600}>
+                              {item.student_name} ({item.class_name})
+                            </Typography>
+                            {count >= 3 && (
+                              <Tooltip title="3+ Detentions: Re-enrollment Review Required!">
+                                <Chip label={`${count} Detentions`} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />
+                              </Tooltip>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ color: '#FF5252', fontWeight: 700 }}>
+                          {item.current_points} pts
+                        </TableCell>
+                        <TableCell sx={{ color: '#F4F4FF' }}>
+                          <Typography variant="caption" display="block">
+                            {item.start_date} → {item.end_date}
+                          </Typography>
+                          {item.notes && (
+                            <Typography variant="caption" sx={{ color: '#5A5984' }}>
+                              {item.notes}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {item.status === 'active' && (
+                            <Chip label="Active (1 Week)" size="small" sx={{ backgroundColor: 'rgba(255, 193, 7, 0.2)', color: '#FFC107', border: '1px solid #FFC107' }} />
+                          )}
+                          {item.status === 'completed' && (
+                            <Chip label="Completed" size="small" sx={{ backgroundColor: 'rgba(0, 211, 119, 0.2)', color: '#00D377', border: '1px solid #00D377' }} />
+                          )}
+                          {item.status === 'deferred' && (
+                            <Chip label="Exam Bypass (Deferred)" size="small" sx={{ backgroundColor: 'rgba(146, 102, 255, 0.2)', color: '#9266FF', border: '1px solid #9266FF' }} />
+                          )}
+                          {item.status === 'cancelled' && (
+                            <Chip label="Cancelled by Admin" size="small" sx={{ backgroundColor: 'rgba(100, 100, 100, 0.2)', color: '#b3b3b3' }} />
+                          )}
+                        </TableCell>
+                        <TableCell sx={{ color: '#b3b3b3' }}>
+                          {item.probation_end_date ? (
+                            <Box display="flex" alignItems="center" gap={0.5}>
+                              <Timer sx={{ fontSize: 16, color: '#00D377' }} />
+                              <Typography variant="caption" sx={{ color: '#00D377' }}>
+                                Until {item.probation_end_date}
+                              </Typography>
+                            </Box>
+                          ) : (
+                            '—'
+                          )}
+                        </TableCell>
+                        <TableCell align="right">
+                          {item.status === 'active' && (
+                            <IconButton
+                              size="small"
+                              onClick={() => updateDetentionStatus(item.id, { status: 'completed' })}
+                              sx={{ color: '#00D377' }}
+                              title="Mark Completed & Start 2w Probation"
+                            >
+                              <CheckCircle fontSize="small" />
+                            </IconButton>
+                          )}
+                          <IconButton
+                            size="small"
+                            onClick={() => deleteDetention(item.id)}
+                            sx={{ color: '#EB2B4B' }}
+                            title="Cancel / Delete Detention"
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
+
+      {/* Диалог назначения детеншна */}
+      <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ backgroundColor: '#0E0D2A', color: 'white' }}>
+          Assign Detention Period
+        </DialogTitle>
+        <DialogContent sx={{ backgroundColor: '#0E0D2A', pt: 2 }}>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Student Name"
+              value={formData.student_name}
+              onChange={(e) => setFormData({ ...formData, student_name: e.target.value })}
+              sx={fieldStyle}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              label="Class"
+              value={formData.class_name}
+              onChange={(e) => setFormData({ ...formData, class_name: e.target.value })}
+              sx={fieldStyle}
+            />
+            <Grid container spacing={1}>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="date"
+                  label="Start Date"
+                  InputLabelProps={{ shrink: true }}
+                  value={formData.start_date}
+                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                  sx={fieldStyle}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="date"
+                  label="End Date"
+                  InputLabelProps={{ shrink: true }}
+                  value={formData.end_date}
+                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                  sx={fieldStyle}
+                />
+              </Grid>
+            </Grid>
+            <TextField
+              fullWidth
+              size="small"
+              label="Notes / Reason"
+              multiline
+              rows={2}
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              sx={fieldStyle}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ backgroundColor: '#0E0D2A', p: 2 }}>
+          <Button onClick={() => setOpenAddDialog(false)} sx={{ color: '#5A5984' }}>
+            Cancel
+          </Button>
+          <Button onClick={handleCreateDetention} variant="contained" sx={{ background: 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)' }}>
+            Assign Detention
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Диалог экзаменационных недель (Exam Weeks Calendar) */}
+      <Dialog open={openExamDialog} onClose={() => setOpenExamDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ backgroundColor: '#0E0D2A', color: 'white' }}>
+          Exam Weeks Calendar (Auto-Bypass)
+        </DialogTitle>
+        <DialogContent sx={{ backgroundColor: '#0E0D2A', pt: 2 }}>
+          <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 2 }}>
+            If a detention falls into an Exam Week, detention is automatically deferred to the next trimester/semester.
+          </Typography>
+
+          <Grid container spacing={1} sx={{ mb: 2 }}>
+            <Grid item xs={5}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Exam Title"
+                value={examForm.title}
+                onChange={(e) => setExamForm({ ...examForm, title: e.target.value })}
+                sx={fieldStyle}
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                label="Start"
+                InputLabelProps={{ shrink: true }}
+                value={examForm.start_date}
+                onChange={(e) => setExamForm({ ...examForm, start_date: e.target.value })}
+                sx={fieldStyle}
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                label="End"
+                InputLabelProps={{ shrink: true }}
+                value={examForm.end_date}
+                onChange={(e) => setExamForm({ ...examForm, end_date: e.target.value })}
+                sx={fieldStyle}
+              />
+            </Grid>
+            <Grid item xs={1}>
+              <IconButton onClick={handleCreateExamWeek} sx={{ color: '#00D377', mt: 0.5 }}>
+                <Add />
+              </IconButton>
+            </Grid>
+          </Grid>
+
+          {/* Список уже добавленных экзаменов */}
+          <Box display="flex" flexDirection="column" gap={1}>
+            {examWeeks.map((exam) => (
+              <Box
+                key={exam.id}
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{
+                  p: 1.5,
+                  borderRadius: 1,
+                  backgroundColor: 'rgba(146, 102, 255, 0.1)',
+                  border: '1px solid rgba(146, 102, 255, 0.2)',
+                }}
+              >
+                <Box>
+                  <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
+                    {exam.title}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#5A5984' }}>
+                    {exam.start_date} — {exam.end_date}
+                  </Typography>
+                </Box>
+                <IconButton size="small" onClick={() => deleteExamWeek(exam.id)} sx={{ color: '#EB2B4B' }}>
+                  <Delete fontSize="small" />
+                </IconButton>
+              </Box>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ backgroundColor: '#0E0D2A', p: 2 }}>
+          <Button onClick={() => setOpenExamDialog(false)} sx={{ color: '#5A5984' }}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}
+
+const fieldStyle = {
+  '& .MuiOutlinedInput-root': {
+    color: '#F4F4FF',
+    '& fieldset': { borderColor: 'rgba(146, 102, 255, 0.3)' },
+    '&:hover fieldset': { borderColor: 'rgba(146, 102, 255, 0.5)' },
+    '&.Mui-focused fieldset': { borderColor: '#9266FF' },
+  },
+  '& .MuiInputLabel-root': { color: '#5A5984' },
+};
