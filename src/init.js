@@ -15,82 +15,113 @@ import {
 } from "@telegram-apps/sdk-react";
 
 /**
- * Initializes the application and configures its dependencies.
+ * Initializes the application and configures its dependencies safely for Desktop & Mobile.
  */
 export async function init(options) {
   // Set @telegram-apps/sdk-react debug mode and initialize it.
-  setDebug(options.debug);
+  try {
+    setDebug(options.debug);
+  } catch {}
 
-  // В режиме разработки мокируем окружение Telegram для SDK,
-  // чтобы не падать с UnknownEnvError вне Telegram
+  // В режиме разработки мокируем окружение Telegram для SDK
   try {
     if (import.meta.env && import.meta.env.DEV) {
       mockTelegramEnv();
     }
   } catch {}
 
-  initSDK();
-
-  // Add Eruda if needed.
-  options.eruda &&
-    void import("eruda").then(({ default: eruda }) => {
-      eruda.init();
-      eruda.position({ x: window.innerWidth - 50, y: 0 });
-    });
-
-  // Telegram for macOS has a ton of bugs, including cases, when the client doesn't
-  // even response to the "web_app_request_theme" method. It also generates an incorrect
-  // event for the "web_app_request_safe_area" method.
-  if (options.mockForMacOS) {
-    let firstThemeSent = false;
-    mockTelegramEnv({
-      onEvent(event, next) {
-        if (event[0] === "web_app_request_theme") {
-          let tp = {};
-          if (firstThemeSent) {
-            tp = themeParamsState();
-          } else {
-            firstThemeSent = true;
-            tp ||= retrieveLaunchParams().tgWebAppThemeParams;
-          }
-          return emitEvent("theme_changed", { theme_params: tp });
-        }
-
-        if (event[0] === "web_app_request_safe_area") {
-          return emitEvent("safe_area_changed", {
-            left: 0,
-            top: 0,
-            right: 0,
-            bottom: 0,
-          });
-        }
-
-        next();
-      },
-    });
+  try {
+    initSDK();
+  } catch (e) {
+    if (import.meta.env.DEV) console.warn("initSDK failed:", e);
   }
 
-  // Mount all components used in the project.
-  mountBackButton.ifAvailable();
-  restoreInitData();
-  await Promise.all([
-    mountMiniApp.isAvailable() &&
-      mountMiniApp().then(() => {
-        bindThemeParamsCssVars();
-      }),
-    mountViewport.isAvailable() &&
-      mountViewport().then(() => {
-        bindViewportCssVars();
-      }),
+  // Add Eruda if needed.
+  if (options.eruda) {
+    try {
+      void import("eruda").then(({ default: eruda }) => {
+        eruda.init();
+        eruda.position({ x: window.innerWidth - 50, y: 0 });
+      });
+    } catch {}
+  }
+
+  // Telegram for macOS workaround
+  if (options.mockForMacOS) {
+    try {
+      let firstThemeSent = false;
+      mockTelegramEnv({
+        onEvent(event, next) {
+          if (event[0] === "web_app_request_theme") {
+            let tp = {};
+            if (firstThemeSent) {
+              tp = themeParamsState();
+            } else {
+              firstThemeSent = true;
+              tp ||= retrieveLaunchParams().tgWebAppThemeParams;
+            }
+            return emitEvent("theme_changed", { theme_params: tp });
+          }
+
+          if (event[0] === "web_app_request_safe_area") {
+            return emitEvent("safe_area_changed", {
+              left: 0,
+              top: 0,
+              right: 0,
+              bottom: 0,
+            });
+          }
+
+          next();
+        },
+      });
+    } catch {}
+  }
+
+  // Mount components safely
+  try {
+    if (mountBackButton.ifAvailable) mountBackButton.ifAvailable();
+  } catch {}
+
+  try {
+    restoreInitData();
+  } catch {}
+
+  try {
+    await Promise.all([
+      mountMiniApp.isAvailable && mountMiniApp.isAvailable()
+        ? mountMiniApp().then(() => {
+            try { bindThemeParamsCssVars(); } catch {}
+          }).catch(() => {})
+        : Promise.resolve(),
+      mountViewport.isAvailable && mountViewport.isAvailable()
+        ? mountViewport().then(() => {
+            try { bindViewportCssVars(); } catch {}
+          }).catch(() => {})
+        : Promise.resolve(),
   ]);
+  } catch {}
 
-  postEvent("web_app_setup_swipe_behavior", { allow_vertical_swipe: false });
-
-  // Управление полноэкранным режимом
-  // В дев-режиме и на старых версиях Mini Apps пропускаем вызовы
+  // Определение платформы для безопасного вызова эвентов
+  let platform = 'unknown';
   try {
     const lp = retrieveLaunchParams();
-    const platform = lp.tgWebAppPlatform;
+    platform = lp.tgWebAppPlatform || 'unknown';
+  } catch {}
+
+  // Вызовы только для мобильных устройств (iOS / Android),
+  // чтобы избежать 'Webview crashed.' на ПК в Telegram Desktop
+  const isMobile = ['ios', 'android'].includes(platform);
+
+  if (isMobile) {
+    try {
+      postEvent("web_app_setup_swipe_behavior", { allow_vertical_swipe: false });
+    } catch {}
+  }
+
+  // Управление полноэкранным режимом
+  try {
+    const lp = retrieveLaunchParams();
     const version = String(lp.tgWebAppVersion || '0.0');
     const [majStr, minStr] = version.split('.');
     const maj = parseInt(majStr || '0', 10);
@@ -102,11 +133,9 @@ export async function init(options) {
         if (supportsExitFullscreen) {
           postEvent('web_app_exit_fullscreen');
         }
-      } else {
+      } else if (isMobile) {
         postEvent('web_app_request_fullscreen');
       }
     }
-  } catch {
-    // Молча пропускаем управление полноэкранным режимом, если окружение не готово
-  }
+  } catch {}
 }
