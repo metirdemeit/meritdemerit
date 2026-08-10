@@ -6,10 +6,11 @@ import {
   Card,
   CardContent,
   Button,
+  ButtonGroup,
   CircularProgress,
   Alert,
 } from '@mui/material';
-import { Person, ArrowBack } from '@mui/icons-material';
+import { Person, ArrowBack, School, Dashboard } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { useTeacherStore } from '../../store/teacherStore';
 import { useCommonStore } from '../../store/commonStore';
@@ -17,9 +18,10 @@ import UserCard from '../../components/UserCard';
 import ClassCard from '../../components/ClassCard';
 import SearchBar from '../../components/layouts/SearchBar';
 import { AssignRulesDrawer } from '../components/dialogs/AssignRulesDrawer';
+import { HomeroomStatsWidget } from './components/HomeroomStatsWidget';
 
 export function StudentsPage() {
-  const { assignPoints } = useTeacherStore();
+  const { assignPoints, profile, fetchProfile } = useTeacherStore();
   const {
     students,
     classes,
@@ -30,6 +32,16 @@ export function StudentsPage() {
     fetchRules,
     searchStudents,
   } = useCommonStore();
+
+  // Режим просмотра: 'homeroom' | 'all'
+  const [viewMode, setViewMode] = useState('homeroom');
+
+  // Закрепленный класс учителя (из профиля или сохраненный локально)
+  const [homeroomClass, setHomeroomClass] = useState(() => {
+    return localStorage.getItem('homeroom_class') || '10-A';
+  });
+
+  const [showRiskOnly, setShowRiskOnly] = useState(false);
 
   const [selectedClassId, setSelectedClassId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -193,6 +205,22 @@ export function StudentsPage() {
     return '';
   }, [selectedStudentIds, students]);
 
+  const homeroomStudents = useMemo(() => {
+    let list = students.filter(
+      (s) => (s.class_name || s.class || '') === homeroomClass
+    );
+    if (showRiskOnly) {
+      list = list.filter((s) => (s.points ?? 100) < 100);
+    }
+    return list;
+  }, [students, homeroomClass, showRiskOnly]);
+
+  const handleHomeroomClassChange = (newClass) => {
+    setHomeroomClass(newClass);
+    localStorage.setItem('homeroom_class', newClass);
+    toast.success(`Homeroom class set to ${newClass}`);
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', pb: 2 }}>
       {/* Header */}
@@ -204,17 +232,57 @@ export function StudentsPage() {
         my: 2,
       }}>
         <Container maxWidth="sm">
-          <Box display="flex" alignItems="center" mb={3}>
-            <Person sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
-            <Box>
-              <Typography variant="h5" sx={{ color: 'white', fontWeight: 400 }}>
-                Students Management
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#5A5984' }}>
-                {selectedClassId ? 'Select students to assign points' : 'Select a class to view students'}
-              </Typography>
+          <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+            <Box display="flex" alignItems="center">
+              <School sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
+              <Box>
+                <Typography variant="h5" sx={{ color: 'white', fontWeight: 600 }}>
+                  Students Management
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                  {viewMode === 'homeroom'
+                    ? `Homeroom Dashboard (${homeroomClass})`
+                    : selectedClassId ? 'Select students to assign points' : 'Select a class to view students'}
+                </Typography>
+              </Box>
             </Box>
           </Box>
+
+          {/* Toggle buttons: My Homeroom Class / All Classes */}
+          <ButtonGroup fullWidth size="small" variant="contained" sx={{ mt: 1 }}>
+            <Button
+              startIcon={<School />}
+              variant={viewMode === 'homeroom' ? 'contained' : 'outlined'}
+              onClick={() => {
+                setViewMode('homeroom');
+                setSelectedClassId(null);
+                setIsInSearchMode(false);
+              }}
+              sx={{
+                py: 1,
+                fontWeight: 600,
+                color: viewMode === 'homeroom' ? '#F4F4FF' : '#5A5984',
+                background: viewMode === 'homeroom' ? 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)' : 'transparent',
+                borderColor: 'rgba(146, 102, 255, 0.3)',
+              }}
+            >
+              My Class ({homeroomClass})
+            </Button>
+            <Button
+              startIcon={<Dashboard />}
+              variant={viewMode === 'all' ? 'contained' : 'outlined'}
+              onClick={() => setViewMode('all')}
+              sx={{
+                py: 1,
+                fontWeight: 600,
+                color: viewMode === 'all' ? '#F4F4FF' : '#5A5984',
+                background: viewMode === 'all' ? 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)' : 'transparent',
+                borderColor: 'rgba(146, 102, 255, 0.3)',
+              }}
+            >
+              All Classes
+            </Button>
+          </ButtonGroup>
         </Container>
       </Box>
 
@@ -226,86 +294,140 @@ export function StudentsPage() {
           </Alert>
         )}
 
-        {!selectedClassId && (
-          <Box sx={{ mb: 3 }}>
-            <SearchBar placeholder="Search students..." value={searchQuery} onChange={setSearchQuery} />
-          </Box>
-        )}
+        {/* РЕЖИМ 1: МОЙ КЛАСС (HOMEROOM DASHBOARD) */}
+        {viewMode === 'homeroom' ? (
+          <>
+            {/* Виджет статистики закрепленного класса */}
+            <HomeroomStatsWidget
+              className={homeroomClass}
+              classes={classes}
+              students={students.filter((s) => (s.class_name || s.class || '') === homeroomClass)}
+              onSelectClass={handleHomeroomClassChange}
+              showRiskOnly={showRiskOnly}
+              onToggleRiskFilter={() => setShowRiskOnly(!showRiskOnly)}
+            />
 
-        <Card sx={{ 
-          background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
-          borderRadius: 2,
-          border: '1px solid rgba(146, 102, 255, 0.2)',
-        }}>
-          <CardContent>
-            {(loadingClasses || loadingStudents || loadingSearch) ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress sx={{ color: '#9266FF' }} />
+            <Card sx={{
+              background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
+              borderRadius: 2,
+              border: '1px solid rgba(146, 102, 255, 0.2)',
+            }}>
+              <CardContent sx={{ p: 2 }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>
+                    Class {homeroomClass} Students ({homeroomStudents.length})
+                  </Typography>
+                </Box>
+
+                {loadingStudents ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <CircularProgress sx={{ color: '#9266FF' }} />
+                  </Box>
+                ) : homeroomStudents.length === 0 ? (
+                  <Alert severity="info" sx={{ backgroundColor: 'rgba(146, 102, 255, 0.1)', border: '1px solid rgba(146, 102, 255, 0.3)', color: '#F4F4FF' }}>
+                    {showRiskOnly ? 'No students in Demerit risk zone for this class!' : `No students found for class ${homeroomClass}. Use the dropdown above to select another class.`}
+                  </Alert>
+                ) : (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 1.5 }}>
+                    {homeroomStudents.map((student) => (
+                      <UserCard
+                        key={student.id}
+                        user={student}
+                        type="student"
+                        onClick={() => handleStudentClick(student.id)}
+                        showActions={false}
+                      />
+                    ))}
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          /* РЕЖИМ 2: ВСЕ КЛАССЫ И ПОИСК */
+          <>
+            {!selectedClassId && (
+              <Box sx={{ mb: 3 }}>
+                <SearchBar placeholder="Search students..." value={searchQuery} onChange={setSearchQuery} />
               </Box>
-            ) : selectedClassId ? (
-              <>
-                <Box sx={{ mb: 3 }}>
-                  <Button
-                    startIcon={<ArrowBack />}
-                    onClick={handleBackToClasses}
-                    sx={{ color: '#9266FF', '&:hover': { backgroundColor: 'rgba(146, 102, 255, 0.1)' } }}
-                  >
-                    Back to Classes
-                  </Button>
-                </Box>
-                {studentsToShow.length === 0 ? (
-                  <Alert severity="info" sx={{ backgroundColor: 'rgba(146, 102, 255, 0.1)', border: '1px solid rgba(146, 102, 255, 0.3)', color: '#F4F4FF' }}>
-                    No students found.
-                  </Alert>
-                ) : (
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
-                    {studentsToShow.map(student => (
-                      <UserCard key={student.id} user={student} type="student" onClick={() => handleStudentClick(student.id)} showActions={false} />
-                    ))}
-                  </Box>
-                )}
-              </>
-            ) : isInSearchMode ? (
-              <>
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" sx={{ color: '#5A5984' }}>
-                    Search results for "{searchQuery}"
-                  </Typography>
-                </Box>
-                {studentsToShow.length === 0 ? (
-                  <Alert severity="info" sx={{ backgroundColor: 'rgba(146, 102, 255, 0.1)', border: '1px solid rgba(146, 102, 255, 0.3)', color: '#F4F4FF' }}>
-                    No students found matching your search.
-                  </Alert>
-                ) : (
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
-                    {studentsToShow.map(student => (
-                      <UserCard key={student.id} user={student} type="student" onClick={() => handleStudentClick(student.id)} showActions={false} />
-                    ))}
-                  </Box>
-                )}
-              </>
-            ) : (
-              <>
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="body2" sx={{ color: '#5A5984' }}>
-                    Select a class to view students
-                  </Typography>
-                </Box>
-                {classes.length === 0 ? (
-                  <Alert severity="info" sx={{ backgroundColor: 'rgba(146, 102, 255, 0.1)', border: '1px solid rgba(146, 102, 255, 0.3)', color: '#F4F4FF' }}>
-                    No classes found.
-                  </Alert>
-                ) : (
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1.5, mt: 1 }}>
-                    {classes.map(classItem => (
-                      <ClassCard key={classItem.id} classItem={classItem} onClick={() => handleClassSelect(classItem.id)} />
-                    ))}
-                  </Box>
-                )}
-              </>
             )}
-          </CardContent>
-        </Card>
+
+            <Card sx={{
+              background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
+              borderRadius: 2,
+              border: '1px solid rgba(146, 102, 255, 0.2)',
+            }}>
+              <CardContent>
+                {(loadingClasses || loadingStudents || loadingSearch) ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <CircularProgress sx={{ color: '#9266FF' }} />
+                  </Box>
+                ) : selectedClassId ? (
+                  <>
+                    <Box sx={{ mb: 3 }}>
+                      <Button
+                        startIcon={<ArrowBack />}
+                        onClick={handleBackToClasses}
+                        sx={{ color: '#9266FF', '&:hover': { backgroundColor: 'rgba(146, 102, 255, 0.1)' } }}
+                      >
+                        Back to Classes
+                      </Button>
+                    </Box>
+                    {studentsToShow.length === 0 ? (
+                      <Alert severity="info" sx={{ backgroundColor: 'rgba(146, 102, 255, 0.1)', border: '1px solid rgba(146, 102, 255, 0.3)', color: '#F4F4FF' }}>
+                        No students found.
+                      </Alert>
+                    ) : (
+                      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
+                        {studentsToShow.map(student => (
+                          <UserCard key={student.id} user={student} type="student" onClick={() => handleStudentClick(student.id)} showActions={false} />
+                        ))}
+                      </Box>
+                    )}
+                  </>
+                ) : isInSearchMode ? (
+                  <>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="body2" sx={{ color: '#5A5984' }}>
+                        Search results for "{searchQuery}"
+                      </Typography>
+                    </Box>
+                    {studentsToShow.length === 0 ? (
+                      <Alert severity="info" sx={{ backgroundColor: 'rgba(146, 102, 255, 0.1)', border: '1px solid rgba(146, 102, 255, 0.3)', color: '#F4F4FF' }}>
+                        No students found matching your search.
+                      </Alert>
+                    ) : (
+                      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
+                        {studentsToShow.map(student => (
+                          <UserCard key={student.id} user={student} type="student" onClick={() => handleStudentClick(student.id)} showActions={false} />
+                        ))}
+                      </Box>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="body2" sx={{ color: '#5A5984' }}>
+                        Select a class to view students
+                      </Typography>
+                    </Box>
+                    {classes.length === 0 ? (
+                      <Alert severity="info" sx={{ backgroundColor: 'rgba(146, 102, 255, 0.1)', border: '1px solid rgba(146, 102, 255, 0.3)', color: '#F4F4FF' }}>
+                        No classes found.
+                      </Alert>
+                    ) : (
+                      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1.5, mt: 1 }}>
+                        {classes.map(classItem => (
+                          <ClassCard key={classItem.id} classItem={classItem} onClick={() => handleClassSelect(classItem.id)} />
+                        ))}
+                      </Box>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
       </Container>
 
       <AssignRulesDrawer

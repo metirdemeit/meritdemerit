@@ -18,6 +18,7 @@ import { useCommonStore } from '../../store/commonStore';
 import DeleteConfirmationDialog from '../components/dialogs/DeleteConfirmationDialog';
 import AssignmentTable from '../components/AssignmentTable';
 import CommonRankingTable from '../components/CommonRankingTable';
+import { School, WarningAmber } from '@mui/icons-material';
 
 export function DashboardPage() {
   const { user } = useAuthStore();
@@ -27,12 +28,20 @@ export function DashboardPage() {
     deleteHistoryRecord,
     fetchProfile,
   } = useTeacherStore();
-  const { rankings, fetchRankings } = useCommonStore();
+  const { rankings, fetchRankings, students, fetchStudents } = useCommonStore();
+
+  const homeroomClass = localStorage.getItem('homeroom_class') || '10-A';
 
   // Loading для каждой секции
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [loadingRankings, setLoadingRankings] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
+
+  // Студенты закрепленного класса
+  const homeroomStudents = (students || []).filter(
+    (s) => (s.class_name || s.class || '') === homeroomClass
+  );
+  const riskStudents = homeroomStudents.filter((s) => (s.points ?? 100) < 100);
 
   // Диалог удаления
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -53,6 +62,7 @@ export function DashboardPage() {
     setLoadingRankings(true);
     try {
       await fetchRankings();
+      await fetchStudents();
     } finally {
       setLoadingRankings(false);
     }
@@ -129,6 +139,31 @@ export function DashboardPage() {
       </Box>
 
       <Container maxWidth="sm" sx={{ px: 2 }}>
+        {/* Homeroom Class Quick Status & Alert */}
+        {riskStudents.length > 0 && (
+          <Alert
+            severity="warning"
+            icon={<WarningAmber fontSize="inherit" />}
+            sx={{
+              mb: 3,
+              backgroundColor: 'rgba(255, 152, 0, 0.12)',
+              border: '1px solid rgba(255, 152, 0, 0.4)',
+              color: '#FF9800',
+              borderRadius: 2,
+              '& .MuiAlert-icon': { color: '#FF9800' },
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              Attention Homeroom Teacher ({homeroomClass})
+            </Typography>
+            <Typography variant="body2">
+              {riskStudents.length} student(s) in your class currently have points below 100 (
+              {riskStudents.map((s) => `${s.first_name || ''} ${s.last_name || s.username} (${s.points ?? 0} pts)`).join(', ')}
+              ).
+            </Typography>
+          </Alert>
+        )}
+
         {/* Points History */}
         <Card sx={{ 
           background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
