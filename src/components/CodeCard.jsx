@@ -14,8 +14,8 @@ export default function CodeCard({
   onSelect,
   showActions = true,
 }) {
-  const isMerit = rule.type === 'Merit';
-  const isDemerit = rule.type === 'Demerit';
+  const isMerit = rule.type?.toLowerCase() === 'merit' || rule.points > 0;
+  const isDemerit = rule.type?.toLowerCase() === 'demerit' || rule.points < 0;
   return (
     <Card
       onClick={onSelect}
@@ -23,18 +23,18 @@ export default function CodeCard({
         mb: 1.5,
         background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
         border: isMerit 
-          ? '1px solid rgba(0, 211, 119, 0.18)'
+          ? '1px solid rgba(0, 211, 119, 0.3)'
           : isDemerit 
-            ? '1px solid rgba(235, 43, 75, 0.18)'
-            : '1px solid rgba(146, 102, 255, 0.18)',
+            ? '1px solid rgba(235, 43, 75, 0.3)'
+            : '1px solid rgba(146, 102, 255, 0.3)',
         borderRadius: 2,
         cursor: onSelect ? 'pointer' : 'default',
         '&:hover': onSelect ? {
           border: isMerit 
-            ? '1px solid rgba(0, 211, 119, 0.5)'
+            ? '1px solid rgba(0, 211, 119, 0.6)'
             : isDemerit 
-              ? '1px solid rgba(235, 43, 75, 0.5)'
-              : '1px solid rgba(146, 102, 255, 0.5)',
+              ? '1px solid rgba(235, 43, 75, 0.6)'
+              : '1px solid rgba(146, 102, 255, 0.6)',
           transform: 'translateY(-2px)',
           transition: 'all 0.2s ease-in-out',
         } : {},
@@ -56,12 +56,19 @@ export default function CodeCard({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#F4F4FF',
+              color: '#FFFFFF',
+              fontWeight: 700,
+              fontSize: '1rem',
+              boxShadow: isMerit
+                ? '0 4px 12px rgba(0, 211, 119, 0.35)'
+                : isDemerit
+                  ? '0 4px 12px rgba(235, 43, 75, 0.35)'
+                  : '0 4px 12px rgba(146, 102, 255, 0.35)',
               flexShrink: 0,
               position: 'relative',
             }}
           >
-            {isMerit ? '+' : isDemerit ? '-' : ''}{rule.points}
+            {isMerit ? '+' : ''}{rule.points}
           </Box>
           <Box flexGrow={1} overflow="hidden">
             <Typography variant="body1" sx={{ color: '#F4F4FF', fontWeight: 500 }} noWrap>

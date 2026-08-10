@@ -241,27 +241,46 @@ export function StudentsBlog() {
 
       <Card sx={styles.card}>
         <CardContent sx={{ p: 2 }}>
-         {/* Условие 1: Класс не выбран - показываем список классов */}
-         {!selectedClassId && (
+         {isInSearchMode ? (
+           <>
+             <Typography variant="h6" sx={{ color: '#F4F4FF', mb: 2 }}>
+               Search Results ({studentsToShow.length})
+             </Typography>
+             {studentsToShow.length === 0 ? (
+               <Box textAlign="center" py={3}>
+                 <Person sx={styles.noStudentsIcon} />
+                 <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                   No students found
+                 </Typography>
+               </Box>
+             ) : (
+               <List>
+                 {studentsToShow.map((student) => (
+                   <li key={student.id} style={{ listStyle: 'none' }}>
+                     <UserCard
+                       user={student}
+                       type="student"
+                       onClick={() => openAssignDialogForStudent(student.id)}
+                       onEdit={() => handleOpenDialog(student, 'student')}
+                       onDelete={() => handleDelete(student.id, 'student')}
+                     />
+                   </li>
+                 ))}
+               </List>
+             )}
+           </>
+         ) : !selectedClassId ? (
            <>
              <Typography variant="h6">
                Classes
              </Typography>
-             {false ? (
-               <Box textAlign="center" py={3}>
-                 <CircularProgress sx={{ color: '#9266FF' }} />
-               </Box>
-             ) : (
-               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1.5, mt: 1 }}>
-                 {classes
-                   .filter((c) => c.name?.toLowerCase().includes(searchQuery.toLowerCase()))
-                   .map((c) => (
-                     <ClassCard key={c.id} classItem={c} onClick={() => setSelectedClassId(c.id)} />
-                   ))}
-               </Box>
-             )}
+             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1.5, mt: 1 }}>
+               {classes.map((c) => (
+                 <ClassCard key={c.id} classItem={c} onClick={() => setSelectedClassId(c.id)} />
+               ))}
+             </Box>
            </>
-         )}
+         ) : null}
 
          {/* Условие 2: Класс выбран - показываем студентов */}
          {selectedClassId && (
