@@ -146,10 +146,11 @@ export function StudentsPage() {
       });
       toast.success('Points assigned');
       handleCloseRulesDrawer();
+      // Принудительный рефреш баллов сразу после выставки
       if (selectedClassId) {
         await fetchStudentsByClass(selectedClassId);
       } else {
-        await fetchStudents();
+        await fetchStudents(true);
       }
     } catch (e) {
       toast.error('Failed to assign points');

@@ -41,6 +41,7 @@ import {
 } from '@mui/icons-material';
 import { useDetentionStore } from '../../../store/detentionStore';
 import { useAdminStore } from '../../../store/adminStore';
+import { useCommonStore } from '../../../store/commonStore';
 import toast from 'react-hot-toast';
 
 export default function DetentionManager() {
@@ -56,23 +57,34 @@ export default function DetentionManager() {
   } = useDetentionStore();
 
   const { students, fetchStudents } = useAdminStore();
+  const { classes, fetchClasses } = useCommonStore();
 
   React.useEffect(() => {
     fetchStudents();
-  }, [fetchStudents]);
+    fetchClasses();
+  }, [fetchStudents, fetchClasses]);
 
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [openExamDialog, setOpenExamDialog] = useState(false);
 
+  // Двухшаговый выбор: класс → ученик
+  const [selectedClass, setSelectedClass] = useState('');
+
+  const studentsInClass = selectedClass
+    ? students.filter((s) => (s.class_name || s.class || '') === selectedClass)
+    : [];
+
   // Form State
-  const [formData, setFormData] = useState({
+  const defaultForm = {
     student_name: '',
-    class_name: '10-A',
-    current_points: 15,
+    student_id: null,
+    class_name: '',
+    current_points: 0,
     start_date: new Date().toISOString().split('T')[0],
     end_date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
     notes: '',
-  });
+  };
+  const [formData, setFormData] = useState(defaultForm);
 
   const [examForm, setExamForm] = useState({
     title: '',
@@ -82,20 +94,14 @@ export default function DetentionManager() {
 
   const handleCreateDetention = () => {
     if (!formData.student_name.trim()) {
-      toast.error('Enter student name');
+      toast.error('Select a student');
       return;
     }
     const created = addDetention(formData);
     toast.success(`Detention assigned for ${created.student_name}`);
     setOpenAddDialog(false);
-    setFormData({
-      student_name: '',
-      class_name: '10-A',
-      current_points: 15,
-      start_date: new Date().toISOString().split('T')[0],
-      end_date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-      notes: '',
-    });
+    setSelectedClass('');
+    setFormData(defaultForm);
   };
 
   const handleCreateExamWeek = () => {
@@ -290,53 +296,60 @@ export default function DetentionManager() {
         </DialogTitle>
         <DialogContent sx={{ backgroundColor: '#0E0D2A', pt: 2 }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            {students && students.length > 0 ? (
-              <FormControl fullWidth size="small" sx={fieldStyle}>
-                <InputLabel sx={{ color: '#5A5984' }}>Select Student</InputLabel>
-                <Select
-                  value={formData.student_name}
-                  label="Select Student"
-                  onChange={(e) => {
-                    const sel = students.find(
-                      (s) => `${s.first_name || ''} ${s.last_name || ''}`.trim() === e.target.value || s.username === e.target.value
-                    );
-                    setFormData({
-                      ...formData,
-                      student_name: e.target.value,
-                      student_id: sel?.id,
-                      class_name: sel?.class_name || sel?.class || formData.class_name,
-                      current_points: sel?.points !== undefined ? sel?.points : formData.current_points,
-                    });
-                  }}
-                >
-                  {students.map((s) => {
+            {/* Шаг 1: Выбор класса */}
+            <FormControl fullWidth size="small" sx={fieldStyle}>
+              <InputLabel sx={{ color: '#5A5984' }}>Step 1: Select Class</InputLabel>
+              <Select
+                value={selectedClass}
+                label="Step 1: Select Class"
+                onChange={(e) => {
+                  setSelectedClass(e.target.value);
+                  setFormData({ ...defaultForm, class_name: e.target.value });
+                }}
+              >
+                {(classes || []).map((c) => (
+                  <MenuItem key={c.id} value={c.name}>
+                    {c.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Шаг 2: Выбор ученика из выбранного класса */}
+            <FormControl fullWidth size="small" sx={fieldStyle} disabled={!selectedClass}>
+              <InputLabel sx={{ color: selectedClass ? '#5A5984' : '#3A3A5A' }}>
+                Step 2: Select Student {!selectedClass && '(select class first)'}
+              </InputLabel>
+              <Select
+                value={formData.student_name}
+                label="Step 2: Select Student (select class first)"
+                onChange={(e) => {
+                  const sel = studentsInClass.find(
+                    (s) => `${s.first_name || ''} ${s.last_name || ''}`.trim() === e.target.value || s.username === e.target.value
+                  );
+                  setFormData({
+                    ...formData,
+                    student_name: e.target.value,
+                    student_id: sel?.id,
+                    current_points: sel?.points !== undefined ? sel.points : 0,
+                  });
+                }}
+              >
+                {studentsInClass.length === 0 ? (
+                  <MenuItem disabled value="">No students in this class</MenuItem>
+                ) : (
+                  studentsInClass.map((s) => {
                     const name = `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.username;
                     return (
                       <MenuItem key={s.id} value={name}>
-                        {name} ({s.class_name || 'N/A'}) — {s.points || 0} pts
+                        {name} — {s.points ?? 0} pts
                       </MenuItem>
                     );
-                  })}
-                </Select>
-              </FormControl>
-            ) : (
-              <TextField
-                fullWidth
-                size="small"
-                label="Student Name"
-                value={formData.student_name}
-                onChange={(e) => setFormData({ ...formData, student_name: e.target.value })}
-                sx={fieldStyle}
-              />
-            )}
-            <TextField
-              fullWidth
-              size="small"
-              label="Class"
-              value={formData.class_name}
-              onChange={(e) => setFormData({ ...formData, class_name: e.target.value })}
-              sx={fieldStyle}
-            />
+                  })
+                )}
+              </Select>
+            </FormControl>
+
             <Grid container spacing={1}>
               <Grid item xs={6}>
                 <TextField

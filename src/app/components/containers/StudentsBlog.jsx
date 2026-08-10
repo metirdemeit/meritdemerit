@@ -33,6 +33,7 @@ export function StudentsBlog() {
     classes,
     rules,
     fetchClasses,
+    fetchStudents,
     fetchStudentsByClass,
     fetchRules,
     searchStudents,
@@ -212,6 +213,12 @@ export function StudentsBlog() {
       await assignPoints({ student_ids: selectedStudentIds, rule_ids: selectedRuleIds, comment: assignComment });
       toast.success('Points assigned');
       handleCloseRulesDrawer();
+      // Принудительный рефреш данных студентов из бэкенда после выставки баллов
+      if (selectedClassId) {
+        await fetchStudentsByClass(selectedClassId);
+      } else {
+        await fetchStudents(true); // force=true чтобы обойти кеш
+      }
     } catch {
       toast.error('Failed to assign points');
     } finally {
