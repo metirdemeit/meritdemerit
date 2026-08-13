@@ -36,10 +36,8 @@ export function StudentsPage() {
   // Режим просмотра: 'homeroom' | 'all'
   const [viewMode, setViewMode] = useState('homeroom');
 
-  // Закрепленный класс учителя (из профиля или сохраненный локально)
-  const [homeroomClass, setHomeroomClass] = useState(() => {
-    return localStorage.getItem('homeroom_class') || '10-A';
-  });
+  // Закрепленный класс учителя (из профиля бэкенда)
+  const homeroomClass = profile?.homeroom_class_name || '10-A';
 
   const [showRiskOnly, setShowRiskOnly] = useState(false);
 

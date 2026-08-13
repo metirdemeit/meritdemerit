@@ -93,17 +93,28 @@ export function CodesPages() {
     if (rule) {
       setEditingRule(rule);
       setFormData({
-        type: rule.type || '',
+        type: rule.type || 'merit',
         description: rule.description || '',
         points: rule.points || '',
-        category: rule.category || '',
+        access_level: rule.access_level || 'all',
+        hasLimit: !!rule.limit,
+        max_uses: rule.limit?.max_uses || 1,
+        reset_type: rule.limit?.reset_type || 'period',
+        reset_period: rule.limit?.reset_period || 'weekly',
+        reset_date: rule.limit?.reset_date || '',
       });
     } else {
       setEditingRule(null);
       setFormData({
-        type: '',
+        type: 'merit',
         description: '',
         points: '',
+        access_level: 'all',
+        hasLimit: false,
+        max_uses: 1,
+        reset_type: 'period',
+        reset_period: 'weekly',
+        reset_date: '',
       });
     }
     setDialogOpen(true);
@@ -113,19 +124,40 @@ export function CodesPages() {
     setDialogOpen(false);
     setEditingRule(null);
     setFormData({
-      type: '',
+      type: 'merit',
       description: '',
       points: '',
+      access_level: 'all',
+      hasLimit: false,
+      max_uses: 1,
+      reset_type: 'period',
+      reset_period: 'weekly',
+      reset_date: '',
     });
   };
 
   const handleSubmit = async () => {
     try {
+      const payload = {
+        description: formData.description,
+        points: parseInt(formData.points, 10),
+        type: formData.type || 'merit',
+        access_level: formData.access_level || 'all',
+        limit: formData.hasLimit
+          ? {
+              max_uses: parseInt(formData.max_uses, 10) || 1,
+              reset_type: formData.reset_type || 'period',
+              reset_period: formData.reset_type === 'period' ? formData.reset_period : null,
+              reset_date: formData.reset_type === 'until_date' ? formData.reset_date : null,
+            }
+          : null,
+      };
+
       if (editingRule) {
-        await updateRule(editingRule.id, formData);
+        await updateRule(editingRule.id, payload);
         toast.success('Rule updated');
       } else {
-        await createRule(formData);
+        await createRule(payload);
         toast.success('Rule created');
       }
 

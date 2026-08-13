@@ -29,6 +29,8 @@ export function AssignRulesDrawer({
     onSubmit();
   };
 
+  const visibleRules = rules.filter(r => r.access_level !== 'admin');
+
   return (
     <Drawer
       open={open}
@@ -51,12 +53,12 @@ export function AssignRulesDrawer({
          </Typography>
         
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3, overflowY: 'auto' }}>
-          {rules.length === 0 ? (
+          {visibleRules.length === 0 ? (
             <Typography variant="body2" sx={{ color: '#5A5984', textAlign: 'center', py: 2 }}>
               Loading rules...
             </Typography>
           ) : (
-            rules.map(rule => (
+            visibleRules.map(rule => (
               <FormControlLabel
                 key={rule.id}
                 control={ 

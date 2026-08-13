@@ -56,18 +56,18 @@ function getInterventionMeta(level) {
 }
 
 export default function InterventionsManager() {
-  const { interventions, addIntervention, toggleParentNotified, resolveIntervention, deleteIntervention } = useInterventionStore();
+  const { interventions, fetchInterventions, addIntervention, toggleParentNotified, resolveIntervention, deleteIntervention } = useInterventionStore();
   const { students, fetchStudents } = useAdminStore();
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      await fetchStudents(true);
+      await Promise.all([fetchStudents(true), fetchInterventions()]);
       setLoading(false);
     };
     load();
-  }, [fetchStudents]);
+  }, [fetchStudents, fetchInterventions]);
 
   // Автоматически создаём алерты для студентов с баллами 21-50
   // Не дублируем: проверяем по student_id

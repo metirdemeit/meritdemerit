@@ -74,9 +74,43 @@ export default function CodeCard({
             <Typography variant="body1" sx={{ color: '#F4F4FF', fontWeight: 500 }} noWrap>
               {rule.description}
             </Typography>
-            <Typography variant="caption" sx={{ color: '#777' }} noWrap>
-              {rule.type} • {rule.category || 'General'}
-            </Typography>
+            <Box sx={{ display: 'flex', gap: 0.8, alignItems: 'center', mt: 0.5, flexWrap: 'wrap' }}>
+              <Typography variant="caption" sx={{ color: '#777' }}>
+                {rule.type}
+              </Typography>
+              {rule.access_level && rule.access_level !== 'all' && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    px: 0.8,
+                    py: 0.2,
+                    borderRadius: 1,
+                    backgroundColor: rule.access_level === 'admin' ? 'rgba(235, 43, 75, 0.2)' : 'rgba(146, 102, 255, 0.2)',
+                    color: rule.access_level === 'admin' ? '#EB2B4B' : '#9266FF',
+                    fontWeight: 600,
+                    fontSize: '0.7rem',
+                  }}
+                >
+                  {rule.access_level === 'admin' ? '🔒 Admin Only' : '👨‍🏫 Teacher Only'}
+                </Typography>
+              )}
+              {rule.limit && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    px: 0.8,
+                    py: 0.2,
+                    borderRadius: 1,
+                    backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                    color: '#FF9800',
+                    fontWeight: 600,
+                    fontSize: '0.7rem',
+                  }}
+                >
+                  ⏱ Limit: {rule.limit.max_uses}x ({rule.limit.reset_type === 'until_date' ? `until ${rule.limit.reset_date}` : rule.limit.reset_period})
+                </Typography>
+              )}
+            </Box>
           </Box>
 
           {showActions && (

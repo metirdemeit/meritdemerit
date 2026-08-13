@@ -23,6 +23,7 @@ import { School, WarningAmber } from '@mui/icons-material';
 export function DashboardPage() {
   const { user } = useAuthStore();
   const { 
+    profile,
     history,
     fetchHistory, 
     deleteHistoryRecord,
@@ -30,7 +31,7 @@ export function DashboardPage() {
   } = useTeacherStore();
   const { rankings, fetchRankings, students, fetchStudents } = useCommonStore();
 
-  const homeroomClass = localStorage.getItem('homeroom_class') || '10-A';
+  const homeroomClass = profile?.homeroom_class_name || user?.homeroom_class_name || '10-A';
 
   // Loading для каждой секции
   const [loadingHistory, setLoadingHistory] = useState(false);
