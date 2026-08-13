@@ -47,6 +47,11 @@ async def check_rule_limits_and_permissions(
         if not limit or limit.max_uses <= 0:
             continue
 
+        # If reset_type is 'until_date' and current date is past reset_date, limit is expired
+        if limit.reset_type == "until_date" and limit.reset_date:
+            if date.today() > limit.reset_date:
+                continue
+
         start_time = get_start_of_period(limit)
 
         for student in students:
