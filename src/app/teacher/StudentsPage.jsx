@@ -204,10 +204,15 @@ export function StudentsPage() {
     return '';
   }, [selectedStudentIds, students]);
 
+  const isClassMatch = (s, targetClass) => {
+    const rawName = s.class_name || s.school_class?.name || s.class || '';
+    const name = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const target = (targetClass || '').toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^class/, '');
+    return name === target || name.replace(/^class/, '') === target;
+  };
+
   const homeroomStudents = useMemo(() => {
-    let list = students.filter(
-      (s) => (s.class_name || s.class || '') === homeroomClass
-    );
+    let list = students.filter((s) => isClassMatch(s, homeroomClass));
     if (showRiskOnly) {
       list = list.filter((s) => (s.points ?? 100) < 100);
     }
@@ -299,7 +304,7 @@ export function StudentsPage() {
             <HomeroomStatsWidget
               className={homeroomClass}
               classes={classes}
-              students={students.filter((s) => (s.class_name || s.class || '') === homeroomClass)}
+              students={students.filter((s) => isClassMatch(s, homeroomClass))}
               onSelectClass={handleHomeroomClassChange}
               showRiskOnly={showRiskOnly}
               onToggleRiskFilter={() => setShowRiskOnly(!showRiskOnly)}

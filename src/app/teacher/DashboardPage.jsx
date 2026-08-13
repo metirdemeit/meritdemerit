@@ -38,10 +38,15 @@ export function DashboardPage() {
   const [loadingRankings, setLoadingRankings] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
 
+  const isClassMatch = (s, targetClass) => {
+    const rawName = s.class_name || s.school_class?.name || s.class || '';
+    const name = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const target = (targetClass || '').toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^class/, '');
+    return name === target || name.replace(/^class/, '') === target;
+  };
+
   // Студенты закрепленного класса
-  const homeroomStudents = (students || []).filter(
-    (s) => (s.class_name || s.class || '') === homeroomClass
-  );
+  const homeroomStudents = (students || []).filter((s) => isClassMatch(s, homeroomClass));
   const riskStudents = homeroomStudents.filter((s) => (s.points ?? 100) < 100);
 
   // Диалог удаления
