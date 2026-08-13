@@ -10,7 +10,15 @@ RATE_WINDOW = 60
 
 
 async def rate_limit_middleware(request: Request, call_next):
-    client_ip = request.client.host if request.client else "unknown"
+    forwarded = request.headers.get("x-forwarded-for")
+    cf_ip = request.headers.get("cf-connecting-ip")
+    if cf_ip:
+        client_ip = cf_ip.strip()
+    elif forwarded:
+        client_ip = forwarded.split(",")[0].strip()
+    else:
+        client_ip = request.client.host if request.client else "unknown"
+
     now = time.time()
 
     timestamps = _request_log[client_ip]

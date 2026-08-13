@@ -319,10 +319,17 @@ async def get_admin_dashboard():
     total_teachers = await Teacher.all().count()
     active_students = await Student.filter(telegram_id__isnull=False).count()
     active_teachers = await Teacher.filter(telegram_id__isnull=False).count()
-    all_history = await PointHistory.all()
-    sum_positive_points = sum(h.points_changed for h in all_history if h.points_changed > 0)
-    sum_negative_points = abs(sum(h.points_changed for h in all_history if h.points_changed < 0))
-    total_assignments = len(all_history)
+    teacher_history = await PointHistory.all()
+    admin_history = await AdminPointHistory.all()
+
+    pos_teacher = sum(h.points_changed for h in teacher_history if h.points_changed > 0)
+    pos_admin = sum(h.points_changed for h in admin_history if h.points_changed > 0)
+    neg_teacher = sum(h.points_changed for h in teacher_history if h.points_changed < 0)
+    neg_admin = sum(h.points_changed for h in admin_history if h.points_changed < 0)
+
+    sum_positive_points = pos_teacher + pos_admin
+    sum_negative_points = abs(neg_teacher + neg_admin)
+    total_assignments = len(teacher_history) + len(admin_history)
     
     return DashboardStats(
         total_students=total_students,
@@ -545,16 +552,17 @@ async def update_rule(rule_id: int, rule_details: RuleUpdate):
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found")
 
-    update_data = rule_details.model_dump(exclude_unset=True)
-    limit_data = update_data.pop("limit", None)
+    dump = rule_details.model_dump(exclude_unset=True)
+    has_limit_key = "limit" in dump
+    limit_data = dump.pop("limit", None)
 
-    if update_data:
-        await rule.update_from_dict(update_data)
+    if dump:
+        await rule.update_from_dict(dump)
         await rule.save()
 
-    if limit_data is not None:
+    if has_limit_key:
         existing_limit = await LimitMD.get_or_none(rule_id=rule.id)
-        if limit_data is None or (isinstance(limit_data, dict) and limit_data.get("max_uses") == 0):
+        if limit_data is None or (isinstance(limit_data, dict) and limit_data.get("max_uses", 0) <= 0):
             if existing_limit:
                 await existing_limit.delete()
         elif isinstance(limit_data, dict):

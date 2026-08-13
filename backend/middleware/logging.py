@@ -41,8 +41,16 @@ async def log_requests(request: Request, call_next: Callable) -> Response:
     try:
         response = await call_next(request)
         elapsed = time.time() - start_time
+        content_type = response.headers.get("content-type", "") or response.media_type or ""
 
-        # Read streaming response body
+        # Avoid reading streaming binary files like zip downloads into string logs
+        if "application/zip" in content_type or "octet-stream" in content_type:
+            logger.info("<<< %s %s -> %s (%.3fs)", method, path, response.status_code, elapsed)
+            logger.info("    Response: <binary file response>")
+            logger.info("=" * 60)
+            return response
+
+        # Read JSON/Text response body
         response_body_bytes = b""
         async for chunk in response.body_iterator:
             if isinstance(chunk, str):

@@ -6,6 +6,7 @@ from datetime import datetime
 
 from backend.models import Teacher, Student, DisciplineRule, PointHistory, Class
 from backend.utils.security import get_current_user, enforce_https
+from backend.utils.rules_helper import check_rule_limits_and_permissions, auto_trigger_interventions
 from tortoise.contrib.pydantic import pydantic_model_creator
 
 router = APIRouter(dependencies=[Depends(enforce_https)])
@@ -23,6 +24,8 @@ class TeacherProfile(BaseModel):
     first_name: str
     last_name: str | None
     telegram_id: int | None
+    homeroom_class_id: int | None = None
+    homeroom_class_name: str | None = None
 
 class TeacherHistoryResponse(BaseModel):
     id: int
