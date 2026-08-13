@@ -618,33 +618,15 @@ async def delete_intervention(intervention_id: int):
     await item.delete()
     return None
 
-    await rule.update_from_dict(update_data)
-    await rule.save()
-    return await RuleOut_Pydantic.from_tortoise_orm(rule)
-
-@router.delete("/rules/{rule_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete rule")
-async def delete_rule(rule_id: int):
-    """
-    Delete a discipline rule.
-    """
-    rule = await DisciplineRule.get_or_none(id=rule_id)
-    if not rule:
-        raise HTTPException(status_code=404, detail="Rule not found")
-    
-    await rule.delete()
-    return None
-
-# --- Search ---
-
-@router.get("/search", response_model=List[Teacher_Pydantic], summary="Search teachers by name")
+@router.get("/search", response_model=List[TeacherOut], summary="Search teachers by name")
 async def search_teachers(q: str = Query(..., min_length=1)):
     """
     Search for teachers by first or last name.
     """
     teachers = await Teacher.filter(
         Q(first_name__icontains=q) | Q(last_name__icontains=q)
-    )
-    return await Teacher_Pydantic.from_queryset(teachers)
+    ).prefetch_related("homeroom_class")
+    return [await _build_teacher_out(t) for t in teachers]
 
 
 # --- Assignment ---
