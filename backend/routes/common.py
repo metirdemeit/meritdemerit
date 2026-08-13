@@ -21,12 +21,15 @@ class StudentWithClassResponse(BaseModel):
     first_name: str
     last_name: str | None
     points: int
+    class_name: str | None = None
     school_class: dict | None = None
 
     @classmethod
     async def from_student(cls, student: Student):
         school_class_data = None
+        class_name_str = None
         if student.school_class:
+            class_name_str = student.school_class.name
             school_class_data = {
                 "id": student.school_class.id,
                 "name": student.school_class.name
@@ -37,6 +40,7 @@ class StudentWithClassResponse(BaseModel):
             first_name=student.first_name,
             last_name=student.last_name,
             points=student.points,
+            class_name=class_name_str,
             school_class=school_class_data
         )
 class ClassAverageRankingItem(BaseModel):
