@@ -1,0 +1,288 @@
+\documentclass[12pt,a4paper]{article}
+
+% --- ПАКЕТЫ И НАСТРОЙКИ ЯЗЫКА ---
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{array}
+\usepackage{tabularx}
+
+% --- ЦВЕТОВАЯ ПАЛИТРА СИСТЕМЫ ---
+\definecolor{primaryPurple}{RGB}{146, 102, 255}
+\definecolor{darkBg}{RGB}{14, 13, 42}
+\definecolor{accentGreen}{RGB}{0, 211, 119}
+\definecolor{accentRed}{RGB}{255, 82, 82}
+\definecolor{accentOrange}{RGB}{255, 152, 0}
+\definecolor{cardBg}{RGB}{26, 25, 50}
+
+% --- НАСТРОЙКИ ССЫЛОК И СТИЛЕЙ ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryPurple,
+    filecolor=primaryPurple,      
+    urlcolor=primaryPurple,
+    pdftitle={Руководство пользователя MeritDemerit System},
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{gray}{\small MeritDemerit System — Руководство пользователя}}
+\lhead{\textcolor{gray}{\small Инструкция по эксплуатации}}
+\rfoot{\textcolor{gray}{\thepage}}
+
+\titleformat{\section}{\Large\bfseries\color{primaryPurple}}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\large\bfseries\color{darkBg}}{\thesubsection.}{0.5em}{}
+
+% --- СТИЛИ БЛОКОВ УВЕДОМЛЕНИЙ ---
+\newtcolorbox{infoBox}[1][]{
+    colback=primaryPurple!10!white,
+    colframe=primaryPurple,
+    fonttitle=\bfseries,
+    title=#1,
+    arc=3mm
+}
+
+\newtcolorbox{warningBox}[1][]{
+    colback=accentRed!10!white,
+    colframe=accentRed,
+    fonttitle=\bfseries,
+    title=#1,
+    arc=3mm
+}
+
+\newtcolorbox{successBox}[1][]{
+    colback=accentGreen!10!white,
+    colframe=accentGreen,
+    fonttitle=\bfseries,
+    title=#1,
+    arc=3mm
+}
+
+\begin{document}
+
+% --- ТИТУЛЬНЫЙ ЛИСТ ---
+\begin{titlepage}
+    \centering
+    \vspace*{1.5cm}
+    
+    {\Huge \bfseries \color{primaryPurple} MeritDemerit System \par}
+    \vspace{0.5cm}
+    {\style{italic} \Large Единая платформа учета дисциплины и успеваемости \par}
+    
+    \vspace{2cm}
+    \rule{\linewidth}{0.5mm} \\[0.4cm]
+    {\huge \bfseries ИНСТРУКЦИЯ ПО ЭКСПЛУАТАЦИИ \par}
+    \rule{\linewidth}{0.5mm} \\[1.5cm]
+    
+    \Large
+    \textbf{Полное руководство пользователя для:}\\[0.3cm]
+    \begin{itemize}[label=$\bullet$, leftmargin=6cm]
+        \item \textbf{Учеников} (Students)
+        \item \textbf{Учителей} (Teachers / Homeroom)
+        \item \textbf{Администраторов} (Admins)
+    \end{itemize}
+    
+    \vfill
+    
+    {\large \textbf{Версия системы:} 2.4.0 (Production Rollout) \par}
+    {\large \textbf{Дата обновления:} 14 Августа 2026 г. \par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% --- РАЗДЕЛ 1: ВВЕДЕНИЕ ---
+\section{Общие сведения о системе}
+
+Платформа \textbf{MeritDemerit System} предназначена для автоматизации учета академических достижений (Merit) и дисциплинарных замечаний (Demerit) учащихся школы.
+
+\subsection{Ключевые концепции балльной системы}
+\begin{itemize}
+    \item \textbf{Стартовый баланс:} Каждый ученик начинает с базовым балансом в \textbf{100 баллов}.
+    \item \textbf{Merit (Поощрения):} Баллы за академические успехи, лидерство и активное участие (+1 до +50 баллов).
+    \item \textbf{Demerit (Замечания):} Списание баллов за нарушения дисциплины и внутреннего распорядка (-1 до -50 баллов).
+\end{itemize}
+
+\subsection{Категории статусов учеников}
+\begin{table}[h!]
+\centering
+\begin{tabularx}{\textwidth}{|l|c|X|}
+\hline
+\textbf{Зона статуса} & \textbf{Диапазон баллов} & \textbf{Описание и следствия} \\ \hline
+\textbf{Merit Zone} & 131+ & Высокие академические и дисциплинарные показатели. \\ \hline
+\textbf{Standard Zone} & 100 -- 130 & Нормальный уровень дисциплины. \\ \hline
+\textbf{Warning Zone} & 41 -- 50 & Официальное письменное предупреждение (Formal Warning). \\ \hline
+\textbf{Homeroom Zone} & 31 -- 40 & Вмешательство классного руководителя (Homeroom Action). \\ \hline
+\textbf{Counselor Zone} & $\le$ 30 & Обязательный вызов к психологу / директору с родителями. \\ \hline
+\end{tabularx}
+\end{table}
+
+\newpage
+
+% --- РАЗДЕЛ 2: РУКОВОДСТВО ДЛЯ УЧЕНИКОВ ---
+\section{Инструкция для Ученика (Student Guide)}
+
+Как ученик, вы имеете доступ к личному кабинету через веб-браузер или интеграцию Telegram WebApp.
+
+\subsection{Авторизация и вход}
+\begin{enumerate}
+    \item Откройте приложение системы и перейдите на страницу входа.
+    \item Введите ваш персональный \textbf{Username} (например, \texttt{s\_ivanov}) и выданный \textbf{Пароль}.
+    \item Нажмите кнопку \textbf{Login}.
+\end{enumerate}
+
+\subsection{Обзор личного кабинета (Student Dashboard)}
+После успешного входа вам доступны следующие разделы:
+\begin{itemize}
+    \item \textbf{Текущий баланс (Points):} Отображается крупным шрифтом в центре экрана с цветовым индикатором вашего статуса.
+    \item \textbf{Личная история (My History):} Хронологический список всех начислений и списаний баллов. Включает:
+    \begin{itemize}
+        \item Название правила и примененное количество баллов.
+        \item ФИО учителя или администратора, выставившего баллы.
+        \item Пояснительный комментарий и точную дату/время.
+    \end{itemize}
+    \item \textbf{Школьный рейтинг (Rankings):} Раздел для просмотра вашей позиции в рейтинге вашего класса и среди параллелей.
+\end{itemize}
+
+\begin{infoBox}[Совет ученику]
+Если вы считаете, что баллы были выставлены ошибочно, обратитесь к вашему классному руководителю для уточнения деталей по номеру записи в истории.
+\end{infoBox}
+
+\newpage
+
+% --- РАЗДЕЛ 3: РУКОВОДСТВО ДЛЯ УЧИТЕЛЕЙ ---
+\section{Инструкция для Учителя (Teacher Guide)}
+
+Учителя имеют возможность отслеживать дисциплину своего закрепленного (классного) класса и начислять баллы ученикам по всей школе.
+
+\subsection{Дашборд классного руководителя (Homeroom Dashboard)}
+При входе учитель попадает на персональный дашборд:
+\begin{itemize}
+    \item \textbf{Виджет «My Homeroom Class»:} Автоматически отображает статистику вашего классного руководства (например, \textit{Class 6A}):
+    \begin{itemize}
+        \item Общее число учеников (Total Students).
+        \item Средний балл класса (Average Points).
+        \item Число отличников (Merit Zone 131+).
+        \item Число учеников в зоне риска (Demerit Risk $<100$).
+    \end{itemize}
+    \item \textbf{Фильтр «Filter Demerit Risk»:} Кнопка быстрого отбора учеников, имеющих менее 100 баллов, для оперативной воспитательной работы.
+    \item \textbf{Переключение класса:} В выпадающем списке «Homeroom Class» учитель может временно переключить просмотр на любой другой класс школы.
+\end{itemize}
+
+\subsection{Начисление баллов ученикам (Assigning Points)}
+Процесс выставления баллов состоит из 4 простых шагов:
+
+\begin{enumerate}
+    \item \textbf{Выбор режима просмотра:}
+    \begin{itemize}
+        \item \textbf{My Class:} Для выставления баллов ученикам своего класса.
+        \item \textbf{All Classes:} Для выбора любого класса и учеников школы.
+    \end{itemize}
+    \item \textbf{Выбор ученика(ов):} Нажмите на карточку ученика (или выберите нескольких).
+    \item \textbf{Выбор правила (Rule):} В открывшемся боковом меню (Assign Rules Drawer) выберите одно или несколько правил (Merit или Demerit).
+    \item \textbf{Комментарий и подтверждение:} Введите текстовое пояснение (например, \textit{«Победа на олимпиаде по физике»}) и нажмите \textbf{Submit}.
+\end{enumerate}
+
+\subsection{Ограничения и лимиты применения правил (LimitMD)}
+В системе действуют автоматические правила защиты от злоупотреблений и ограничение частоты:
+\begin{warningBox}[Обратите внимание на лимиты!]
+Если при попытке начислить баллы система выдаёт предупреждение:
+\begin{center}
+\textit{«Студент X достиг лимита для правила Y (максимум 2 раз за период weekly)»}
+\end{center}
+это означает, что для данного правила администратором установлен лимит повторов. Вам необходимо дождаться автоматического сброса периода (следующего дня / недели / месяца) или выбрать другое правило.
+\end{warningBox}
+
+\newpage
+
+% --- РАЗДЕЛ 4: РУКОВОДСТВО ДЛЯ АДМИНИСТРАТОРОВ ---
+\section{Инструкция для Администратора (Admin Guide)}
+
+Администратор обладает полными правами управления пользователями, правилами дисциплины, интервенциями и отчетами.
+
+\subsection{Управление пользователями (Users Management)}
+Раздел позволяет выполнять полные CRUD-операции над аккаунтами учеников и учителей.
+
+\begin{itemize}
+    \item \textbf{Создание пользователя (Add Teacher / Add Student):}
+    \begin{enumerate}
+        \item Нажмите кнопку \textbf{+ Add Teacher} или \textbf{+ Add Student}.
+        \item Введите Имя (First Name) и Фамилию (Last Name).
+        \item \textbf{Авто-подсказка логина:} Система автоматически предложит логин формата \texttt{f\_lastname} (например, \texttt{t\_test}). Вы можете кликнуть на подсказку \texttt{Suggestion: ...}.
+        \item \textbf{Генератор пароля:} Нажмите кнопку \textbf{Generate} для автоматического создания надёжного 8-значного пароля.
+        \item Для учителей укажите классный кабинет (Homeroom Class), для учеников — класс обучения.
+    \end{enumerate}
+    \item \textbf{Поиск и редактирование:} Воспользуйтесь строкой поиска по ФИО или логину для быстрого изменения данных или удаления аккаунта.
+\end{itemize}
+
+\subsection{Управление правилами и лимитами (Codes \& Rules Management)}
+Администратор формирует справочник правил школы и устанавливает права доступа и лимиты.
+
+\begin{table}[h!]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{Уровень доступа (Access Level)} & \textbf{Описние прав} \\ \hline
+\textbf{🌐 All Users} & Доступно для выставления всем учителям и администраторам. \\ \hline
+\textbf{👨‍🏫 Teachers \& Admins} & Доступно учителям и администраторам. \\ \hline
+\textbf{🔒 Admin Only} & Скрыто от учителей. Доступно только администраторам. \\ \hline
+\end{tabularx}
+\end{table}
+
+\subsubsection{Настройка ограничений LimitMD}
+При создании/редактировании правила вы можете включить галочку \textbf{«Установить лимит использования (LimitMD)»}:
+\begin{itemize}
+    \item \textbf{Max Uses:} Максимальное количество разрешенных применений правила к одному ученику.
+    \item \textbf{Тип сброса «Периодически» (period):}
+    \begin{itemize}
+        \item \texttt{daily} — авто-сброс каждый день в 00:00 UTC.
+        \item \texttt{weekly} — авто-сброс каждый понедельник в 00:00 UTC.
+        \item \texttt{monthly} — авто-сброс 1-го числа каждого месяца.
+        \item \texttt{none} — бессрочный лимит на всё время.
+    \end{itemize}
+    \item \textbf{Тип сброса «До даты» (until\_date):} Ограничение действует строго до выбранной даты истечения, после чего снимается автоматически.
+\end{itemize}
+
+\subsection{Центр управления интервенциями (Interventions Manager)}
+Система автоматически отслеживает снижение баллов учеников и формирует записи интервенций:
+\begin{itemize}
+    \item \textbf{Warning (41--50 pts):} Требуется формальное письменное предупреждение.
+    \item \textbf{Homeroom (31--40 pts):} Требуется разбор ситуации классным руководителем.
+    \item \textbf{Counselor ($\le$ 30 pts):} Обязательная беседа с психологом и родителями.
+\end{itemize}
+Администратор может ставить отметку \textbf{Parent Notified} (Родители уведомлены) и переводить интервенцию в статус \textbf{Resolved} (Разрешено).
+
+\subsection{Экспорт данных (Export Data)}
+В административной панели доступна функция скачивания отчетов в формате ZIP/Excel по учебным четвертям для архивного хранения и печатных ведомостей.
+
+\newpage
+
+% --- РАЗДЕЛ 5: FAQ ---
+\section{Часто задаваемые вопросы (FAQ)}
+
+\begin{description}
+    \item[Q: Что делать, если ученик забыл пароль?] \hfill \\
+    Администратор может найти ученика в разделе \textit{Users Management}, открыть редактирование и сгенерировать новый пароль кнопкой \textbf{Generate}.
+    
+    \item[Q: Удаляются ли записи лимитов при сбросе периода?] \hfill \\
+    Нет. База данных сохраняет полную историю всех выставок. Сбрасывается только окно вычисления статистики (счётчик за новый день/неделю).
+    
+    \item[Q: Почему учитель не видит определенное правило в списке?] \hfill \\
+    Данное правило имеет уровень доступа \textbf{Admin Only (🔒)}. Выставить его может только администратор.
+    
+    \item[Q: Как изменить классное руководство учителя?] \hfill \\
+    Перейдите в \textit{Users Management $\rightarrow$ Teachers}, нажмите иконку редактирования у нужного учителя и выберите новый класс в поле \textit{Homeroom Class}.
+\end{description}
+
+\vfill
+\begin{center}
+    \textcolor{gray}{\small Документ сгенерирован автоматически в системе MeritDemerit System v2.4.0}
+\end{center}
+
+\end{document}
