@@ -21,7 +21,73 @@ async def lifespan(app: FastAPI):
     bot_task: asyncio.Task | None = None
 
     await Tortoise.init(config=TORTOISE_ORM)
-    await Tortoise.generate_schemas()
+
+    # Apply pending schema changes safely via raw SQL (idempotent)
+    conn = Tortoise.get_connection("default")
+    try:
+        migration_stmts = [
+            # Migration 3: add access_level to disciplinerule
+            'ALTER TABLE "disciplinerule" ADD COLUMN IF NOT EXISTS "access_level" VARCHAR(20) NOT NULL DEFAULT \'all\'',
+            # Migration 3: add homeroom_class_id to teacher
+            'ALTER TABLE "teacher" ADD COLUMN IF NOT EXISTS "homeroom_class_id" INT REFERENCES "class" ("id") ON DELETE SET NULL',
+            # Migration 3: create limit_md table
+            """CREATE TABLE IF NOT EXISTS "limit_md" (
+                "id"           SERIAL NOT NULL PRIMARY KEY,
+                "max_uses"     INT NOT NULL DEFAULT 1,
+                "reset_type"   VARCHAR(20) NOT NULL DEFAULT 'period',
+                "reset_period" VARCHAR(20) DEFAULT 'weekly',
+                "reset_date"   DATE,
+                "created_at"   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                "rule_id"      INT NOT NULL UNIQUE REFERENCES "disciplinerule" ("id") ON DELETE CASCADE
+            )""",
+            # Migration 3: create intervention table
+            """CREATE TABLE IF NOT EXISTS "intervention" (
+                "id"              SERIAL NOT NULL PRIMARY KEY,
+                "level"           VARCHAR(20) NOT NULL,
+                "status"          VARCHAR(20) NOT NULL DEFAULT 'pending',
+                "parent_notified" BOOL NOT NULL DEFAULT FALSE,
+                "notes"           TEXT,
+                "created_at"      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                "updated_at"      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                "student_id"      INT NOT NULL REFERENCES "student" ("id") ON DELETE CASCADE
+            )""",
+            'CREATE INDEX IF NOT EXISTS "idx_intervention_student" ON "intervention" ("student_id")',
+            'CREATE INDEX IF NOT EXISTS "idx_intervention_status"  ON "intervention" ("status")',
+            # Migration 2: create exam_week table
+            """CREATE TABLE IF NOT EXISTS "exam_week" (
+                "id"         SERIAL NOT NULL PRIMARY KEY,
+                "title"      VARCHAR(100) NOT NULL,
+                "start_date" DATE NOT NULL,
+                "end_date"   DATE NOT NULL,
+                "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )""",
+            # Migration 2: create detention_history table
+            """CREATE TABLE IF NOT EXISTS "detention_history" (
+                "id"                 SERIAL NOT NULL PRIMARY KEY,
+                "start_date"         DATE NOT NULL,
+                "end_date"           DATE NOT NULL,
+                "status"             VARCHAR(20) NOT NULL DEFAULT 'active',
+                "notes"              TEXT,
+                "probation_end_date" DATE,
+                "is_exam_bypass"     BOOL NOT NULL DEFAULT FALSE,
+                "exam_week_title"    VARCHAR(100),
+                "created_at"         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                "updated_at"         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                "student_id"         INT NOT NULL REFERENCES "student" ("id") ON DELETE CASCADE,
+                "assigned_by_id"     INT REFERENCES "teacher" ("id") ON DELETE SET NULL
+            )""",
+            'CREATE INDEX IF NOT EXISTS "idx_detention_student" ON "detention_history" ("student_id")',
+            'CREATE INDEX IF NOT EXISTS "idx_detention_status"  ON "detention_history" ("status")',
+        ]
+        for stmt in migration_stmts:
+            await conn.execute_query(stmt)
+        logging.getLogger(__name__).info("Database schema migrations applied successfully")
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Schema migration error: {e}")
+
+    # Create any remaining tables not covered by manual migrations
+    await Tortoise.generate_schemas(safe=True)
+
     try:
         run_bot = os.getenv("RUN_BOT", "true").lower() in {"1", "true", "yes"}
         if run_bot:
