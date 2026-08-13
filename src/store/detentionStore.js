@@ -1,101 +1,97 @@
+// src/store/detentionStore.js
+// Replaces the previous localStorage/persist-based store with real API calls.
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { api } from '../services/api';
 
-export const useDetentionStore = create(
-  persist(
-    (set, get) => ({
-      detentions: [],
+export const useDetentionStore = create((set, get) => ({
+  detentions: [],
+  examWeeks: [],
+  loading: false,
+  error: null,
 
-      examWeeks: [
-        {
-          id: 'exam-1',
-          title: 'Fall Trimester Exams',
-          start_date: '2026-10-15',
-          end_date: '2026-10-22',
-        },
-      ],
+  // =================== DETENTIONS ===================
 
-      // === ACTION METHODS ===
-      addDetention: (record) => {
-        const newRecord = {
-          id: `det-${Date.now()}`,
-          created_at: new Date().toISOString(),
-          status: 'active',
-          probation_end_date: null,
-          probation_points_gained: 0,
-          notes: '',
-          ...record,
-        };
-
-        // Check if dates fall into Exam Week
-        const overlap = get().checkExamOverlap(newRecord.start_date, newRecord.end_date);
-        if (overlap) {
-          newRecord.status = 'deferred';
-          newRecord.notes += ` [Exam Week Bypass: Перенесено из-за экзаменов "${overlap.title}"]`;
-        }
-
-        set({ detentions: [newRecord, ...get().detentions] });
-        return newRecord;
-      },
-
-      updateDetentionStatus: (id, updates) => {
-        set({
-          detentions: get().detentions.map((d) => {
-            if (d.id !== id) return d;
-            const updated = { ...d, ...updates };
-
-            // Если отмечается отработанным (completed), включаем 2-Week Probation
-            if (updates.status === 'completed' && d.status !== 'completed') {
-              const compDate = new Date();
-              const probationEnd = new Date(compDate.getTime() + 14 * 86400000);
-              updated.probation_end_date = probationEnd.toISOString().split('T')[0];
-            }
-            return updated;
-          }),
-        });
-      },
-
-      deleteDetention: (id) => {
-        set({ detentions: get().detentions.filter((d) => d.id !== id) });
-      },
-
-      // === EXAM WEEKS ===
-      addExamWeek: (exam) => {
-        const newExam = {
-          id: `exam-${Date.now()}`,
-          ...exam,
-        };
-        set({ examWeeks: [...get().examWeeks, newExam] });
-      },
-
-      deleteExamWeek: (id) => {
-        set({ examWeeks: get().examWeeks.filter((e) => e.id !== id) });
-      },
-
-      checkExamOverlap: (startDate, endDate) => {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        return get().examWeeks.find((e) => {
-          const eStart = new Date(e.start_date);
-          const eEnd = new Date(e.end_date);
-          return (start <= eEnd && end >= eStart);
-        });
-      },
-
-      // Получить количество детеншнов студента
-      getStudentDetentionCount: (studentId) => {
-        return get().detentions.filter(
-          (d) => String(d.student_id) === String(studentId) && d.status !== 'cancelled'
-        ).length;
-      },
-
-      // Проверка флага 3-х детеншнов
-      isReenrollmentRequired: (studentId) => {
-        return get().getStudentDetentionCount(studentId) >= 3;
-      },
-    }),
-    {
-      name: 'meritdemerit_detentions',
+  fetchDetentions: async () => {
+    set({ loading: true, error: null });
+    try {
+      const data = await api.get('/admin/detentions');
+      set({ detentions: data || [], loading: false });
+      return data;
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('fetchDetentions failed', err);
+      set({ loading: false, error: 'Failed to load detentions' });
+      return null;
     }
-  )
-);
+  },
+
+  fetchStudentDetentions: async (studentId) => {
+    try {
+      const data = await api.get(`/admin/detentions/student/${studentId}`);
+      return data || [];
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('fetchStudentDetentions failed', err);
+      return [];
+    }
+  },
+
+  // Returns the created detention record from backend
+  addDetention: async (payload) => {
+    // payload: { student_id, start_date (YYYY-MM-DD), end_date, notes? }
+    const created = await api.post('/admin/detentions', payload);
+    set({ detentions: [created, ...get().detentions] });
+    return created;
+  },
+
+  updateDetentionStatus: async (id, updates) => {
+    // updates: { status?, notes?, probation_end_date? }
+    const updated = await api.put(`/admin/detentions/${id}`, updates);
+    set({
+      detentions: get().detentions.map((d) => (d.id === id ? updated : d)),
+    });
+    return updated;
+  },
+
+  deleteDetention: async (id) => {
+    await api.del(`/admin/detentions/${id}`);
+    set({ detentions: get().detentions.filter((d) => d.id !== id) });
+  },
+
+  // =================== EXAM WEEKS ===================
+
+  fetchExamWeeks: async () => {
+    try {
+      const data = await api.get('/admin/exam-weeks');
+      set({ examWeeks: data || [] });
+      return data;
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('fetchExamWeeks failed', err);
+      return null;
+    }
+  },
+
+  addExamWeek: async (payload) => {
+    // payload: { title, start_date, end_date }
+    const created = await api.post('/admin/exam-weeks', payload);
+    set({ examWeeks: [...get().examWeeks, created] });
+    return created;
+  },
+
+  deleteExamWeek: async (id) => {
+    await api.del(`/admin/exam-weeks/${id}`);
+    set({ examWeeks: get().examWeeks.filter((e) => e.id !== id) });
+  },
+
+  // =================== HELPERS (client-side) ===================
+
+  // Count non-cancelled detentions for a student (uses local state)
+  getStudentDetentionCount: (studentId) => {
+    return get().detentions.filter(
+      (d) => String(d.student_id) === String(studentId) && d.status !== 'cancelled'
+    ).length;
+  },
+
+  // True if student has >= 3 non-cancelled detentions
+  isReenrollmentRequired: (studentId) => {
+    return get().getStudentDetentionCount(studentId) >= 3;
+  },
+}));

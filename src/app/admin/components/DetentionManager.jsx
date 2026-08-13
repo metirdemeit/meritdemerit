@@ -48,6 +48,8 @@ export default function DetentionManager() {
   const {
     detentions,
     examWeeks,
+    fetchDetentions,
+    fetchExamWeeks,
     addDetention,
     updateDetentionStatus,
     deleteDetention,
@@ -62,7 +64,9 @@ export default function DetentionManager() {
   React.useEffect(() => {
     fetchStudents();
     fetchClasses();
-  }, [fetchStudents, fetchClasses]);
+    fetchDetentions();
+    fetchExamWeeks();
+  }, [fetchStudents, fetchClasses, fetchDetentions, fetchExamWeeks]);
 
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [openExamDialog, setOpenExamDialog] = useState(false);
@@ -71,7 +75,7 @@ export default function DetentionManager() {
   const [selectedClass, setSelectedClass] = useState('');
 
   const studentsInClass = selectedClass
-    ? students.filter((s) => (s.class_name || s.class || '') === selectedClass)
+    ? students.filter((s) => (s.school_class?.name || s.class_name || s.class || '') === selectedClass)
     : [];
 
   // Form State
@@ -92,26 +96,39 @@ export default function DetentionManager() {
     end_date: '',
   });
 
-  const handleCreateDetention = () => {
-    if (!formData.student_name.trim()) {
+  const handleCreateDetention = async () => {
+    if (!formData.student_id) {
       toast.error('Select a student');
       return;
     }
-    const created = addDetention(formData);
-    toast.success(`Detention assigned for ${created.student_name}`);
-    setOpenAddDialog(false);
-    setSelectedClass('');
-    setFormData(defaultForm);
+    try {
+      const created = await addDetention({
+        student_id: formData.student_id,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        notes: formData.notes,
+      });
+      toast.success(`Detention assigned for ${created?.student_name || 'student'}`);
+      setOpenAddDialog(false);
+      setSelectedClass('');
+      setFormData(defaultForm);
+    } catch (err) {
+      toast.error('Failed to assign detention');
+    }
   };
 
-  const handleCreateExamWeek = () => {
+  const handleCreateExamWeek = async () => {
     if (!examForm.title || !examForm.start_date || !examForm.end_date) {
       toast.error('Fill in all exam week fields');
       return;
     }
-    addExamWeek(examForm);
-    toast.success(`Exam Week "${examForm.title}" added`);
-    setExamForm({ title: '', start_date: '', end_date: '' });
+    try {
+      await addExamWeek(examForm);
+      toast.success(`Exam Week "${examForm.title}" added`);
+      setExamForm({ title: '', start_date: '', end_date: '' });
+    } catch (err) {
+      toast.error('Failed to add exam week');
+    }
   };
 
   // Студенты с 3+ детеншнами
