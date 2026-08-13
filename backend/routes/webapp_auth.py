@@ -380,11 +380,21 @@ class UserProfile(BaseModel):
     last_name: str | None
     telegram_id: int | None
     role: str
+    homeroom_class_id: int | None = None
+    homeroom_class_name: str | None = None
 
 
 @router.get("/me", response_model=UserProfile)
 async def read_users_me(current_user: Union[Student, Teacher, Admin] = Depends(get_current_user)):
     role = get_user_role(current_user)
+    class_id = None
+    class_name = None
+    if isinstance(current_user, Teacher):
+        await current_user.fetch_related("homeroom_class")
+        if current_user.homeroom_class:
+            class_id = current_user.homeroom_class.id
+            class_name = current_user.homeroom_class.name
+
     return {
         "id": current_user.id,
         "username": current_user.username,
@@ -392,4 +402,7 @@ async def read_users_me(current_user: Union[Student, Teacher, Admin] = Depends(g
         "last_name": current_user.last_name,
         "telegram_id": current_user.telegram_id,
         "role": role,
+        "homeroom_class_id": class_id,
+        "homeroom_class_name": class_name,
     }
+

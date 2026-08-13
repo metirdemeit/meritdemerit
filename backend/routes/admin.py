@@ -12,7 +12,11 @@ from tortoise.functions import Avg, Count
 from tortoise.expressions import Q
 from datetime import datetime, timedelta, timezone, date
 
-from backend.models import DisciplineRule, Teacher, Student, PointHistory, Admin, Class, AdminPointHistory, DetentionHistory, ExamWeek
+from backend.models import (
+    DisciplineRule, Teacher, Student, PointHistory, Admin, Class,
+    AdminPointHistory, DetentionHistory, ExamWeek, LimitMD, Intervention
+)
+from backend.utils.rules_helper import check_rule_limits_and_permissions, auto_trigger_interventions
 from backend.utils.security import get_current_admin, enforce_https
 from backend.utils.google_sheets import get_sheets_service, ensure_sheet, write_values
 from backend.utils.quarter_export import build_quarter_export_zip_bytes, load_quarter_export_rows
@@ -23,41 +27,93 @@ router = APIRouter(dependencies=[Depends(get_current_admin), Depends(enforce_htt
 
 # --- Pydantic Models ---
 
-# Rules
-RuleIn_Pydantic = pydantic_model_creator(
-    DisciplineRule, name="RuleIn", exclude_readonly=True
-)
-RuleOut_Pydantic = pydantic_model_creator(
-    DisciplineRule, name="RuleOut"
-)
+# Limits and Rules
+class LimitMDIn(BaseModel):
+    max_uses: int = 1
+    reset_type: Literal["period", "until_date"] = "period"
+    reset_period: Literal["daily", "weekly", "monthly", "none"] | None = "weekly"
+    reset_date: date | None = None
 
-class RuleUpdate(BaseModel):
-    description: str | None = None
-    points: int | None = None
-    type: Literal["merit", "demerit"] | None = None
+class LimitMDOut(BaseModel):
+    id: int
+    rule_id: int
+    max_uses: int
+    reset_type: str
+    reset_period: str | None
+    reset_date: date | None
+
+class RuleResponse(BaseModel):
+    id: int
+    description: str
+    points: int
+    type: str
+    access_level: str
+    limit: LimitMDOut | None = None
 
 class RuleCreate(BaseModel):
     description: str
     points: int
     type: Literal["merit", "demerit"] = "merit"
+    access_level: Literal["all", "teacher", "admin"] = "all"
+    limit: LimitMDIn | None = None
+
+class RuleUpdate(BaseModel):
+    description: str | None = None
+    points: int | None = None
+    type: Literal["merit", "demerit"] | None = None
+    access_level: Literal["all", "teacher", "admin"] | None = None
+    limit: LimitMDIn | None = None
 
 # Teachers
-Teacher_Pydantic = pydantic_model_creator(Teacher, name="TeacherOut")
-TeacherIn_Pydantic = pydantic_model_creator(
-    Teacher, name="TeacherIn", exclude=("id", "telegram_id", "password")
-)
+class TeacherOut(BaseModel):
+    id: int
+    username: str
+    first_name: str
+    last_name: str | None = None
+    telegram_id: int | None = None
+    homeroom_class_id: int | None = None
+    homeroom_class_name: str | None = None
 
-class TeacherCreate(TeacherIn_Pydantic):
+class TeacherCreate(BaseModel):
     username: str
     first_name: str
     last_name: str | None = None
     password: str
+    homeroom_class_id: int | None = None
 
 class TeacherUpdate(BaseModel):
     username: str | None = None
     first_name: str | None = None
     last_name: str | None = None
     password: str | None = None
+    homeroom_class_id: int | None = None
+
+# Interventions
+class InterventionCreate(BaseModel):
+    student_id: int
+    level: Literal["warning", "homeroom", "counselor"]
+    status: Literal["pending", "resolved"] = "pending"
+    parent_notified: bool = False
+    notes: str | None = None
+
+class InterventionUpdate(BaseModel):
+    status: Literal["pending", "resolved"] | None = None
+    parent_notified: bool | None = None
+    notes: str | None = None
+
+class InterventionOut(BaseModel):
+    id: int
+    student_id: int
+    student_name: str
+    student_class: str
+    student_points: int
+    level: str
+    status: str
+    parent_notified: bool
+    notes: str | None
+    created_at: datetime
+    updated_at: datetime
+
 
 # Students
 Student_Pydantic = pydantic_model_creator(Student, name="StudentOut")
@@ -351,9 +407,60 @@ async def delete_student(student_id: int):
     await student.delete()
     return None
 
+# --- Helpers ---
+
+async def _build_teacher_out(teacher: Teacher) -> TeacherOut:
+    await teacher.fetch_related("homeroom_class")
+    return TeacherOut(
+        id=teacher.id,
+        username=teacher.username,
+        first_name=teacher.first_name,
+        last_name=teacher.last_name,
+        telegram_id=teacher.telegram_id,
+        homeroom_class_id=teacher.homeroom_class.id if teacher.homeroom_class else None,
+        homeroom_class_name=teacher.homeroom_class.name if teacher.homeroom_class else None,
+    )
+
+async def _build_rule_out(rule: DisciplineRule) -> RuleResponse:
+    limit = await LimitMD.get_or_none(rule_id=rule.id)
+    limit_out = None
+    if limit:
+        limit_out = LimitMDOut(
+            id=limit.id,
+            rule_id=limit.rule_id,
+            max_uses=limit.max_uses,
+            reset_type=limit.reset_type,
+            reset_period=limit.reset_period,
+            reset_date=limit.reset_date,
+        )
+    return RuleResponse(
+        id=rule.id,
+        description=rule.description,
+        points=rule.points,
+        type=rule.type,
+        access_level=rule.access_level,
+        limit=limit_out,
+    )
+
+async def _build_intervention_out(item: Intervention) -> InterventionOut:
+    await item.fetch_related("student", "student__school_class")
+    return InterventionOut(
+        id=item.id,
+        student_id=item.student.id,
+        student_name=f"{item.student.first_name} {item.student.last_name or ''}".strip(),
+        student_class=item.student.school_class.name if item.student.school_class else "Без класса",
+        student_points=item.student.points,
+        level=item.level,
+        status=item.status,
+        parent_notified=item.parent_notified,
+        notes=item.notes,
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+    )
+
 # --- Teachers CRUD ---
 
-@router.post("/teachers", response_model=Teacher_Pydantic, status_code=status.HTTP_201_CREATED, summary="Create teacher")
+@router.post("/teachers", response_model=TeacherOut, status_code=status.HTTP_201_CREATED, summary="Create teacher")
 async def create_teacher(teacher_data: TeacherCreate):
     try:
         teacher = await Teacher.create(
@@ -361,48 +468,40 @@ async def create_teacher(teacher_data: TeacherCreate):
             first_name=teacher_data.first_name,
             last_name=teacher_data.last_name,
             password=teacher_data.password,
+            homeroom_class_id=teacher_data.homeroom_class_id,
         )
-        return await Teacher_Pydantic.from_tortoise_orm(teacher)
+        return await _build_teacher_out(teacher)
     except IntegrityError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already exists"
         )
 
-@router.get("/teachers", response_model=List[Teacher_Pydantic], summary="Get all teachers")
+@router.get("/teachers", response_model=List[TeacherOut], summary="Get all teachers")
 async def get_all_teachers():
-    teachers = Teacher.all()
-    return await Teacher_Pydantic.from_queryset(teachers)
+    teachers = await Teacher.all().prefetch_related("homeroom_class")
+    return [await _build_teacher_out(t) for t in teachers]
 
-@router.get("/teachers/{teacher_id}", response_model=Teacher_Pydantic, summary="Get teacher by ID")
+@router.get("/teachers/{teacher_id}", response_model=TeacherOut, summary="Get teacher by ID")
 async def get_teacher(teacher_id: int):
-    """
-    Get a specific teacher by ID.
-    """
     teacher = await Teacher.get_or_none(id=teacher_id)
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
-    return await Teacher_Pydantic.from_tortoise_orm(teacher)
+    return await _build_teacher_out(teacher)
 
-@router.put("/teachers/{teacher_id}", response_model=Teacher_Pydantic, summary="Update teacher")
+@router.put("/teachers/{teacher_id}", response_model=TeacherOut, summary="Update teacher")
 async def update_teacher(teacher_id: int, teacher_data: TeacherUpdate):
-    """
-    Update a teacher.
-    """
     teacher = await Teacher.get_or_none(id=teacher_id)
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
     
-    update_data = teacher_data.dict(exclude_unset=True)
+    update_data = teacher_data.model_dump(exclude_unset=True)
     await teacher.update_from_dict(update_data)
     await teacher.save()
-    return await Teacher_Pydantic.from_tortoise_orm(teacher)
+    return await _build_teacher_out(teacher)
 
 @router.delete("/teachers/{teacher_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete teacher")
 async def delete_teacher(teacher_id: int):
-    """
-    Delete a teacher.
-    """
     teacher = await Teacher.get_or_none(id=teacher_id)
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
@@ -412,42 +511,113 @@ async def delete_teacher(teacher_id: int):
 
 # --- Rules CRUD ---
 
-@router.post("/rules", response_model=RuleOut_Pydantic, status_code=status.HTTP_201_CREATED, summary="Create rule")
+@router.post("/rules", response_model=RuleResponse, status_code=status.HTTP_201_CREATED, summary="Create rule")
 async def create_rule(rule_data: RuleCreate):
-    """
-    Create a new discipline rule.
-    """
-    rule = await DisciplineRule.create(**rule_data.dict())
-    return await RuleOut_Pydantic.from_tortoise_orm(rule)
+    limit_data = rule_data.limit
+    rule_dict = rule_data.model_dump(exclude={"limit"})
+    rule = await DisciplineRule.create(**rule_dict)
 
-@router.get("/rules", response_model=List[RuleOut_Pydantic], summary="Get all rules")
+    if limit_data:
+        await LimitMD.create(
+            rule_id=rule.id,
+            max_uses=limit_data.max_uses,
+            reset_type=limit_data.reset_type,
+            reset_period=limit_data.reset_period,
+            reset_date=limit_data.reset_date,
+        )
+    return await _build_rule_out(rule)
+
+@router.get("/rules", response_model=List[RuleResponse], summary="Get all rules")
 async def get_all_rules():
-    """
-    Get all discipline rules.
-    """
-    rules = DisciplineRule.all()
-    return await RuleOut_Pydantic.from_queryset(rules)
+    rules = await DisciplineRule.all()
+    return [await _build_rule_out(r) for r in rules]
 
-@router.get("/rules/{rule_id}", response_model=RuleOut_Pydantic, summary="Get rule by ID")
+@router.get("/rules/{rule_id}", response_model=RuleResponse, summary="Get rule by ID")
 async def get_rule(rule_id: int):
-    """
-    Get a specific rule by ID.
-    """
     rule = await DisciplineRule.get_or_none(id=rule_id)
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found")
-    return await RuleOut_Pydantic.from_tortoise_orm(rule)
+    return await _build_rule_out(rule)
 
-@router.put("/rules/{rule_id}", response_model=RuleOut_Pydantic, summary="Update rule")
+@router.put("/rules/{rule_id}", response_model=RuleResponse, summary="Update rule")
 async def update_rule(rule_id: int, rule_details: RuleUpdate):
-    """
-    Update a discipline rule.
-    """
     rule = await DisciplineRule.get_or_none(id=rule_id)
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found")
-    
-    update_data = rule_details.dict(exclude_unset=True)
+
+    update_data = rule_details.model_dump(exclude_unset=True)
+    limit_data = update_data.pop("limit", None)
+
+    if update_data:
+        await rule.update_from_dict(update_data)
+        await rule.save()
+
+    if limit_data is not None:
+        existing_limit = await LimitMD.get_or_none(rule_id=rule.id)
+        if limit_data is None or (isinstance(limit_data, dict) and limit_data.get("max_uses") == 0):
+            if existing_limit:
+                await existing_limit.delete()
+        elif isinstance(limit_data, dict):
+            if existing_limit:
+                await existing_limit.update_from_dict(limit_data)
+                await existing_limit.save()
+            else:
+                await LimitMD.create(rule_id=rule.id, **limit_data)
+
+    return await _build_rule_out(rule)
+
+@router.delete("/rules/{rule_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete rule")
+async def delete_rule(rule_id: int):
+    rule = await DisciplineRule.get_or_none(id=rule_id)
+    if not rule:
+        raise HTTPException(status_code=404, detail="Rule not found")
+
+    await rule.delete()
+    return None
+
+# --- Interventions CRUD ---
+
+@router.get("/interventions", response_model=List[InterventionOut], summary="Get all interventions")
+async def get_interventions():
+    items = await Intervention.all().prefetch_related("student", "student__school_class").order_by("-created_at")
+    return [await _build_intervention_out(item) for item in items]
+
+@router.post("/interventions", response_model=InterventionOut, status_code=status.HTTP_201_CREATED, summary="Create intervention")
+async def create_intervention(payload: InterventionCreate):
+    student = await Student.get_or_none(id=payload.student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    item = await Intervention.create(
+        student_id=payload.student_id,
+        level=payload.level,
+        status=payload.status,
+        parent_notified=payload.parent_notified,
+        notes=payload.notes,
+    )
+    return await _build_intervention_out(item)
+
+@router.patch("/interventions/{intervention_id}", response_model=InterventionOut, summary="Update intervention")
+async def update_intervention(intervention_id: int, payload: InterventionUpdate):
+    item = await Intervention.get_or_none(id=intervention_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Intervention not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    if update_data:
+        await item.update_from_dict(update_data)
+        await item.save()
+
+    return await _build_intervention_out(item)
+
+@router.delete("/interventions/{intervention_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete intervention")
+async def delete_intervention(intervention_id: int):
+    item = await Intervention.get_or_none(id=intervention_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Intervention not found")
+    await item.delete()
+    return None
+
     await rule.update_from_dict(update_data)
     await rule.save()
     return await RuleOut_Pydantic.from_tortoise_orm(rule)
@@ -907,20 +1077,23 @@ async def admin_get_rule_class_students(rule_id: int, class_id: int):
 @router.post("/workflow/assign", status_code=status.HTTP_201_CREATED, summary="Assign points using workflow (admin)")
 async def admin_workflow_assign_points(assignment: AdminAssignment, current_admin: Admin = Depends(get_current_admin)):
     """
-    Assign points using the workflow system (admin version).
+    Assign points using the workflow system (admin version). Checks limits and auto-triggers interventions.
     """
     if not assignment.student_ids or not assignment.rule_ids:
         raise HTTPException(status_code=400, detail="Student and rule IDs cannot be empty.")
 
+    rules = await DisciplineRule.filter(id__in=assignment.rule_ids)
+    if len(rules) != len(assignment.rule_ids):
+        raise HTTPException(status_code=404, detail="One or more rules not found")
+
+    students_to_update = await Student.filter(id__in=assignment.student_ids)
+    if len(students_to_update) != len(assignment.student_ids):
+        raise HTTPException(status_code=404, detail="One or more students not found")
+
+    # 1. Check limits
+    await check_rule_limits_and_permissions(students_to_update, rules, is_teacher=False)
+
     async with in_transaction():
-        rules = await DisciplineRule.filter(id__in=assignment.rule_ids)
-        if len(rules) != len(assignment.rule_ids):
-            raise HTTPException(status_code=404, detail="One or more rules not found")
-
-        students_to_update = await Student.filter(id__in=assignment.student_ids)
-        if len(students_to_update) != len(assignment.student_ids):
-            raise HTTPException(status_code=404, detail="One or more students not found")
-
         history_records: list[AdminPointHistory] = []
         total_points_map = {student.id: 0 for student in students_to_update}
 
@@ -944,6 +1117,9 @@ async def admin_workflow_assign_points(assignment: AdminAssignment, current_admi
 
         # Bulk create history records
         await AdminPointHistory.bulk_create(history_records)
+
+    # 2. Auto-trigger interventions if points dropped into risk zones
+    await auto_trigger_interventions(students_to_update)
 
     return {
         "message": f"Points assigned successfully to {len(students_to_update)} students using {len(rules)} rules.",

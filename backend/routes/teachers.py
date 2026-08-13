@@ -65,14 +65,20 @@ async def get_current_teacher(current_user: Teacher = Depends(get_current_user))
 @router.get("/me", response_model=TeacherProfile, summary="Get teacher profile")
 async def get_teacher_profile(teacher: Teacher = Depends(get_current_teacher)):
     """
-    Get current teacher's profile information.
+    Get current teacher's profile information with homeroom class.
     """
+    await teacher.fetch_related("homeroom_class")
+    class_id = teacher.homeroom_class.id if teacher.homeroom_class else None
+    class_name = teacher.homeroom_class.name if teacher.homeroom_class else None
+
     return TeacherProfile(
         id=teacher.id,
         username=teacher.username,
         first_name=teacher.first_name,
         last_name=teacher.last_name,
-        telegram_id=teacher.telegram_id
+        telegram_id=teacher.telegram_id,
+        homeroom_class_id=class_id,
+        homeroom_class_name=class_name,
     )
 
 # --- Assignment ---
@@ -80,22 +86,25 @@ async def get_teacher_profile(teacher: Teacher = Depends(get_current_teacher)):
 @router.post("/workflow/assign", status_code=status.HTTP_201_CREATED, summary="Assign points to students")
 async def assign_points(assignment: WorkflowAssignment, teacher: Teacher = Depends(get_current_teacher)):
     """
-    Assign points to students using rules.
+    Assign points to students using rules. Checks access level and rule limits.
     """
     if not assignment.student_ids or not assignment.rule_ids:
         raise HTTPException(status_code=400, detail="Student and rule IDs cannot be empty.")
 
+    # Validate rules exist
+    rules = await DisciplineRule.filter(id__in=assignment.rule_ids)
+    if len(rules) != len(assignment.rule_ids):
+        raise HTTPException(status_code=404, detail="One or more rules not found")
+
+    # Validate students exist
+    students_to_update = await Student.filter(id__in=assignment.student_ids)
+    if len(students_to_update) != len(assignment.student_ids):
+        raise HTTPException(status_code=404, detail="One or more students not found")
+
+    # 1. Check permissions and limits
+    await check_rule_limits_and_permissions(students_to_update, rules, is_teacher=True)
+
     async with in_transaction():
-        # Validate rules exist
-        rules = await DisciplineRule.filter(id__in=assignment.rule_ids)
-        if len(rules) != len(assignment.rule_ids):
-            raise HTTPException(status_code=404, detail="One or more rules not found")
-
-        # Validate students exist
-        students_to_update = await Student.filter(id__in=assignment.student_ids)
-        if len(students_to_update) != len(assignment.student_ids):
-            raise HTTPException(status_code=404, detail="One or more students not found")
-
         history_records = []
         total_points_map = {student.id: 0 for student in students_to_update}
 
@@ -120,6 +129,9 @@ async def assign_points(assignment: WorkflowAssignment, teacher: Teacher = Depen
 
         # Bulk create history records
         await PointHistory.bulk_create(history_records)
+
+    # 2. Auto-trigger interventions if points dropped into risk zones
+    await auto_trigger_interventions(students_to_update)
 
     return {
         "message": f"Points assigned successfully to {len(students_to_update)} students using {len(rules)} rules.",
