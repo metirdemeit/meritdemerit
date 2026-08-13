@@ -44,7 +44,7 @@ export const useDetentionStore = create((set, get) => ({
 
   updateDetentionStatus: async (id, updates) => {
     // updates: { status?, notes?, probation_end_date? }
-    const updated = await api.put(`/admin/detentions/${id}`, updates);
+    const updated = await api.patch(`/admin/detentions/${id}`, updates);
     set({
       detentions: get().detentions.map((d) => (d.id === id ? updated : d)),
     });

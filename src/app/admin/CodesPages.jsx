@@ -37,8 +37,9 @@ import DeleteConfirmationDialog from '../components/dialogs/DeleteConfirmationDi
 export function CodesPages() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user } = useAuthStore();
   const {
+    rules,
+    fetchRules,
     assignPoints,
     createRule,
     updateRule,
@@ -46,10 +47,8 @@ export function CodesPages() {
   } = useAdminStore();
   
   const {
-    rules,
     classes,
     students,
-    fetchRules,
     fetchClasses,
     fetchStudentsByClass,
   } = useCommonStore();

@@ -169,6 +169,6 @@ export const useAdminStore = create((set, get) => ({
 
   // === WORKFLOW ===
   assignPoints: async (payload) => {
-    await api.post('/admin/assign', payload);
+    return await api.post('/admin/workflow/assign', payload);
   },
 }));

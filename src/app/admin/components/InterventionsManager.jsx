@@ -27,8 +27,9 @@ import { useAdminStore } from '../../../store/adminStore';
 import toast from 'react-hot-toast';
 
 // Определить уровень вмешательства по баллам
+// Определить уровень вмешательства по баллам
 function getInterventionLevel(points) {
-  if (points >= 21 && points <= 30) return 'counselor';
+  if (points <= 30) return 'counselor';
   if (points >= 31 && points <= 40) return 'homeroom';
   if (points >= 41 && points <= 50) return 'warning';
   return null;
@@ -48,8 +49,8 @@ function getInterventionMeta(level) {
     Icon: School,
   };
   return {
-    label: '21-30 pts: Counselor Intervention',
-    desc: 'Student points dropped into 21-30 range. Mandatory counselor meeting with parents required.',
+    label: '≤30 pts: Counselor Intervention',
+    desc: 'Student points dropped into 30 or lower. Mandatory counselor meeting with parents required.',
     badgeBg: 'rgba(235, 43, 75, 0.2)', badgeColor: '#FF5252', borderColor: 'rgba(235, 43, 75, 0.6)',
     Icon: Psychology,
   };
@@ -68,35 +69,6 @@ export default function InterventionsManager() {
     };
     load();
   }, [fetchStudents, fetchInterventions]);
-
-  // Автоматически создаём алерты для студентов с баллами 21-50
-  // Не дублируем: проверяем по student_id
-  useEffect(() => {
-    if (!students || students.length === 0) return;
-    students.forEach((s) => {
-      const pts = s.points ?? 100;
-      const level = getInterventionLevel(pts);
-      if (!level) return;
-      const name = `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.username;
-      // Проверяем: нет ли уже pending алерта для этого студента этого уровня
-      const already = interventions.find(
-        (i) => String(i.student_id) === String(s.id) && i.level === level && i.status === 'pending'
-      );
-      if (!already) {
-        const meta = getInterventionMeta(level);
-        addIntervention({
-          student_id: s.id,
-          student_name: name,
-          class_name: s.class_name || 'N/A',
-          points: pts,
-          level,
-          title: meta.label,
-          description: meta.desc,
-        });
-      }
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [students]);
 
   const allAlerts = interventions;
   const pendingList = allAlerts.filter((i) => i.status === 'pending');
