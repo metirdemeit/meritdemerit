@@ -10,9 +10,9 @@ from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.exceptions import DoesNotExist, IntegrityError
 from tortoise.functions import Avg, Count
 from tortoise.expressions import Q
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 
-from backend.models import DisciplineRule, Teacher, Student, PointHistory, Admin, Class, AdminPointHistory
+from backend.models import DisciplineRule, Teacher, Student, PointHistory, Admin, Class, AdminPointHistory, DetentionHistory, ExamWeek
 from backend.utils.security import get_current_admin, enforce_https
 from backend.utils.google_sheets import get_sheets_service, ensure_sheet, write_values
 from backend.utils.quarter_export import build_quarter_export_zip_bytes, load_quarter_export_rows
@@ -951,3 +951,237 @@ async def admin_workflow_assign_points(assignment: AdminAssignment, current_admi
         "rules_used": len(rules),
         "total_points": sum(total_points_map.values())
     }
+
+
+# =============================================================================
+# DETENTION HISTORY
+# =============================================================================
+
+# --- Pydantic schemas ---
+
+class ExamWeekCreate(BaseModel):
+    title: str
+    start_date: date
+    end_date: date
+
+class ExamWeekOut(BaseModel):
+    id: int
+    title: str
+    start_date: date
+    end_date: date
+
+    class Config:
+        from_attributes = True
+
+
+class DetentionCreate(BaseModel):
+    student_id: int
+    start_date: date
+    end_date: date
+    notes: str | None = None
+
+
+class DetentionUpdate(BaseModel):
+    status: str | None = None           # active | completed | deferred | cancelled
+    notes: str | None = None
+    probation_end_date: date | None = None
+
+
+class DetentionOut(BaseModel):
+    id: int
+    student_id: int
+    student_name: str           # from student.first_name + last_name
+    class_name: str | None      # from student.school_class.name (FK, not denorm.)
+    current_points: int         # from student.points at query time (not stored)
+    start_date: date
+    end_date: date
+    status: str
+    notes: str | None
+    probation_end_date: date | None
+    is_exam_bypass: bool
+    exam_week_title: str | None
+    assigned_by_name: str | None  # from assigned_by.first_name + last_name or "Admin"
+    created_at: datetime
+
+
+# --- Helper ---
+
+def _check_exam_overlap(start: date, end: date, exam_weeks: list[ExamWeek]) -> ExamWeek | None:
+    """Return the first ExamWeek that overlaps with the given date range."""
+    for ew in exam_weeks:
+        if start <= ew.end_date and end >= ew.start_date:
+            return ew
+    return None
+
+
+async def _build_detention_out(d: DetentionHistory) -> DetentionOut:
+    """Build DetentionOut from a prefetched DetentionHistory record."""
+    student = d.student
+    class_name = None
+    if hasattr(student, "school_class") and student.school_class:
+        class_name = student.school_class.name
+
+    assigned_by_name = "Admin"
+    if hasattr(d, "assigned_by") and d.assigned_by:
+        t = d.assigned_by
+        assigned_by_name = f"{t.first_name} {t.last_name or ''}".strip()
+
+    return DetentionOut(
+        id=d.id,
+        student_id=student.id,
+        student_name=f"{student.first_name} {student.last_name or ''}".strip(),
+        class_name=class_name,
+        current_points=student.points,   # always live from Student table
+        start_date=d.start_date,
+        end_date=d.end_date,
+        status=d.status,
+        notes=d.notes,
+        probation_end_date=d.probation_end_date,
+        is_exam_bypass=d.is_exam_bypass,
+        exam_week_title=d.exam_week_title,
+        assigned_by_name=assigned_by_name,
+        created_at=d.created_at,
+    )
+
+
+_DETENTION_PREFETCH = ["student", "student__school_class", "assigned_by"]
+
+
+# =============================================================================
+# EXAM WEEKS endpoints
+# =============================================================================
+
+@router.get("/exam-weeks", response_model=List[ExamWeekOut], summary="List all exam weeks")
+async def list_exam_weeks():
+    """Get all exam week periods."""
+    weeks = await ExamWeek.all().order_by("start_date")
+    return [ExamWeekOut(
+        id=w.id,
+        title=w.title,
+        start_date=w.start_date,
+        end_date=w.end_date,
+    ) for w in weeks]
+
+
+@router.post("/exam-weeks", response_model=ExamWeekOut, status_code=status.HTTP_201_CREATED,
+             summary="Create exam week")
+async def create_exam_week(payload: ExamWeekCreate):
+    """Create a new exam week period."""
+    ew = await ExamWeek.create(
+        title=payload.title,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+    )
+    return ExamWeekOut(id=ew.id, title=ew.title, start_date=ew.start_date, end_date=ew.end_date)
+
+
+@router.delete("/exam-weeks/{exam_week_id}", status_code=status.HTTP_204_NO_CONTENT,
+               summary="Delete exam week")
+async def delete_exam_week(exam_week_id: int):
+    """Delete an exam week period."""
+    ew = await ExamWeek.get_or_none(id=exam_week_id)
+    if not ew:
+        raise HTTPException(status_code=404, detail="Exam week not found")
+    await ew.delete()
+    return None
+
+
+# =============================================================================
+# DETENTIONS endpoints
+# =============================================================================
+
+@router.get("/detentions", response_model=List[DetentionOut], summary="List all detentions")
+async def list_detentions():
+    """Get all detention records ordered newest first."""
+    records = await DetentionHistory.all().prefetch_related(*_DETENTION_PREFETCH).order_by("-created_at")
+    return [await _build_detention_out(d) for d in records]
+
+
+@router.get("/detentions/student/{student_id}", response_model=List[DetentionOut],
+            summary="Get detentions for a specific student")
+async def list_student_detentions(student_id: int):
+    """Get all detention records for a given student."""
+    student = await Student.get_or_none(id=student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    records = await DetentionHistory.filter(student_id=student_id).prefetch_related(
+        *_DETENTION_PREFETCH
+    ).order_by("-created_at")
+    return [await _build_detention_out(d) for d in records]
+
+
+@router.post("/detentions", response_model=DetentionOut, status_code=status.HTTP_201_CREATED,
+             summary="Create a detention record")
+async def create_detention(
+    payload: DetentionCreate,
+    current_admin: Admin = Depends(get_current_admin),
+):
+    """
+    Create a new detention record for a student.
+    - Automatically checks active ExamWeek periods: if the dates overlap, status is set to
+      'deferred' and exam_week_title is recorded.
+    """
+    student = await Student.get_or_none(id=payload.student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    # Check exam week overlap
+    exam_weeks = await ExamWeek.all()
+    overlap = _check_exam_overlap(payload.start_date, payload.end_date, exam_weeks)
+
+    det_status = "active"
+    is_bypass = False
+    exam_title = None
+    if overlap:
+        det_status = "deferred"
+        is_bypass = True
+        exam_title = overlap.title
+
+    record = await DetentionHistory.create(
+        student_id=payload.student_id,
+        assigned_by=None,               # Admin created — no teacher FK
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        notes=payload.notes,
+        status=det_status,
+        is_exam_bypass=is_bypass,
+        exam_week_title=exam_title,
+    )
+
+    await record.fetch_related(*_DETENTION_PREFETCH)
+    return await _build_detention_out(record)
+
+
+@router.patch("/detentions/{detention_id}", response_model=DetentionOut,
+              summary="Update detention status or notes")
+async def update_detention(detention_id: int, payload: DetentionUpdate):
+    """
+    Update a detention record.
+    - If status changes to 'completed', probation_end_date is automatically set to today + 14 days.
+    """
+    record = await DetentionHistory.get_or_none(id=detention_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Detention not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+
+    # Auto-set probation when marking completed
+    if update_data.get("status") == "completed" and record.status != "completed":
+        from datetime import date as _date
+        update_data["probation_end_date"] = _date.today() + timedelta(days=14)
+
+    await record.update_from_dict(update_data)
+    await record.save()
+    await record.fetch_related(*_DETENTION_PREFETCH)
+    return await _build_detention_out(record)
+
+
+@router.delete("/detentions/{detention_id}", status_code=status.HTTP_204_NO_CONTENT,
+               summary="Delete a detention record")
+async def delete_detention(detention_id: int):
+    """Delete a detention record."""
+    record = await DetentionHistory.get_or_none(id=detention_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Detention not found")
+    await record.delete()
+    return None

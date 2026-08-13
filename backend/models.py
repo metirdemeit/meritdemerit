@@ -85,3 +85,56 @@ class AdminPointHistory(models.Model):
 
     def __str__(self):
         return f"{self.student} got {self.points_changed} points from Admin for {self.rule}"
+
+
+class ExamWeek(models.Model):
+    """Exam week periods where detention is automatically bypassed (deferred)."""
+    id = fields.IntField(pk=True)
+    title = fields.CharField(max_length=100)
+    start_date = fields.DateField()
+    end_date = fields.DateField()
+    created_at = fields.DatetimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.start_date} – {self.end_date})"
+
+    class Meta:
+        table = "exam_week"
+
+
+class DetentionHistory(models.Model):
+    """Detention records. class_name and current_points are read via FK from Student."""
+    id = fields.IntField(pk=True)
+
+    # class_name → student.school_class.name (never denormalized)
+    # current_points → student.points at query time (never stored here)
+    student = fields.ForeignKeyField(
+        "models.Student", related_name="detentions", on_delete=fields.CASCADE
+    )
+    # NULL means assigned by Admin
+    assigned_by = fields.ForeignKeyField(
+        "models.Teacher", related_name="assigned_detentions",
+        null=True, on_delete=fields.SET_NULL
+    )
+
+    start_date = fields.DateField()
+    end_date = fields.DateField()
+
+    # active | completed | deferred | cancelled
+    status = fields.CharField(max_length=20, default="active")
+    notes = fields.TextField(null=True)
+    # Set to 14 days after status → completed
+    probation_end_date = fields.DateField(null=True)
+
+    is_exam_bypass = fields.BooleanField(default=False)
+    exam_week_title = fields.CharField(max_length=100, null=True)
+
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Detention #{self.id} – student_id={self.student_id} [{self.status}]"
+
+    class Meta:
+        table = "detention_history"
+
