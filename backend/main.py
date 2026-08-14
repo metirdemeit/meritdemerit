@@ -131,11 +131,11 @@ app.add_middleware(
 )
 
 
-app.include_router(common.router, prefix="", tags=["Common"])
 app.include_router(webapp_auth.router, prefix="/auth", tags=["WebApp Auth"])
 app.include_router(students.router, prefix="/students", tags=["Students"])
 app.include_router(teachers.router, prefix="/teacher", tags=["Teachers"])
 app.include_router(admin.router, prefix="/admin", tags=["Admin"])
+app.include_router(common.router, prefix="", tags=["Common"])  # MUST be last: contains /students/{id} catchall
 
 
 @app.get("/")
