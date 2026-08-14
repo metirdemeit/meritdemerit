@@ -101,9 +101,62 @@ export const useAuthStore = create((set) => ({
   // === init on app start ===
   initialize: async () => {
     const token = localStorage.getItem('access_token');
-    if (!token) return;
 
-    await useAuthStore.getState().fetchProfile();
+    // Если токен уже есть — просто проверяем профиль
+    if (token) {
+      await useAuthStore.getState().fetchProfile();
+      return;
+    }
+
+    // Нет токена → пробуем Telegram Quick Auto-Login
+    // Получаем initData из реального Telegram WebApp или cookie
+    const { getCookie } = await import('../utils/cookies');
+    const { extractTelegramIdFromInitData, generateMockInitData, getSavedUsername, isDevMode } = await import('../utils/devHelpers');
+
+    let initData = null;
+    if (window.Telegram?.WebApp?.initData) {
+      initData = window.Telegram.WebApp.initData;
+    } else if (isDevMode()) {
+      // В dev режиме — мок initData для тестирования
+      const savedUsername = getSavedUsername();
+      if (savedUsername) {
+        initData = generateMockInitData(savedUsername);
+      }
+    }
+
+    if (!initData) return; // Нет initData — обычный LoginPage
+
+    const telegramId = extractTelegramIdFromInitData(initData);
+    if (!telegramId) return;
+
+    try {
+      const data = await (await import('../services/api')).api.post(
+        '/auth/quick',
+        { init_data: initData },
+        { skipErrorToast: true }  // не показывать ошибку если пользователь ещё не привязан
+      );
+
+      if (data?.access_token) {
+        localStorage.setItem('access_token', data.access_token);
+
+        const userObj = {
+          id: data.user_id,
+          username: data.username,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          telegram_id: data.telegram_id,
+          role: data.role,
+        };
+
+        set({
+          user: userObj,
+          isAuthenticated: true,
+          loading: false,
+        });
+      }
+    } catch {
+      // 404 = пользователь ещё не привязан → показываем LoginPage, это нормально
+    }
   },
 
   // === logout ===
