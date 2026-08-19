@@ -216,7 +216,8 @@ const styles = {
     minHeight: '50vh',
   },
   headerSection: {
-    pt: 3,
+    pt: 4,
+    mt: 2,
     pb: 4,
     px: 2,
   },

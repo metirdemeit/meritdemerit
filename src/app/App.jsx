@@ -49,7 +49,11 @@ export function App({ telegramReady = false }) {
 
   return (
     <>
-      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+      <Toaster
+        position="top-center"
+        containerStyle={{ top: 95 }}
+        toastOptions={{ duration: 3000 }}
+      />
 
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Box sx={styles.container}>
@@ -81,7 +85,7 @@ const styles = {
   },
   main: {
     flexGrow: 1,
-    pt: 'calc(env(safe-area-inset-top, 0px) + 55px)',
+    pt: 'calc(env(safe-area-inset-top, 0px) + 95px)',
     pb: 8,
     minHeight: '100vh',
   },

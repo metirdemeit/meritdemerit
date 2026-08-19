@@ -14,13 +14,31 @@ import {
 import { Visibility, Groups } from '@mui/icons-material';
 
 function getGradeGroup(ranking) {
-  const className = ranking?.class_name || ranking?.school_class?.name || '';
-  const match = className.match(/\d+/);
+  // Extract class name from any possible key format
+  const rawClass = ranking?.class_name ||
+                   (typeof ranking?.school_class === 'string' ? ranking?.school_class : ranking?.school_class?.name) ||
+                   ranking?.student?.class_name ||
+                   (typeof ranking?.student?.school_class === 'string' ? ranking?.student?.school_class : ranking?.student?.school_class?.name) ||
+                   '';
+
+  const match = String(rawClass).match(/\d+/);
   if (match) {
     const gradeNum = parseInt(match[0], 10);
     if (gradeNum >= 6 && gradeNum <= 8) return '6-8';
     if (gradeNum >= 9 && gradeNum <= 12) return '9-12';
   }
+
+  // Fallback by class ID (1..6 = 6A..8B -> 6-8; 7..14 = 9A..12B -> 9-12)
+  const classId = ranking?.class_id || 
+                  ranking?.school_class_id || 
+                  (typeof ranking?.school_class === 'number' ? ranking?.school_class : ranking?.school_class?.id) ||
+                  (typeof ranking?.student?.school_class === 'number' ? ranking?.student?.school_class : ranking?.student?.school_class?.id);
+
+  if (classId) {
+    if (classId >= 1 && classId <= 6) return '6-8';
+    if (classId >= 7 && classId <= 14) return '9-12';
+  }
+
   return '6-8';
 }
 
@@ -108,7 +126,7 @@ export default function CommonRankingTable({ rankings = [] }) {
                   {ranking?.total_points ?? ranking?.points ?? 0}
                 </TableCell>
                 <TableCell sx={{ color: '#b3b3b3' }}>
-                  {ranking?.class_name || ranking?.school_class?.name || '-'}
+                  {ranking?.class_name || (typeof ranking?.school_class === 'string' ? ranking?.school_class : ranking?.school_class?.name) || '-'}
                 </TableCell>
               </TableRow>
             ))}

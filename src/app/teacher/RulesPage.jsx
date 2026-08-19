@@ -109,7 +109,9 @@ export function RulesPage() {
         backdropFilter: 'blur(50px)',
         boxShadow: '0 20px 100px #4a1d63',
         p: 2,
-        my: 2,
+        pt: 3,
+        mt: 2,
+        mb: 2,
       }}>
         <Container maxWidth="sm">
           <Box display="flex" alignItems="center" mb={3}>
