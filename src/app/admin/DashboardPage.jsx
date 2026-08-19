@@ -221,6 +221,9 @@ const styles = {
     background: 'linear-gradient(135deg, #4a1d63 0%, #343355 50%, #4a1d63 100%)',
     boxShadow: '0 20px 100px #4a1d63',
     mb: 2,
+    position: 'sticky',
+    top: 0,
+    zIndex: 100,
   },
   avatar: {
     width: 48,
