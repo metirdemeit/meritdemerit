@@ -51,7 +51,10 @@ export function HistoryPages() {
         top: 0,
         zIndex: 100,
           p: 2,
-          my: 2,
+          pt: 'calc(var(--tg-safe-area-inset-top, 0px) + 80px)',
+          pb: 2,
+          mt: 0,
+          mb: 2,
         }}
       >
         <Container maxWidth="sm">
