@@ -78,23 +78,29 @@ export const useAuthStore = create((set) => ({
   },
 
   // === profile check ===
-  fetchProfile: async () => {
+  fetchProfile: async (options = {}) => {
     try {
       set({ loading: true });
 
-      const user = await api.get('/auth/me');
+      const user = await api.get('/auth/me', {
+        skipErrorToast: options.silent,
+        skipUnauthorizedSignal: options.silent,
+      });
 
       set({
         user,
         isAuthenticated: true,
         loading: false,
       });
+      return true;
     } catch {
+      localStorage.removeItem('access_token');
       set({
         user: null,
         isAuthenticated: false,
         loading: false,
       });
+      return false;
     }
   },
 
@@ -102,38 +108,38 @@ export const useAuthStore = create((set) => ({
   initialize: async () => {
     const token = localStorage.getItem('access_token');
 
-    // Если токен уже есть — просто проверяем профиль
+    // Если токен есть — пытаемся проверить профиль (в тихом режиме)
     if (token) {
-      await useAuthStore.getState().fetchProfile();
-      return;
+      const ok = await useAuthStore.getState().fetchProfile({ silent: true });
+      if (ok) return;
     }
 
-    // Нет токена → пробуем Telegram Quick Auto-Login
-    // Получаем initData из реального Telegram WebApp или cookie
-    const { getCookie } = await import('../utils/cookies');
+    // Нет валидного токена → пробуем Telegram Quick Auto-Login
+    const { getCookie, setCookie } = await import('../utils/cookies');
     const { extractTelegramIdFromInitData, generateMockInitData, getSavedUsername, isDevMode } = await import('../utils/devHelpers');
 
-    let initData = null;
-    if (window.Telegram?.WebApp?.initData) {
-      initData = window.Telegram.WebApp.initData;
-    } else if (isDevMode()) {
-      // В dev режиме — мок initData для тестирования
+    let initData = window.Telegram?.WebApp?.initData || getCookie('initData');
+    if (!initData && isDevMode()) {
       const savedUsername = getSavedUsername();
       if (savedUsername) {
         initData = generateMockInitData(savedUsername);
       }
     }
 
-    if (!initData) return; // Нет initData — обычный LoginPage
+    if (!initData) return;
+
+    if (window.Telegram?.WebApp?.initData) {
+      setCookie('initData', initData);
+    }
 
     const telegramId = extractTelegramIdFromInitData(initData);
     if (!telegramId) return;
 
     try {
-      const data = await (await import('../services/api')).api.post(
+      const data = await api.post(
         '/auth/quick',
         { init_data: initData },
-        { skipErrorToast: true }  // не показывать ошибку если пользователь ещё не привязан
+        { skipErrorToast: true, skipUnauthorizedSignal: true }
       );
 
       if (data?.access_token) {
@@ -155,7 +161,7 @@ export const useAuthStore = create((set) => ({
         });
       }
     } catch {
-      // 404 = пользователь ещё не привязан → показываем LoginPage, это нормально
+      // 404 = пользователь ещё не привязан → показываем LoginPage
     }
   },
 

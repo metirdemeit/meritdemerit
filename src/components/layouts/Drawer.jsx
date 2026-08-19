@@ -6,7 +6,7 @@ const Drawer = ({
   onClose,
   title,
   children,
-  maxHeight = '90vh',
+  maxHeight = '85vh',
 }) => {
   return (
     <MUIDrawer
@@ -16,9 +16,10 @@ const Drawer = ({
       PaperProps={{
         sx: {
           background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
-          borderTopLeftRadius: 16,
-          borderTopRightRadius: 16,
-          maxHeight,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          maxHeight: 'calc(100vh - 65px)',
+          marginTop: '65px',
           zIndex: 1300, // Высокий z-index для правильного наложения
         },
       }}
@@ -26,19 +27,30 @@ const Drawer = ({
         zIndex: 1300, // Убеждаемся, что drawer всегда сверху
       }}
     >
-      <Box sx={{ p: 3, pt: 2, pb: 2, width: '100%', maxWidth: '500px', mx: 'auto' }}>
+      <Box sx={{ p: 3, pt: 3, pb: 2, width: '100%', maxWidth: '500px', mx: 'auto' }}>
         {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6" sx={{ color: '#F4F4FF', fontWeight: 400 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, pt: 1 }}>
+          <Typography variant="h6" sx={{ color: '#F4F4FF', fontWeight: 500 }}>
             {title}
           </Typography>
-          <IconButton onClick={onClose} sx={{ color: '#5A5984' }}>
-            <CloseIcon />
+          <IconButton
+            onClick={onClose}
+            sx={{
+              color: '#5A5984',
+              backgroundColor: 'rgba(146, 102, 255, 0.1)',
+              p: 1,
+              '&:hover': {
+                backgroundColor: 'rgba(146, 102, 255, 0.2)',
+                color: '#ffffff',
+              },
+            }}
+          >
+            <CloseIcon fontSize="small" />
           </IconButton>
         </Box>
 
         {/* Content */}
-        <Box sx={{ maxHeight: `calc(${maxHeight} - 120px)`}}>
+        <Box sx={{ maxHeight: `calc(${maxHeight} - 100px)`, overflowY: 'auto' }}>
           {children}
         </Box>
       </Box>

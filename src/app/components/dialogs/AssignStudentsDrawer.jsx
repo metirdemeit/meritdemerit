@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Box, Typography, Button, Divider, TextField } from '@mui/material';
+import toast from 'react-hot-toast';
 import Drawer from '../../../components/layouts/Drawer';
 import ClassTab from '../../../components/ClassTab';
 import ClassStudentsSection from '../../../components/ClassStudentsSection';
@@ -48,7 +49,11 @@ const AssignStudentsDrawer = ({
     const allSelectedIds = Object.values(selectedByClass)
       .reduce((acc, setIds) => acc.concat(Array.from(setIds)), []);
     if (allSelectedIds.length === 0 || !rule?.id) return;
-    onSubmit && onSubmit({ student_ids: allSelectedIds, rule_ids: [rule.id], comment });
+    if (!comment.trim()) {
+      toast.error('Комментарий обязателен при выставлении баллов');
+      return;
+    }
+    onSubmit && onSubmit({ student_ids: allSelectedIds, rule_ids: [rule.id], comment: comment.trim() });
   };
 
   return (
@@ -101,7 +106,9 @@ const AssignStudentsDrawer = ({
             fullWidth
             multiline
             rows={2}
-            placeholder="Comment (optional)"
+            required
+            label="Комментарий (обязательно)"
+            placeholder="Введите комментарий..."
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             sx={{

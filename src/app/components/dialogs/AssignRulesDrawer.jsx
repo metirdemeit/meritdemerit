@@ -8,6 +8,7 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
+import toast from 'react-hot-toast';
 import Drawer from '../../../components/layouts/Drawer';
 
 export function AssignRulesDrawer({
@@ -24,6 +25,10 @@ export function AssignRulesDrawer({
 }) {
   const handleSubmit = () => {
     if (selectedRuleIds.length === 0) {
+      return;
+    }
+    if (!assignComment || !assignComment.trim()) {
+      toast.error('Комментарий обязателен при выставлении баллов');
       return;
     }
     onSubmit();
@@ -96,7 +101,9 @@ export function AssignRulesDrawer({
           fullWidth
           multiline
           rows={3}
-           label="Comment (optional)"
+          required
+          label="Комментарий (обязательно)"
+          placeholder="Введите комментарий..."
           value={assignComment}
           onChange={(e) => onCommentChange(e.target.value)}
           sx={{

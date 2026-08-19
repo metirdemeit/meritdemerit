@@ -44,8 +44,9 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // только сигнализируем, без редиректа
-      window.dispatchEvent(new Event('unauthorized'));
+      if (!error.config?.skipUnauthorizedSignal) {
+        window.dispatchEvent(new Event('unauthorized'));
+      }
     } else if (!error.config?.skipErrorToast) {
       toast.error(
         error.response?.data?.detail || error.response?.data?.message || 'Ошибка сети'

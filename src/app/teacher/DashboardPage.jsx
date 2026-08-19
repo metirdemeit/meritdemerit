@@ -90,17 +90,19 @@ export function DashboardPage() {
   }, []);
 
   // Удаление
-  const handleDeleteAssignment = (historyId) => {
-    setAssignmentToDelete(historyId);
+  const handleDeleteAssignment = (recordOrId) => {
+    const id = typeof recordOrId === 'object' ? recordOrId?.id : recordOrId;
+    setAssignmentToDelete(id);
     setDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
     if (!assignmentToDelete) return;
 
-    setDeletingId(assignmentToDelete);
+    const id = typeof assignmentToDelete === 'object' ? assignmentToDelete?.id : assignmentToDelete;
+    setDeletingId(id);
     try {
-      await deleteHistoryRecord(assignmentToDelete);
+      await deleteHistoryRecord(id);
       toast.success('Assignment deleted');
       await loadHistory(); // обновляем список после удаления
     } catch (e) {

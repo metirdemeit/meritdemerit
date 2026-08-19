@@ -34,9 +34,8 @@ export function App({ telegramReady = false }) {
   }, [initialize]);
 
 
-  // Если Telegram SDK не инициализирован → fallback режим
-  // Это происходит при reload в Telegram WebApp
-  if (!telegramReady) {
+  // Если Telegram SDK не инициализирован и пользователь не авторизован → fallback режим
+  if (!telegramReady && !user && !localStorage.getItem('access_token')) {
     return <TelegramOnly isReload={true} />;
   }
 

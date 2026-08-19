@@ -148,12 +148,16 @@ export function StudentsPage() {
 
   const handleAssignSubmit = async () => {
     if (!selectedStudentIds.length || !selectedRuleIds.length) return;
+    if (!assignComment || !assignComment.trim()) {
+      toast.error('Комментарий обязателен при выставлении баллов');
+      return;
+    }
     setIsAssigning(true);
     try {
       await assignPoints({
         student_ids: selectedStudentIds,
         rule_ids: selectedRuleIds,
-        comment: assignComment,
+        comment: assignComment.trim(),
       });
       toast.success('Points assigned');
       handleCloseRulesDrawer();
