@@ -33,8 +33,8 @@ export function StudentsPage() {
     searchStudents,
   } = useCommonStore();
 
-  // Режим просмотра: 'homeroom' | 'all'
-  const [viewMode, setViewMode] = useState('homeroom');
+  // Режим просмотра: 'all' | 'homeroom'
+  const [viewMode, setViewMode] = useState('all');
 
   // Закрепленный класс учителя (из профиля бэкенда или переключенный временно)
   const [selectedHomeroomClass, setSelectedHomeroomClass] = useState(null);
@@ -255,8 +255,22 @@ export function StudentsPage() {
             </Box>
           </Box>
 
-          {/* Toggle buttons: My Homeroom Class / All Classes */}
+          {/* Toggle buttons: All Classes / My Homeroom Class */}
           <ButtonGroup fullWidth size="small" variant="contained" sx={{ mt: 1 }}>
+            <Button
+              startIcon={<Dashboard />}
+              variant={viewMode === 'all' ? 'contained' : 'outlined'}
+              onClick={() => setViewMode('all')}
+              sx={{
+                py: 1,
+                fontWeight: 600,
+                color: viewMode === 'all' ? '#F4F4FF' : '#5A5984',
+                background: viewMode === 'all' ? 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)' : 'transparent',
+                borderColor: 'rgba(146, 102, 255, 0.3)',
+              }}
+            >
+              All Classes
+            </Button>
             <Button
               startIcon={<School />}
               variant={viewMode === 'homeroom' ? 'contained' : 'outlined'}
@@ -274,20 +288,6 @@ export function StudentsPage() {
               }}
             >
               My Class ({homeroomClass})
-            </Button>
-            <Button
-              startIcon={<Dashboard />}
-              variant={viewMode === 'all' ? 'contained' : 'outlined'}
-              onClick={() => setViewMode('all')}
-              sx={{
-                py: 1,
-                fontWeight: 600,
-                color: viewMode === 'all' ? '#F4F4FF' : '#5A5984',
-                background: viewMode === 'all' ? 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)' : 'transparent',
-                borderColor: 'rgba(146, 102, 255, 0.3)',
-              }}
-            >
-              All Classes
             </Button>
           </ButtonGroup>
         </Container>

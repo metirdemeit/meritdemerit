@@ -81,7 +81,7 @@ const styles = {
   },
   main: {
     flexGrow: 1,
-    pt: 10,
+    pt: 'calc(env(safe-area-inset-top, 0px) + 55px)',
     pb: 8,
     minHeight: '100vh',
   },
