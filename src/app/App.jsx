@@ -11,9 +11,8 @@ import { useEffect, useState } from 'react';
 /**
  * App component
  *
- * Senior pattern:
- * - loading показывается пока идёт initialize()
- * - fallback только после завершения загрузки
+ * Telegram Mini App viewport уже начинается ниже нативного хедера Telegram.
+ * Никаких дополнительных padding-top не нужно — Telegram сам всё смещает.
  */
 export function App({ telegramReady = false }) {
   const { user, initialize } = useAuthStore();
@@ -30,7 +29,7 @@ export function App({ telegramReady = false }) {
     checkAuth();
   }, [initialize]);
 
-  // Пока идёт инициализация — спиннер с фоном приложения
+  // Спиннер пока идёт initialize()
   if (loading) {
     return (
       <Box sx={{
@@ -45,18 +44,17 @@ export function App({ telegramReady = false }) {
     );
   }
 
-  // После загрузки: нет токена и нет пользователя → fallback
+  // После загрузки: нет пользователя и нет токена → fallback
   if (!telegramReady && !user && !localStorage.getItem('access_token')) {
     return <TelegramOnly isReload={true} />;
   }
 
   return (
     <>
+      {/* Toasts: позиция top-center, небольшой отступ от верха */}
       <Toaster
         position="top-center"
-        containerStyle={{
-          top: 'calc(var(--tg-content-safe-area-inset-top, var(--tg-safe-area-inset-top, 0px)) + 65px)',
-        }}
+        containerStyle={{ top: 16 }}
         toastOptions={{ duration: 3000 }}
       />
 
@@ -91,6 +89,7 @@ const styles = {
   },
   main: {
     flexGrow: 1,
+    // pt: 0 — Telegram сам смещает viewport под свой хедер
     pt: 0,
     pb: 8,
     minHeight: '100vh',

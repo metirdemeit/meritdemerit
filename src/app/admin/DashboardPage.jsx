@@ -214,9 +214,9 @@ const styles = {
     minHeight: '50vh',
   },
   headerSection: {
-    pt: 'calc(var(--tg-content-safe-area-inset-top, var(--tg-safe-area-inset-top, 0px)) + 60px)',
+    pt: 2,
     mt: 0,
-    pb: 4,
+    pb: 3,
     px: 2,
     background: 'linear-gradient(135deg, #4a1d63 0%, #343355 50%, #4a1d63 100%)',
     boxShadow: '0 20px 100px #4a1d63',

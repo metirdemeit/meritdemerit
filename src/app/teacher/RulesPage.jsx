@@ -109,7 +109,7 @@ export function RulesPage() {
         backdropFilter: 'blur(50px)',
         boxShadow: '0 20px 100px #4a1d63',
         p: 2,
-        pt: 'calc(var(--tg-content-safe-area-inset-top, var(--tg-safe-area-inset-top, 0px)) + 60px)',
+        pt: 2,
         pb: 2,
         mt: 0,
         mb: 2,
