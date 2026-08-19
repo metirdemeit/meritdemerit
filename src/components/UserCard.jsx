@@ -6,6 +6,7 @@ import {
   Avatar,
   IconButton,
   Chip,
+  Badge,
 } from '@mui/material';
 import { Edit, Delete } from '@mui/icons-material';
 import { getStudentLevel } from '../utils/studentLevels';
@@ -14,6 +15,7 @@ export default function UserCard({ user, onEdit, onDelete, onClick, showActions 
   const initials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`;
   const isStudent = user.points !== undefined && user.points !== null;
   const level = isStudent ? getStudentLevel(user.points) : null;
+  const hasLoggedIn = Boolean(user.telegram_id);
 
   return (
     <Card
@@ -28,20 +30,39 @@ export default function UserCard({ user, onEdit, onDelete, onClick, showActions 
     >
       <CardContent sx={{ p: 2 }}>
         <Box display="flex" alignItems="center">
-          <Avatar
+          <Badge
+            overlap="circular"
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            variant="dot"
             sx={{
-              width: 40,
-              height: 40,
               mr: 2,
-              background: level 
-                ? level.color 
-                : 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
-              color: '#FFFFFF',
-              fontWeight: 700,
+              '& .MuiBadge-badge': {
+                backgroundColor: hasLoggedIn ? '#00D377' : '#757575',
+                color: hasLoggedIn ? '#00D377' : '#757575',
+                boxShadow: hasLoggedIn
+                  ? '0 0 8px rgba(0, 211, 119, 0.8)'
+                  : 'none',
+                width: 12,
+                height: 12,
+                borderRadius: '50%',
+                border: '2px solid #0C0B21',
+              },
             }}
           >
-            {initials}
-          </Avatar>
+            <Avatar
+              sx={{
+                width: 40,
+                height: 40,
+                background: level 
+                  ? level.color 
+                  : 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
+                color: '#FFFFFF',
+                fontWeight: 700,
+              }}
+            >
+              {initials}
+            </Avatar>
+          </Badge>
 
           <Box flexGrow={1} overflow="hidden">
             <Box display="flex" alignItems="center" gap={1}>

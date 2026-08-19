@@ -223,9 +223,9 @@ export function SettingsPages() {
           background: 'linear-gradient(135deg, #4a1d63 0%, #343355 50%, #4a1d63 100%)',
           backdropFilter: 'blur(50px)',
           boxShadow: '0 20px 100px #4a1d63',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
           p: 2,
           pt: 'calc(var(--tg-safe-area-inset-top, 0px) + 80px)',
           pb: 2,
@@ -234,7 +234,7 @@ export function SettingsPages() {
         }}
       >
         <Container maxWidth="sm">
-          <Box display="flex" alignItems="center" mb={2}>
+          <Box display="flex" alignItems="center">
             <Settings sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
             <Box>
               <Typography variant="h5" sx={{ color: 'white', fontWeight: 600 }}>
@@ -245,55 +245,54 @@ export function SettingsPages() {
               </Typography>
             </Box>
           </Box>
-
-          {/* Модульные вкладки навигации (вертикальный стек) */}
-          <Grid container spacing={1.5} direction="column" sx={{ mt: 1 }}>
-            {navTabs.map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <Grid item xs={12} key={tab.id}>
-                  <Button
-                    fullWidth
-                    variant={isActive ? 'contained' : 'outlined'}
-                    startIcon={tab.icon}
-                    onClick={tab.action}
-                    sx={{
-                      height: 50,
-                      borderRadius: 2,
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      justifyContent: 'flex-start',
-                      px: 2.5,
-                      ...(isActive
-                        ? {
-                            background: 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)',
-                            color: '#FFFFFF',
-                            boxShadow: '0 4px 14px rgba(146, 102, 255, 0.4)',
-                            '&:hover': {
-                              background: 'linear-gradient(135deg, #8152FF 0%, #5824DB 100%)',
-                            },
-                          }
-                        : {
-                            borderColor: 'rgba(146, 102, 255, 0.4)',
-                            color: '#F4F4FF',
-                            backgroundColor: 'rgba(146, 102, 255, 0.05)',
-                            '&:hover': {
-                              borderColor: '#9266FF',
-                              backgroundColor: 'rgba(146, 102, 255, 0.15)',
-                            },
-                          }),
-                    }}
-                  >
-                    {tab.label}
-                  </Button>
-                </Grid>
-              );
-            })}
-          </Grid>
         </Container>
       </Box>
 
       <Container maxWidth="sm" sx={{ px: 2 }}>
+        {/* Модульные вкладки навигации (вертикальный стек) */}
+        <Grid container spacing={1.5} direction="column" sx={{ mb: 2 }}>
+          {navTabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <Grid item xs={12} key={tab.id}>
+                <Button
+                  fullWidth
+                  variant={isActive ? 'contained' : 'outlined'}
+                  startIcon={tab.icon}
+                  onClick={tab.action}
+                  sx={{
+                    height: 50,
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    justifyContent: 'flex-start',
+                    px: 2.5,
+                    ...(isActive
+                      ? {
+                          background: 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)',
+                          color: '#FFFFFF',
+                          boxShadow: '0 4px 14px rgba(146, 102, 255, 0.4)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #8152FF 0%, #5824DB 100%)',
+                          },
+                        }
+                      : {
+                          borderColor: 'rgba(146, 102, 255, 0.4)',
+                          color: '#F4F4FF',
+                          backgroundColor: 'rgba(146, 102, 255, 0.05)',
+                          '&:hover': {
+                            borderColor: '#9266FF',
+                            backgroundColor: 'rgba(146, 102, 255, 0.15)',
+                          },
+                        }),
+                  }}
+                >
+                  {tab.label}
+                </Button>
+              </Grid>
+            );
+          })}
+        </Grid>
         {/* Moderation Tab */}
         {activeTab === 'moderation' && (
           <Card

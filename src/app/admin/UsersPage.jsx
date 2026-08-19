@@ -67,23 +67,31 @@ export function UsersPage() {
 
 const styles = {
   headerSection: {
-    pt: 3,
-    pb: 4,
-    px: 2,
+    background: 'linear-gradient(135deg, #4a1d63 0%, #343355 50%, #4a1d63 100%)',
+    backdropFilter: 'blur(50px)',
+    boxShadow: '0 20px 100px #4a1d63',
+    position: 'sticky',
+    top: 0,
+    zIndex: 100,
+    p: 2,
+    pt: 'calc(var(--tg-safe-area-inset-top, 0px) + 80px)',
+    pb: 2,
+    mt: 0,
+    mb: 2,
   },
   icon: {
     fontSize: 32,
-    color: '#9c27b0',
+    color: '#9266FF',
     mr: 2,
   },
   button: (active) => ({
     padding: 1,
     color: active ? '#F4F4FF' : '#5A5984',
-    backgroundColor: active ? 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)' : 'transparent',
+    background: active ? 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)' : 'transparent',
     borderColor: 'rgba(146, 102, 255, 0.3)',
     '&:hover': {
-      backgroundColor: active ? 'linear-gradient(135deg, #6932EB 0%, #5A2980 100%)' : 'rgba(146, 102, 255, 0.1)',
+      background: active ? 'linear-gradient(135deg, #6932EB 0%, #5A2980 100%)' : 'rgba(146, 102, 255, 0.1)',
       borderColor: 'rgba(146, 102, 255, 0.5)',
     } 
   }),
-}
+};

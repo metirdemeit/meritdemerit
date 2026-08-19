@@ -72,11 +72,12 @@ export function DashboardPage() {
   return (
     <Box sx={{ minHeight: '100vh', pb: 2 }}>
       {/* Header Section */}
+      {/* Header Section */}
       <Box
         sx={styles.headerSection}
       >
         <Container maxWidth="sm">
-          <Box display="flex" alignItems="center" mb={3}>
+          <Box display="flex" alignItems="center">
             <Avatar sx={styles.avatar}>
               {user?.first_name?.[0]}{user?.last_name?.[0]}
             </Avatar>
@@ -89,40 +90,39 @@ export function DashboardPage() {
               </Typography>
             </Box>
           </Box>
-
-          {/* Statistics Card */}
-          <Box display="flex" gap={3}>
-            <Card sx={styles.totalStudentsCard}>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="body2" >
-                  Total Students
-                </Typography>
-                <Typography variant="h3" sx={{ fontWeight: 'bold', my: 1 }}>
-                  {dashboard?.total_students || 0}
-                </Typography>
-                <Typography variant="body2">
-                  Active: {dashboard?.active_students || 0}
-                </Typography>
-              </CardContent>
-            </Card>
-            <Card sx={styles.totalStudentsCard}>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="body2" >
-                  Total Teachers
-                </Typography>
-                <Typography variant="h3" sx={{ fontWeight: 'bold', my: 1 }}>
-                  {dashboard?.total_teachers || 0}
-                </Typography>
-                <Typography variant="body2">
-                  Active: {dashboard?.active_teachers || 0}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Box>
         </Container>
       </Box>
 
       <Container maxWidth="sm" sx={{ px: 2 }}>
+        {/* Statistics Cards */}
+        <Box display="flex" gap={2} mb={3}>
+          <Card sx={styles.totalStudentsCard}>
+            <CardContent sx={{ textAlign: 'center', p: 2, '&:last-child': { pb: 2 } }}>
+              <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                Total Students
+              </Typography>
+              <Typography variant="h3" sx={{ fontWeight: 'bold', my: 1, color: '#9266FF' }}>
+                {dashboard?.total_students || 0}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#5A5984' }}>
+                Active: {dashboard?.active_students || 0}
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card sx={styles.totalStudentsCard}>
+            <CardContent sx={{ textAlign: 'center', p: 2, '&:last-child': { pb: 2 } }}>
+              <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                Total Teachers
+              </Typography>
+              <Typography variant="h3" sx={{ fontWeight: 'bold', my: 1, color: '#4caf50' }}>
+                {dashboard?.total_teachers || 0}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#5A5984' }}>
+                Active: {dashboard?.active_teachers || 0}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
 
         {/* Analytics Section */}
         <Box sx={{ mb: 3 }}>
