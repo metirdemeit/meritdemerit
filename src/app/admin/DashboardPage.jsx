@@ -98,26 +98,26 @@ export function DashboardPage() {
         <Box display="flex" gap={2} mb={3}>
           <Card sx={styles.totalStudentsCard}>
             <CardContent sx={{ textAlign: 'center', p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+              <Typography variant="body2">
                 Total Students
               </Typography>
-              <Typography variant="h3" sx={{ fontWeight: 'bold', my: 1, color: '#9266FF' }}>
+              <Typography variant="h3" sx={{ fontWeight: 'bold', my: 1 }}>
                 {dashboard?.total_students || 0}
               </Typography>
-              <Typography variant="body2" sx={{ color: '#5A5984' }}>
+              <Typography variant="body2">
                 Active: {dashboard?.active_students || 0}
               </Typography>
             </CardContent>
           </Card>
           <Card sx={styles.totalStudentsCard}>
             <CardContent sx={{ textAlign: 'center', p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+              <Typography variant="body2">
                 Total Teachers
               </Typography>
-              <Typography variant="h3" sx={{ fontWeight: 'bold', my: 1, color: '#4caf50' }}>
+              <Typography variant="h3" sx={{ fontWeight: 'bold', my: 1 }}>
                 {dashboard?.total_teachers || 0}
               </Typography>
-              <Typography variant="body2" sx={{ color: '#5A5984' }}>
+              <Typography variant="body2">
                 Active: {dashboard?.active_teachers || 0}
               </Typography>
             </CardContent>
