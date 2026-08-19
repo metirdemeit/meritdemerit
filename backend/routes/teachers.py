@@ -94,6 +94,9 @@ async def assign_points(assignment: WorkflowAssignment, teacher: Teacher = Depen
     if not assignment.student_ids or not assignment.rule_ids:
         raise HTTPException(status_code=400, detail="Student and rule IDs cannot be empty.")
 
+    if not assignment.comment or not assignment.comment.strip():
+        raise HTTPException(status_code=400, detail="Комментарий обязателен при выставлении баллов.")
+
     # Validate rules exist
     rules = await DisciplineRule.filter(id__in=assignment.rule_ids)
     if len(rules) != len(assignment.rule_ids):

@@ -102,7 +102,7 @@ class PointHistory(models.Model):
     """Points history model."""
     id = fields.IntField(pk=True)
     student = fields.ForeignKeyField("models.Student", related_name="point_history")
-    teacher = fields.ForeignKeyField("models.Teacher", related_name="given_points")
+    teacher = fields.ForeignKeyField("models.Teacher", related_name="given_points", null=True, on_delete=fields.SET_NULL)
     rule = fields.ForeignKeyField("models.DisciplineRule", related_name="applications")
     points_changed = fields.IntField()
     comment = fields.TextField()

@@ -26,6 +26,8 @@ async def lifespan(app: FastAPI):
     conn = Tortoise.get_connection("default")
     try:
         migration_stmts = [
+            # Migration 4: allow NULL teacher_id in pointhistory so deleting a teacher doesn't cascade delete points
+            'ALTER TABLE "pointhistory" ALTER COLUMN "teacher_id" DROP NOT NULL',
             # Migration 3: add access_level to disciplinerule
             'ALTER TABLE "disciplinerule" ADD COLUMN IF NOT EXISTS "access_level" VARCHAR(20) NOT NULL DEFAULT \'all\'',
             # Migration 3: add homeroom_class_id to teacher
