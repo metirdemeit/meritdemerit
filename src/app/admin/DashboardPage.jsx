@@ -214,7 +214,7 @@ const styles = {
     minHeight: '50vh',
   },
   headerSection: {
-    pt: 2,
+    pt: 'calc(var(--tg-safe-area-inset-top, 0px) + 24px)',
     mt: 0,
     pb: 3,
     px: 2,

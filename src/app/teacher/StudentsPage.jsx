@@ -239,7 +239,7 @@ export function StudentsPage() {
         top: 0,
         zIndex: 100,
         p: 2,
-        pt: 2,
+        pt: 'calc(var(--tg-safe-area-inset-top, 0px) + 24px)',
         pb: 2,
         mt: 0,
         mb: 2,
