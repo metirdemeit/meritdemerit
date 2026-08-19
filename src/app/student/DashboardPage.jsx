@@ -104,7 +104,7 @@ export function DashboardPage() {
           backdropFilter: 'blur(50px)',
           boxShadow: '0 20px 100px #4a1d63',
           p: 2,
-          pt: 'calc(env(safe-area-inset-top, 0px) + 56px)',
+          pt: 'calc(var(--tg-content-safe-area-inset-top, var(--tg-safe-area-inset-top, 0px)) + 60px)',
           pb: 2,
           mt: 0,
           mb: 2,

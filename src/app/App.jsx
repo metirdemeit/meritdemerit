@@ -10,13 +10,10 @@ import { useEffect, useState } from 'react';
 
 /**
  * App component
- * 
- * @param {boolean} telegramReady - Флаг успешной инициализации Telegram SDK
- * 
+ *
  * Senior pattern:
- * - Если telegramReady === false → показываем fallback UI (TelegramOnly)
- * - Это происходит при reload в Telegram (initData пропадает)
- * - Пользователь должен закрыть и открыть mini app заново
+ * - loading показывается пока идёт initialize()
+ * - fallback только после завершения загрузки
  */
 export function App({ telegramReady = false }) {
   const { user, initialize } = useAuthStore();
@@ -33,16 +30,22 @@ export function App({ telegramReady = false }) {
     checkAuth();
   }, [initialize]);
 
-
+  // Пока идёт инициализация — спиннер с фоном приложения
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#0C0B21' }}>
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
+      }}>
         <CircularProgress sx={{ color: '#9266FF' }} />
       </Box>
     );
   }
 
-  // Если инициализация завершилась, а пользователя нет ни в стейте, ни в localStorage -> fallback
+  // После загрузки: нет токена и нет пользователя → fallback
   if (!telegramReady && !user && !localStorage.getItem('access_token')) {
     return <TelegramOnly isReload={true} />;
   }
@@ -51,7 +54,9 @@ export function App({ telegramReady = false }) {
     <>
       <Toaster
         position="top-center"
-        containerStyle={{ top: 'calc(env(safe-area-inset-top, 0px) + 65px)' }}
+        containerStyle={{
+          top: 'calc(var(--tg-content-safe-area-inset-top, var(--tg-safe-area-inset-top, 0px)) + 65px)',
+        }}
         toastOptions={{ duration: 3000 }}
       />
 
@@ -82,6 +87,7 @@ const styles = {
     minHeight: '100vh',
     display: 'flex',
     flexDirection: 'column',
+    background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
   },
   main: {
     flexGrow: 1,
