@@ -9,34 +9,43 @@ import {
   TableFooter, 
   Button,
   ButtonGroup,
-  Box
+  Box,
+  Typography
 } from '@mui/material';
 import { Visibility, Groups } from '@mui/icons-material';
+import { useCommonStore } from '../../store/commonStore';
 
 function getGradeGroup(ranking) {
-  // Extract class name from any possible key format
-  const rawClass = ranking?.class_name ||
-                   (typeof ranking?.school_class === 'string' ? ranking?.school_class : ranking?.school_class?.name) ||
-                   ranking?.student?.class_name ||
-                   (typeof ranking?.student?.school_class === 'string' ? ranking?.student?.school_class : ranking?.student?.school_class?.name) ||
-                   '';
+  if (!ranking) return '6-8';
 
-  const match = String(rawClass).match(/\d+/);
-  if (match) {
-    const gradeNum = parseInt(match[0], 10);
-    if (gradeNum >= 6 && gradeNum <= 8) return '6-8';
-    if (gradeNum >= 9 && gradeNum <= 12) return '9-12';
+  const possibleNames = [
+    ranking.class_name,
+    typeof ranking.school_class === 'string' ? ranking.school_class : ranking.school_class?.name,
+    ranking.school_class_name,
+    ranking.student?.class_name,
+    typeof ranking.student?.school_class === 'string' ? ranking.student?.school_class : ranking.student?.school_class?.name,
+    ranking.name,
+  ];
+
+  for (const name of possibleNames) {
+    if (!name) continue;
+    const str = String(name).trim();
+    const match = str.match(/\d+/);
+    if (match) {
+      const num = parseInt(match[0], 10);
+      if (num >= 9 && num <= 12) return '9-12';
+      if (num >= 1 && num <= 8) return '6-8';
+    }
   }
 
-  // Fallback by class ID (1..6 = 6A..8B -> 6-8; 7..14 = 9A..12B -> 9-12)
-  const classId = ranking?.class_id || 
-                  ranking?.school_class_id || 
-                  (typeof ranking?.school_class === 'number' ? ranking?.school_class : ranking?.school_class?.id) ||
-                  (typeof ranking?.student?.school_class === 'number' ? ranking?.student?.school_class : ranking?.student?.school_class?.id);
+  const classId = ranking.class_id || 
+                  ranking.school_class_id || 
+                  (typeof ranking.school_class === 'number' ? ranking.school_class : ranking.school_class?.id) ||
+                  (typeof ranking.student?.school_class === 'number' ? ranking.student?.school_class : ranking.student?.school_class?.id);
 
-  if (classId) {
-    if (classId >= 1 && classId <= 6) return '6-8';
-    if (classId >= 7 && classId <= 14) return '9-12';
+  if (typeof classId === 'number' && classId > 0) {
+    if (classId >= 7) return '9-12';
+    if (classId <= 6) return '6-8';
   }
 
   return '6-8';
@@ -45,11 +54,26 @@ function getGradeGroup(ranking) {
 export default function CommonRankingTable({ rankings = [] }) {
   const [showFull, setShowFull] = useState(false);
   const [activeGroup, setActiveGroup] = useState('6-8');
+  const { students } = useCommonStore();
   
   const rankingsList = Array.isArray(rankings) ? rankings : [];
 
-  const group6to8 = rankingsList.filter((item) => getGradeGroup(item) === '6-8');
-  const group9to12 = rankingsList.filter((item) => getGradeGroup(item) === '9-12');
+  let group6to8 = rankingsList.filter((item) => getGradeGroup(item) === '6-8');
+  let group9to12 = rankingsList.filter((item) => getGradeGroup(item) === '9-12');
+
+  // Fallback: If 9-12 is empty in top ranking list, pull from full student list
+  if (group9to12.length === 0 && Array.isArray(students) && students.length > 0) {
+    group9to12 = students
+      .filter((item) => getGradeGroup(item) === '9-12')
+      .sort((a, b) => (b.points || b.total_points || 0) - (a.points || a.total_points || 0));
+  }
+
+  // Fallback: If 6-8 is empty in top ranking list, pull from full student list
+  if (group6to8.length === 0 && Array.isArray(students) && students.length > 0) {
+    group6to8 = students
+      .filter((item) => getGradeGroup(item) === '6-8')
+      .sort((a, b) => (b.points || b.total_points || 0) - (a.points || a.total_points || 0));
+  }
 
   const currentGroupList = activeGroup === '6-8' ? group6to8 : group9to12;
   const displayRankings = showFull ? currentGroupList : currentGroupList.slice(0, 10);

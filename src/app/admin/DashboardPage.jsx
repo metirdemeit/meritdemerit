@@ -44,10 +44,8 @@ export function DashboardPage() {
     const loadRankings = async () => {
       setLoadingRankings(true);
       setErrorRankings(null);
-      const data = await fetchRankings();
-      if (!data) {
-        setErrorRankings('Failed to load rankings');
-      }
+      await fetchRankings();
+      await useCommonStore.getState().fetchStudents();
       setLoadingRankings(false);
     };
 
@@ -216,10 +214,13 @@ const styles = {
     minHeight: '50vh',
   },
   headerSection: {
-    pt: 4,
-    mt: 2,
+    pt: 'calc(env(safe-area-inset-top, 0px) + 56px)',
+    mt: 0,
     pb: 4,
     px: 2,
+    background: 'linear-gradient(135deg, #4a1d63 0%, #343355 50%, #4a1d63 100%)',
+    boxShadow: '0 20px 100px #4a1d63',
+    mb: 2,
   },
   avatar: {
     width: 48,

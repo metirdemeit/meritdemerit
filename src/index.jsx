@@ -171,24 +171,29 @@ async function bootstrap() {
 
   // Пытаемся инициализировать Telegram SDK
   try {
-    const launchParams = retrieveLaunchParams();
-    const { tgWebAppPlatform: platform } = launchParams;
-    const debug =
-      (launchParams.tgWebAppStartParam || "").includes("platformer_debug") ||
-      import.meta.env.DEV;
+    let platform = "weba";
+    let debug = import.meta.env.DEV;
+    try {
+      const launchParams = retrieveLaunchParams();
+      platform = launchParams.tgWebAppPlatform || platform;
+      debug = (launchParams.tgWebAppStartParam || "").includes("platformer_debug") || debug;
+    } catch {
+      // retrieveLaunchParams failed on page reload — safe fallback
+    }
 
     await init({
       debug,
-      eruda: debug && ["ios", "android"].includes(platform),
+      eruda: false,
       mockForMacOS: platform === "macos",
     });
 
     telegramReady = true;
   } catch (e) {
-    // Telegram init failed — это нормально при reload или вне Telegram
-    // Логируем только в dev для отладки
+    if (window.Telegram?.WebApp) {
+      telegramReady = true;
+    }
     if (import.meta.env.DEV) {
-      console.warn("Telegram init failed, fallback mode:", e);
+      console.warn("Telegram init fallback mode:", e);
     }
   }
 

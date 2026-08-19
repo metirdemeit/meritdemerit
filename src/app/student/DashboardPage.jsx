@@ -57,10 +57,10 @@ export function DashboardPage() {
       setLoadingRankings(true);
       setErrorRankings(null);
       try {
-        const data = await fetchRankings();
-        if (!data) {
-          setErrorRankings('Failed to load rankings');
-        }
+        await Promise.all([
+          fetchRankings(),
+          useCommonStore.getState().fetchStudents()
+        ]);
       } catch (err) {
         setErrorRankings('Failed to load rankings');
       } finally {
@@ -104,8 +104,9 @@ export function DashboardPage() {
           backdropFilter: 'blur(50px)',
           boxShadow: '0 20px 100px #4a1d63',
           p: 2,
-          pt: 3,
-          mt: 2,
+          pt: 'calc(env(safe-area-inset-top, 0px) + 56px)',
+          pb: 2,
+          mt: 0,
           mb: 2,
         }}
       >

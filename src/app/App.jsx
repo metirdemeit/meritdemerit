@@ -34,24 +34,24 @@ export function App({ telegramReady = false }) {
   }, [initialize]);
 
 
-  // Если Telegram SDK не инициализирован и пользователь не авторизован → fallback режим
-  if (!telegramReady && !user && !localStorage.getItem('access_token')) {
-    return <TelegramOnly isReload={true} />;
-  }
-
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#0C0B21' }}>
         <CircularProgress sx={{ color: '#9266FF' }} />
       </Box>
     );
+  }
+
+  // Если инициализация завершилась, а пользователя нет ни в стейте, ни в localStorage -> fallback
+  if (!telegramReady && !user && !localStorage.getItem('access_token')) {
+    return <TelegramOnly isReload={true} />;
   }
 
   return (
     <>
       <Toaster
         position="top-center"
-        containerStyle={{ top: 95 }}
+        containerStyle={{ top: 'calc(env(safe-area-inset-top, 0px) + 65px)' }}
         toastOptions={{ duration: 3000 }}
       />
 
@@ -85,7 +85,7 @@ const styles = {
   },
   main: {
     flexGrow: 1,
-    pt: 'calc(env(safe-area-inset-top, 0px) + 95px)',
+    pt: 0,
     pb: 8,
     minHeight: '100vh',
   },

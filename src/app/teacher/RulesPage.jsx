@@ -109,8 +109,9 @@ export function RulesPage() {
         backdropFilter: 'blur(50px)',
         boxShadow: '0 20px 100px #4a1d63',
         p: 2,
-        pt: 3,
-        mt: 2,
+        pt: 'calc(env(safe-area-inset-top, 0px) + 56px)',
+        pb: 2,
+        mt: 0,
         mb: 2,
       }}>
         <Container maxWidth="sm">
