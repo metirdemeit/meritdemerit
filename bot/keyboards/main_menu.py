@@ -3,8 +3,9 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 import os
 
-# Mini App URL - prioritized from environment variable
-MINI_APP_URL = os.getenv("MINI_APP_URL", "https://meritdemerit.onrender.com")
+# Mini App URL - Vercel Frontend
+MINI_APP_URL = os.getenv("MINI_APP_URL", "https://meritdemerit-7ipp.vercel.app/")
+
 
 
 def main_menu_keyboard():
