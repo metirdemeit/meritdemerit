@@ -1,8 +1,10 @@
 from aiogram.types import WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-# Mini App URL - update this when deploying
-MINI_APP_URL = "https://dem-p8gd.onrender.com/"
+import os
+
+# Mini App URL - prioritized from environment variable
+MINI_APP_URL = os.getenv("MINI_APP_URL", "https://meritdemerit.onrender.com")
 
 
 def main_menu_keyboard():
@@ -16,7 +18,7 @@ def main_menu_keyboard():
 
     # Add a button that launches the web app
     builder.button(
-        text="Open Discipline App",
+        text="📱 Открыть Merit & Demerit",
         web_app=web_app_info
     )
 
@@ -24,3 +26,4 @@ def main_menu_keyboard():
     builder.adjust(1)
 
     return builder.as_markup()
+
