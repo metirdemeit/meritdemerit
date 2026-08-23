@@ -18,13 +18,19 @@ export default function AuthWrapper({ children }) {
 
     init();
 
-    const onUnauthorized = () => logout();
+    const onUnauthorized = async () => {
+      const relogged = await useAuthStore.getState().tryAutoRelogin();
+      if (!relogged) {
+        logout();
+      }
+    };
     window.addEventListener('unauthorized', onUnauthorized);
 
     return () => {
       window.removeEventListener('unauthorized', onUnauthorized);
     };
   }, [initialize, logout]);
+
 
   if (!ready || loading) {
     return <SimpleLoadingScreen message="Loading..." />;
