@@ -75,14 +75,28 @@ export const extractTelegramIdFromInitData = (initData) => {
   if (!initData) return null;
   
   try {
-    // Парсим initData строку (формат: auth_date=...&user=...&hash=...)
-    const params = new URLSearchParams(initData);
+    let rawStr = initData;
+    if (typeof rawStr === 'string' && (rawStr.includes('%3D') || rawStr.includes('%26'))) {
+      try {
+        rawStr = decodeURIComponent(rawStr);
+      } catch {}
+    }
+
+    const params = new URLSearchParams(rawStr);
     const userParam = params.get('user');
     
     if (userParam) {
-      // Декодируем URL-encoded JSON
-      const userData = JSON.parse(decodeURIComponent(userParam));
-      return userData.id || null;
+      let userData;
+      if (typeof userParam === 'object') {
+        userData = userParam;
+      } else {
+        try {
+          userData = JSON.parse(userParam);
+        } catch {
+          userData = JSON.parse(decodeURIComponent(userParam));
+        }
+      }
+      return userData?.id ? Number(userData.id) : null;
     }
   } catch (error) {
     console.error('Error extracting telegram_id from initData:', error);

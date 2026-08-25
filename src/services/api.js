@@ -18,10 +18,17 @@ const apiClient = axios.create({
 
 // === helpers ===
 const getInitData = () => {
-  if (isDevMode()) {
+  let initData = window.Telegram?.WebApp?.initData;
+  if (!initData) {
+    initData = localStorage.getItem('tg_init_data');
+  }
+  if (!initData) {
+    initData = getCookie('initData');
+  }
+  if (!initData && isDevMode()) {
     return generateMockInitData(getSavedUsername());
   }
-  return window.Telegram?.WebApp?.initData || getCookie('initData');
+  return initData || null;
 };
 
 // === request interceptor ===
