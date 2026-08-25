@@ -99,7 +99,7 @@ export const extractTelegramIdFromInitData = (initData) => {
       return userData?.id ? Number(userData.id) : null;
     }
   } catch (error) {
-    console.error('Error extracting telegram_id from initData:', error);
+    if (import.meta.env.DEV) console.error('Error extracting telegram_id from initData:', error);
   }
   
   return null;

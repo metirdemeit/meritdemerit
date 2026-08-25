@@ -33,7 +33,7 @@ export const useAuthStore = create((set) => ({
       }
 
       if (initData) {
-        localStorage.setItem('tg_init_data', initData);
+        sessionStorage.setItem('tg_init_data', initData);
         setCookie('initData', initData, 30);
         const telegramId = extractTelegramIdFromInitData(initData);
         payload = {
@@ -78,7 +78,7 @@ export const useAuthStore = create((set) => ({
 
     let initData = window.Telegram?.WebApp?.initData;
     if (!initData) {
-      initData = localStorage.getItem('tg_init_data');
+      initData = sessionStorage.getItem('tg_init_data');
     }
     if (!initData) {
       initData = getCookie('initData');
@@ -92,7 +92,7 @@ export const useAuthStore = create((set) => ({
 
     if (!initData) return false;
 
-    localStorage.setItem('tg_init_data', initData);
+    sessionStorage.setItem('tg_init_data', initData);
     setCookie('initData', initData, 30);
 
     const telegramId = extractTelegramIdFromInitData(initData);
@@ -173,7 +173,7 @@ export const useAuthStore = create((set) => ({
     const { setCookie } = await import('../utils/cookies');
     const tgInitData = window.Telegram?.WebApp?.initData;
     if (tgInitData) {
-      localStorage.setItem('tg_init_data', tgInitData);
+      sessionStorage.setItem('tg_init_data', tgInitData);
       setCookie('initData', tgInitData, 30);
     }
 
@@ -192,7 +192,7 @@ export const useAuthStore = create((set) => ({
   // === logout ===
   logout: () => {
     localStorage.removeItem('access_token');
-    localStorage.removeItem('tg_init_data');
+    sessionStorage.removeItem('tg_init_data');
     deleteCookie('initData');
     clearSavedUsername();
 

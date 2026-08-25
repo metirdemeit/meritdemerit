@@ -226,4 +226,6 @@ if (typeof window !== 'undefined') {
   };
 }
 
-console.log('Mock environment loaded for development outside Telegram');
+if (import.meta.env.DEV) {
+  console.log('[mockEnv] Mock Telegram environment loaded');
+}

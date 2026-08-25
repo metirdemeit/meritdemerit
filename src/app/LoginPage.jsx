@@ -28,7 +28,7 @@ export function LoginPage() {
       const result = await login(username, password);
       if (!result) throw new Error('Invalid credentials');
     } catch (err) {
-      console.error(err);
+      if (import.meta.env.DEV) console.error('[login]', err);
       setError('Login failed. Please check your username and password.');
       toast.error('Login failed');
     } finally {
@@ -44,7 +44,7 @@ export function LoginPage() {
       const result = await login(u, p);
       if (!result) throw new Error('Invalid credentials');
     } catch (err) {
-      console.error(err);
+      if (import.meta.env.DEV) console.error('[quickLogin]', err);
       toast.error('Quick login failed');
     } finally {
       setLoading(false);
@@ -113,7 +113,10 @@ export function LoginPage() {
                 size="small"
                 variant="text"
                 sx={{ color: '#5A5984' }}
-                onClick={() => quickLoginDev('testAdmin', '885522yy')}
+                onClick={() => quickLoginDev(
+                  import.meta.env.VITE_DEV_ADMIN_USER || 'testAdmin',
+                  import.meta.env.VITE_DEV_ADMIN_PASS || ''
+                )}
               >
                 Admin
               </Button>
@@ -121,7 +124,10 @@ export function LoginPage() {
                 size="small"
                 variant="text"
                 sx={{ color: '#5A5984' }}
-                onClick={() => quickLoginDev('testTeacher', '774411yy')}
+                onClick={() => quickLoginDev(
+                  import.meta.env.VITE_DEV_TEACHER_USER || 'testTeacher',
+                  import.meta.env.VITE_DEV_TEACHER_PASS || ''
+                )}
               >
                 Teacher
               </Button>
@@ -129,7 +135,10 @@ export function LoginPage() {
                 size="small"
                 variant="text"
                 sx={{ color: '#5A5984' }}
-                onClick={() => quickLoginDev('testStudent', '996633yy')}
+                onClick={() => quickLoginDev(
+                  import.meta.env.VITE_DEV_STUDENT_USER || 'testStudent',
+                  import.meta.env.VITE_DEV_STUDENT_PASS || ''
+                )}
               >
                 Student
               </Button>
