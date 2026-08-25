@@ -5,7 +5,7 @@ from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.expressions import Q
 
 from backend.models import Student, Class, DisciplineRule
-from backend.utils.security import enforce_https
+from backend.utils.security import enforce_https, get_current_user
 
 router = APIRouter(dependencies=[Depends(enforce_https)])
 
@@ -137,9 +137,12 @@ async def get_rule_by_id(rule_id: int):
 # --- Ranking Endpoints ---
 
 @router.get("/ranking", response_model=List[StudentWithClassResponse], summary="Get top students ranking")
-async def get_top_ranking(limit: int = Query(50, ge=1, le=100)):
+async def get_top_ranking(
+    limit: int = Query(50, ge=1, le=100),
+    current_user: dict = Depends(get_current_user)
+):
     """
-    Get top students ranked by points (highest first, public endpoint).
+    Get top students ranked by points (highest first, authenticated endpoint).
     """
     students = (
         await Student.all()
@@ -159,9 +162,9 @@ async def get_top_ranking(limit: int = Query(50, ge=1, le=100)):
     response_model=List[ClassAverageRankingItem],
     summary="Get classes ranking by average points",
 )
-async def get_classes_average_ranking():
+async def get_classes_average_ranking(current_user: dict = Depends(get_current_user)):
     """
-    Get ranking of all classes by **average student points** (highest first, public endpoint).
+    Get ranking of all classes by **average student points** (highest first, authenticated endpoint).
     """
     classes = await Class.all().prefetch_related("students")
 
