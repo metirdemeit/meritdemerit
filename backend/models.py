@@ -101,9 +101,9 @@ class Intervention(models.Model):
 class PointHistory(models.Model):
     """Points history model."""
     id = fields.IntField(pk=True)
-    student = fields.ForeignKeyField("models.Student", related_name="point_history")
+    student = fields.ForeignKeyField("models.Student", related_name="point_history", on_delete=fields.CASCADE)
     teacher = fields.ForeignKeyField("models.Teacher", related_name="given_points", null=True, on_delete=fields.SET_NULL)
-    rule = fields.ForeignKeyField("models.DisciplineRule", related_name="applications")
+    rule = fields.ForeignKeyField("models.DisciplineRule", related_name="applications", null=True, on_delete=fields.SET_NULL)
     points_changed = fields.IntField()
     comment = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
@@ -114,9 +114,9 @@ class PointHistory(models.Model):
 
 class AdminPointHistory(models.Model):
     id = fields.IntField(pk=True)
-    student = fields.ForeignKeyField("models.Student", related_name="admin_point_history")
-    admin = fields.ForeignKeyField("models.Admin", related_name="given_points_by_admin")
-    rule = fields.ForeignKeyField("models.DisciplineRule", related_name="admin_applications")
+    student = fields.ForeignKeyField("models.Student", related_name="admin_point_history", on_delete=fields.CASCADE)
+    admin = fields.ForeignKeyField("models.Admin", related_name="given_points_by_admin", null=True, on_delete=fields.SET_NULL)
+    rule = fields.ForeignKeyField("models.DisciplineRule", related_name="admin_applications", null=True, on_delete=fields.SET_NULL)
     points_changed = fields.IntField()
     comment = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
