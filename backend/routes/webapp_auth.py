@@ -152,6 +152,7 @@ def parse_init_data(init_data: str) -> dict:
             logger.info("[initData] HMAC valid: %s", is_valid)
             if not is_valid:
                 logger.warning("[initData] HMAC mismatch! received=%s expected=%s", received_hash, expected_hash)
+                raise ValueError("Invalid Telegram HMAC signature")
         else:
             logger.warning("[initData] Skipping HMAC: hash=%s, BOT_TOKEN set=%s", bool(received_hash), bool(BOT_TOKEN))
 
