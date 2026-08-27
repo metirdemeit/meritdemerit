@@ -100,22 +100,32 @@ async def get_student_history(
     combined: list[dict] = []
 
     for record in teacher_history:
+        teacher_name = "Удаленный учитель"
+        if record.teacher:
+            teacher_name = f"{record.teacher.first_name} {record.teacher.last_name or ''}".strip()
+        rule_desc = record.rule.description if record.rule else "—"
+
         combined.append({
             "id": record.id,
-            "teacher_name": f"{record.teacher.first_name} {record.teacher.last_name or ''}".strip(),
+            "teacher_name": teacher_name,
             "role": "teacher",
-            "rule_description": record.rule.description,
+            "rule_description": rule_desc,
             "points_changed": record.points_changed,
             "comment": record.comment,
             "created_at": record.created_at,
         })
 
     for record in admin_history:
+        admin_name = "Администратор"
+        if record.admin:
+            admin_name = f"{record.admin.first_name} {record.admin.last_name or ''}".strip()
+        rule_desc = record.rule.description if record.rule else "—"
+
         combined.append({
             "id": record.id,
-            "teacher_name": f"{record.admin.first_name} {record.admin.last_name or ''}".strip(),
+            "teacher_name": admin_name,
             "role": "admin",
-            "rule_description": record.rule.description,
+            "rule_description": rule_desc,
             "points_changed": record.points_changed,
             "comment": record.comment,
             "created_at": record.created_at,
@@ -145,11 +155,15 @@ async def get_assignment_detail(
         if record.student_id != student.id:
             raise HTTPException(status_code=403, detail="You can only view your own assignments")
         
+        teacher_name = "Удаленный учитель"
+        if record.teacher:
+            teacher_name = f"{record.teacher.first_name} {record.teacher.last_name or ''}".strip()
+
         return StudentHistoryDetail(
             id=record.id,
-            teacher_name=f"{record.teacher.first_name} {record.teacher.last_name or ''}".strip(),
+            teacher_name=teacher_name,
             role="teacher",
-            rule_description=record.rule.description,
+            rule_description=record.rule.description if record.rule else "—",
             points_changed=record.points_changed,
             comment=record.comment,
             created_at=record.created_at
@@ -165,11 +179,15 @@ async def get_assignment_detail(
         if admin_record.student_id != student.id:
             raise HTTPException(status_code=403, detail="You can only view your own assignments")
         
+        admin_name = "Администратор"
+        if admin_record.admin:
+            admin_name = f"{admin_record.admin.first_name} {admin_record.admin.last_name or ''}".strip()
+
         return StudentHistoryDetail(
             id=admin_record.id,
-            teacher_name=f"{admin_record.admin.first_name} {admin_record.admin.last_name or ''}".strip(),
+            teacher_name=admin_name,
             role="admin",
-            rule_description=admin_record.rule.description,
+            rule_description=admin_record.rule.description if admin_record.rule else "—",
             points_changed=admin_record.points_changed,
             comment=admin_record.comment,
             created_at=admin_record.created_at

@@ -242,7 +242,6 @@ def create_login_response(user: Union[Student, Teacher, Admin], role: str) -> di
     return {
         "access_token": create_access_token(
             data={"sub": str(user.id), "role": role, "username": user.username},
-            expires_delta=timedelta(hours=24),
         ),
         "token_type": "bearer",
         "role": role,

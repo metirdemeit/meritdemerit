@@ -170,18 +170,28 @@ async def get_teacher_history(
         .offset(offset) \
         .limit(size)
     
-    items = [
-        TeacherHistoryResponse(
-            id=record.id,
-            student_name=f"{record.student.first_name} {record.student.last_name}",
-            student_class=record.student.school_class.name if record.student.school_class else "Без класса",
-            rule_description=record.rule.description,
-            points_changed=record.points_changed,
-            comment=record.comment,
-            created_at=record.created_at
+    items = []
+    for record in history:
+        student_name = "Удаленный ученик"
+        student_class = "Без класса"
+        if record.student:
+            student_name = f"{record.student.first_name} {record.student.last_name or ''}".strip()
+            if record.student.school_class:
+                student_class = record.student.school_class.name
+
+        rule_desc = record.rule.description if record.rule else "—"
+
+        items.append(
+            TeacherHistoryResponse(
+                id=record.id,
+                student_name=student_name,
+                student_class=student_class,
+                rule_description=rule_desc,
+                points_changed=record.points_changed,
+                comment=record.comment,
+                created_at=record.created_at
+            )
         )
-        for record in history
-    ]
     
     return {
         "items": items,
@@ -210,11 +220,20 @@ async def get_assignment_detail(
     if record.teacher_id != teacher.id:
         raise HTTPException(status_code=403, detail="You can only view your own assignments")
     
+    student_name = "Удаленный ученик"
+    student_class = "Без класса"
+    if record.student:
+        student_name = f"{record.student.first_name} {record.student.last_name or ''}".strip()
+        if record.student.school_class:
+            student_class = record.student.school_class.name
+
+    rule_desc = record.rule.description if record.rule else "—"
+
     return TeacherHistoryDetail(
         id=record.id,
-        student_name=f"{record.student.first_name} {record.student.last_name}",
-        student_class=record.student.school_class.name if record.student.school_class else "Без класса",
-        rule_description=record.rule.description,
+        student_name=student_name,
+        student_class=student_class,
+        rule_description=rule_desc,
         points_changed=record.points_changed,
         comment=record.comment,
         created_at=record.created_at,

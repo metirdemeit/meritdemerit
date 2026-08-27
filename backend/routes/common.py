@@ -170,7 +170,7 @@ async def get_classes_average_ranking(current_user: dict = Depends(get_current_u
 
     items: list[ClassAverageRankingItem] = []
     for class_obj in classes:
-        students = list(class_obj.students or [])
+        students = [s for s in class_obj.students] if hasattr(class_obj, "students") else []
         if not students:
             continue
 
