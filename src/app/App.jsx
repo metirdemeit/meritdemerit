@@ -44,9 +44,17 @@ export function App({ telegramReady = false }) {
     );
   }
 
-  // После загрузки: нет пользователя и нет токена → fallback
-  if (!telegramReady && !user && !localStorage.getItem('access_token')) {
-    return <TelegramOnly isReload={true} />;
+  const hasSessionOrInitData = Boolean(
+    user ||
+    localStorage.getItem('access_token') ||
+    localStorage.getItem('tg_init_data') ||
+    sessionStorage.getItem('tg_init_data') ||
+    window.Telegram?.WebApp?.initData
+  );
+
+  // Fallback UI только если совсем нет окружения Telegram и нет сохраненных сессий
+  if (!telegramReady && !hasSessionOrInitData && !import.meta.env.DEV) {
+    return <TelegramOnly isReload={false} />;
   }
 
   return (

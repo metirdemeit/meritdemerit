@@ -29,8 +29,9 @@ export function LoginPage() {
       if (!result) throw new Error('Invalid credentials');
     } catch (err) {
       if (import.meta.env.DEV) console.error('[login]', err);
-      setError('Login failed. Please check your username and password.');
-      toast.error('Login failed');
+      const msg = err?.response?.data?.detail || err?.response?.data?.message || 'Login failed. Please check your username and password.';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -45,7 +46,8 @@ export function LoginPage() {
       if (!result) throw new Error('Invalid credentials');
     } catch (err) {
       if (import.meta.env.DEV) console.error('[quickLogin]', err);
-      toast.error('Quick login failed');
+      const msg = err?.response?.data?.detail || err?.response?.data?.message || 'Quick login failed';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

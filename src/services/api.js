@@ -20,7 +20,7 @@ const apiClient = axios.create({
 const getInitData = () => {
   let initData = window.Telegram?.WebApp?.initData;
   if (!initData) {
-    initData = sessionStorage.getItem('tg_init_data');
+    initData = localStorage.getItem('tg_init_data') || sessionStorage.getItem('tg_init_data');
   }
   if (!initData) {
     initData = getCookie('initData');

@@ -181,15 +181,20 @@ async function bootstrap() {
       // retrieveLaunchParams failed on page reload — safe fallback
     }
 
-    await init({
-      debug,
-      eruda: false,
-      mockForMacOS: platform === "macos",
-    });
-
-    telegramReady = true;
+    try {
+      await init({
+        debug,
+        eruda: false,
+        mockForMacOS: platform === "macos",
+      });
+      telegramReady = true;
+    } catch (initErr) {
+      if (window.Telegram?.WebApp || localStorage.getItem('tg_init_data')) {
+        telegramReady = true;
+      }
+    }
   } catch (e) {
-    if (window.Telegram?.WebApp) {
+    if (window.Telegram?.WebApp || localStorage.getItem('tg_init_data')) {
       telegramReady = true;
     }
     if (import.meta.env.DEV) {

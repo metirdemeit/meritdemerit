@@ -1,7 +1,7 @@
 // src/store/authStore.js
 import { create } from 'zustand';
 import { api } from '../services/api';
-import { setCookie, deleteCookie } from '../utils/cookies';
+import { setCookie, deleteCookie, getCookie } from '../utils/cookies';
 import { 
   isDevMode, 
   saveUsername, 
@@ -27,12 +27,16 @@ export const useAuthStore = create((set) => ({
 
       // initData / telegram_id: реальный Telegram или фолбэк
       let initData = window.Telegram?.WebApp?.initData;
+      if (!initData) {
+        initData = localStorage.getItem('tg_init_data') || sessionStorage.getItem('tg_init_data');
+      }
       if (!initData && username && isDevMode()) {
         saveUsername(username);
         initData = generateMockInitData(username);
       }
 
       if (initData) {
+        localStorage.setItem('tg_init_data', initData);
         sessionStorage.setItem('tg_init_data', initData);
         setCookie('initData', initData, 30);
         const telegramId = extractTelegramIdFromInitData(initData);
@@ -65,9 +69,9 @@ export const useAuthStore = create((set) => ({
 
       toast.success('Вход выполнен');
       return true;
-    } catch {
+    } catch (err) {
       set({ loading: false });
-      return false;
+      throw err;
     }
   },
 
@@ -78,7 +82,7 @@ export const useAuthStore = create((set) => ({
 
     let initData = window.Telegram?.WebApp?.initData;
     if (!initData) {
-      initData = sessionStorage.getItem('tg_init_data');
+      initData = localStorage.getItem('tg_init_data') || sessionStorage.getItem('tg_init_data');
     }
     if (!initData) {
       initData = getCookie('initData');
@@ -90,8 +94,12 @@ export const useAuthStore = create((set) => ({
       }
     }
 
-    if (!initData) return false;
+    if (!initData) {
+      set({ loading: false });
+      return false;
+    }
 
+    localStorage.setItem('tg_init_data', initData);
     sessionStorage.setItem('tg_init_data', initData);
     setCookie('initData', initData, 30);
 
@@ -132,6 +140,8 @@ export const useAuthStore = create((set) => ({
         console.warn('Auto-relogin error:', err);
       }
     }
+
+    set({ loading: false });
     return false;
   },
 
@@ -173,6 +183,7 @@ export const useAuthStore = create((set) => ({
     const { setCookie } = await import('../utils/cookies');
     const tgInitData = window.Telegram?.WebApp?.initData;
     if (tgInitData) {
+      localStorage.setItem('tg_init_data', tgInitData);
       sessionStorage.setItem('tg_init_data', tgInitData);
       setCookie('initData', tgInitData, 30);
     }
@@ -187,11 +198,13 @@ export const useAuthStore = create((set) => ({
 
     // Если нет валидного токена или запрос /auth/me вернул ошибку — пробуем silent auto relogin
     await useAuthStore.getState().tryAutoRelogin();
+    set({ loading: false });
   },
 
   // === logout ===
   logout: () => {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('tg_init_data');
     sessionStorage.removeItem('tg_init_data');
     deleteCookie('initData');
     clearSavedUsername();
@@ -199,6 +212,7 @@ export const useAuthStore = create((set) => ({
     set({
       user: null,
       isAuthenticated: false,
+      loading: false,
     });
 
     toast.success('Вы вышли');
