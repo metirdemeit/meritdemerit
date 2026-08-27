@@ -223,6 +223,8 @@ class TelegramLoginWithCredentials(BaseModel):
     def _resolve_init_data(self):
         if not self.init_data and self.initData:
             self.init_data = self.initData
+        if not self.init_data:
+            raise ValueError("init_data is required")
         return self
 
 
@@ -285,9 +287,9 @@ async def login_json(data: JsonLoginCredentials, request: Request):
 @router.post("/login")
 async def first_time_login(data: TelegramLoginWithCredentials, request: Request):
     """
-    First-time login: username/password + link Telegram account via initData (optional).
+    First-time login: username/password + link Telegram account via initData.
     """
-    telegram_id = extract_telegram_id(data.init_data) if data.init_data else None
+    telegram_id = extract_telegram_id(data.init_data)
     key = _bruteforce_key_from_request(request, telegram_id=telegram_id)
     _limiter.check(key)
     logger.info("[/login] telegram_id=%s, username=%s", telegram_id, data.username)
@@ -297,6 +299,8 @@ async def first_time_login(data: TelegramLoginWithCredentials, request: Request)
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username and password cannot be empty",
         )
+
+    existing_user = await find_user_by_telegram_id(telegram_id)
 
     user = await authenticate_user(data.username, data.password)
     if not user:
@@ -308,23 +312,21 @@ async def first_time_login(data: TelegramLoginWithCredentials, request: Request)
 
     logger.info("[/login] Authenticated: %s (id=%s, current tg=%s)", user.username, user.id, user.telegram_id)
 
-    if telegram_id is not None:
-        existing_user = await find_user_by_telegram_id(telegram_id)
-        if user.telegram_id is not None:
-            if user.telegram_id != telegram_id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Your account is already linked to a different Telegram account.",
-                )
-        else:
-            if existing_user:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="This Telegram account is already linked to another user.",
-                )
-            user.telegram_id = telegram_id
-            await user.save(update_fields=["telegram_id"])
-            logger.info("[/login] Linked telegram_id=%s to user=%s", telegram_id, user.username)
+    if user.telegram_id is not None:
+        if user.telegram_id != telegram_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account is already linked to a different Telegram account.",
+            )
+    else:
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This Telegram account is already linked to another user.",
+            )
+        user.telegram_id = telegram_id
+        await user.save(update_fields=["telegram_id"])
+        logger.info("[/login] Linked telegram_id=%s to user=%s", telegram_id, user.username)
 
     _limiter.success(key)
     role = get_user_role(user)
