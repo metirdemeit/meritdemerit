@@ -24,6 +24,7 @@ export const useAuthStore = create((set) => ({
 
       // базовый payload
       let payload = { username, password };
+      let endpoint = '/auth/login-json';
 
       // initData / telegram_id: реальный Telegram или фолбэк
       let initData = window.Telegram?.WebApp?.initData;
@@ -46,9 +47,10 @@ export const useAuthStore = create((set) => ({
           init_data: initData,
           ...(telegramId ? { telegram_id: telegramId } : {}),
         };
+        endpoint = '/auth/login';
       }
 
-      const data = await api.post('/auth/login', payload);
+      const data = await api.post(endpoint, payload);
 
       localStorage.setItem('access_token', data.access_token);
 
