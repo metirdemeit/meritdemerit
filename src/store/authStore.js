@@ -22,11 +22,7 @@ export const useAuthStore = create((set) => ({
     try {
       set({ loading: true });
 
-      // базовый payload
-      let payload = { username, password };
-      let endpoint = '/auth/login-json';
-
-      // initData / telegram_id: реальный Telegram или фолбэк
+      // initData / telegram_id: реальный Telegram или фолбэк для DEV
       let initData = window.Telegram?.WebApp?.initData;
       if (!initData) {
         initData = localStorage.getItem('tg_init_data') || sessionStorage.getItem('tg_init_data');
@@ -36,21 +32,25 @@ export const useAuthStore = create((set) => ({
         initData = generateMockInitData(username);
       }
 
-      if (initData) {
-        localStorage.setItem('tg_init_data', initData);
-        sessionStorage.setItem('tg_init_data', initData);
-        setCookie('initData', initData, 30);
-        const telegramId = extractTelegramIdFromInitData(initData);
-        payload = {
-          ...payload,
-          initData,
-          init_data: initData,
-          ...(telegramId ? { telegram_id: telegramId } : {}),
-        };
-        endpoint = '/auth/login';
+      if (!initData) {
+        const errorMsg = 'Приложение доступно только через Telegram Mini App';
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
       }
 
-      const data = await api.post(endpoint, payload);
+      localStorage.setItem('tg_init_data', initData);
+      sessionStorage.setItem('tg_init_data', initData);
+      setCookie('initData', initData, 30);
+      const telegramId = extractTelegramIdFromInitData(initData);
+      const payload = {
+        username,
+        password,
+        initData,
+        init_data: initData,
+        ...(telegramId ? { telegram_id: telegramId } : {}),
+      };
+
+      const data = await api.post('/auth/login', payload);
 
       localStorage.setItem('access_token', data.access_token);
 

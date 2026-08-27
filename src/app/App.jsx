@@ -44,16 +44,14 @@ export function App({ telegramReady = false }) {
     );
   }
 
-  const hasSessionOrInitData = Boolean(
-    user ||
-    localStorage.getItem('access_token') ||
+  const hasTelegramInitData = Boolean(
+    window.Telegram?.WebApp?.initData ||
     localStorage.getItem('tg_init_data') ||
-    sessionStorage.getItem('tg_init_data') ||
-    window.Telegram?.WebApp?.initData
+    sessionStorage.getItem('tg_init_data')
   );
 
-  // Fallback UI только если совсем нет окружения Telegram и нет сохраненных сессий
-  if (!telegramReady && !hasSessionOrInitData && !import.meta.env.DEV) {
+  // Если нет контекста Telegram (initData) И пользователь не авторизован И мы в PROD — блокируем доступ
+  if (!hasTelegramInitData && !user && !import.meta.env.DEV) {
     return <TelegramOnly isReload={false} />;
   }
 
