@@ -49,7 +49,17 @@ apiClient.interceptors.request.use((config) => {
 // === response interceptor ===
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const config = error.config;
+    const isServerErrorOrNetwork = !error.response || (error.response.status >= 500 && error.response.status <= 599);
+
+    if (config && isServerErrorOrNetwork && !config._retryCount && !config.skipRetry) {
+      config._retryCount = 1;
+      toast.loading('Ошибка соединения. Повторный запрос через 3 секунды...', { id: 'retry-toast', duration: 3000 });
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      return apiClient(config);
+    }
+
     if (error.response?.status === 401) {
       if (!error.config?.skipUnauthorizedSignal) {
         window.dispatchEvent(new Event('unauthorized'));
