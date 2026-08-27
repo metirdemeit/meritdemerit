@@ -87,6 +87,7 @@ class TeacherUpdate(BaseModel):
     last_name: str | None = None
     password: str | None = None
     homeroom_class_id: int | None = None
+    homeroom_class_name: str | None = None
 
 # Interventions
 class InterventionCreate(BaseModel):
@@ -507,6 +508,14 @@ async def update_teacher(teacher_id: int, teacher_data: TeacherUpdate):
         raise HTTPException(status_code=404, detail="Teacher not found")
     
     update_data = teacher_data.model_dump(exclude_unset=True)
+    if "homeroom_class_name" in update_data:
+        c_name = update_data.pop("homeroom_class_name")
+        if c_name and c_name.strip():
+            sc, _ = await Class.get_or_create(name=c_name.strip(), defaults={"name": c_name.strip()})
+            update_data["homeroom_class_id"] = sc.id
+        else:
+            update_data["homeroom_class_id"] = None
+
     await teacher.update_from_dict(update_data)
     await teacher.save()
     return await _build_teacher_out(teacher)
@@ -705,24 +714,32 @@ def _build_combined_history(
     combined: list[tuple[datetime, PointHistoryResponse]] = []
 
     for r in teacher_records:
+        student_name = f"{r.student.first_name} {r.student.last_name or ''}".strip() if r.student else "Удаленный ученик"
+        teacher_name = f"{r.teacher.first_name} {r.teacher.last_name or ''}".strip() if r.teacher else "Admin"
+        rule_desc = r.rule.description if r.rule else "—"
+
         combined.append((r.created_at, PointHistoryResponse(
             id=r.id,
-            student_name=f"{r.student.first_name} {r.student.last_name}",
+            student_name=student_name,
             student_class=_get_student_class_name(r),
-            teacher_name=f"{r.teacher.first_name} {r.teacher.last_name}" if r.teacher else "Admin",
-            rule_description=r.rule.description,
+            teacher_name=teacher_name,
+            rule_description=rule_desc,
             points_changed=r.points_changed,
             comment=r.comment,
             created_at=r.created_at,
         )))
 
     for r in admin_records:
+        student_name = f"{r.student.first_name} {r.student.last_name or ''}".strip() if r.student else "Удаленный ученик"
+        admin_name = f"{r.admin.first_name} {r.admin.last_name or ''}".strip() if r.admin else "Admin"
+        rule_desc = r.rule.description if r.rule else "—"
+
         combined.append((r.created_at, PointHistoryResponse(
             id=r.id,
-            student_name=f"{r.student.first_name} {r.student.last_name}",
+            student_name=student_name,
             student_class=_get_student_class_name(r),
-            teacher_name="Admin",
-            rule_description=r.rule.description,
+            teacher_name=admin_name,
+            rule_description=rule_desc,
             points_changed=r.points_changed,
             comment=r.comment,
             created_at=r.created_at,
