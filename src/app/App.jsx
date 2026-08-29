@@ -8,6 +8,8 @@ import { TelegramOnly } from "../components/screens/TelegramOnly.jsx";
 import { Toaster } from 'react-hot-toast';
 import { useEffect, useState } from 'react';
 
+import { isTelegramWebView } from "../utils/telegramCheck";
+
 /**
  * App component
  *
@@ -44,14 +46,14 @@ export function App({ telegramReady = false }) {
     );
   }
 
-  const hasTelegramInitData = Boolean(
+  const inTelegram = telegramReady || isTelegramWebView() || Boolean(
     window.Telegram?.WebApp?.initData ||
     localStorage.getItem('tg_init_data') ||
     sessionStorage.getItem('tg_init_data')
   );
 
-  // Если нет контекста Telegram (initData) И пользователь не авторизован И мы в PROD — блокируем доступ
-  if (!hasTelegramInitData && !user && !import.meta.env.DEV) {
+  // Блокируем доступ только если открыли в обычном внешнем браузере (не Telegram)
+  if (!inTelegram && !user && !import.meta.env.DEV) {
     return <TelegramOnly isReload={false} />;
   }
 
