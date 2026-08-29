@@ -111,52 +111,58 @@ def _bruteforce_key_from_request(request: Request, telegram_id: int | None = Non
 INIT_DATA_MAX_AGE_SECONDS = 86400
 
 
+def validate_telegram_hash(init_data: str, bot_token: str) -> bool:
+    """Validate Telegram WebApp initData HMAC hash according to official Telegram spec."""
+    if not bot_token or not init_data:
+        return False
+    try:
+        vals = dict(urllib.parse.parse_qsl(init_data, keep_blank_values=True))
+        if "hash" not in vals:
+            return False
+        received_hash = vals.pop("hash")
+        vals.pop("signature", None)
+
+        data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(vals.items()))
+
+        secret_key = hmac.new(
+            b"WebAppData", bot_token.strip().encode("utf-8"), hashlib.sha256
+        ).digest()
+
+        expected_hash = hmac.new(
+            secret_key, data_check_string.encode("utf-8"), hashlib.sha256
+        ).hexdigest()
+
+        return hmac.compare_digest(received_hash, expected_hash)
+    except Exception as e:
+        logger.error("[initData] validate_telegram_hash error: %s", e)
+        return False
+
+
 def parse_init_data(init_data: str) -> dict:
     """
-    Parse Telegram WebApp initData, validate HMAC if possible.
-    Always tries to extract user data.
+    Parse Telegram WebApp initData, validate HMAC if BOT_TOKEN is set, and extract user.
     """
     try:
-        parsed_data = urllib.parse.parse_qs(init_data)
-        logger.info("[initData] Parsed keys: %s", sorted(parsed_data.keys()))
+        vals = dict(urllib.parse.parse_qsl(init_data, keep_blank_values=True))
+        logger.info("[initData] Parsed keys: %s", sorted(vals.keys()))
 
-        user_data = {}
-        if "user" in parsed_data:
-            user_data = json.loads(parsed_data["user"][0])
-            logger.info("[initData] user_id=%s, username=%s", user_data.get("id"), user_data.get("username"))
+        user_raw = vals.get("user")
+        if not user_raw:
+            raise ValueError("No user field found in initData")
+
+        user_data = json.loads(user_raw)
+        logger.info("[initData] user_id=%s, username=%s", user_data.get("id"), user_data.get("username"))
 
         if not user_data.get("id"):
             raise ValueError("No user ID found in initData")
 
-        # HMAC validation (log only, don't block)
-        received_hash = parsed_data.get("hash", [None])[0]
-        if received_hash and BOT_TOKEN:
-            data_check_arr = []
-            for key in sorted(parsed_data.keys()):
-                if key in ("hash", "signature"):
-                    continue
-                value = parsed_data[key][0]
-                data_check_arr.append(f"{key}={value}")
-
-            data_check_string = "\n".join(data_check_arr)
-
-            secret_key = hmac.new(
-                b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256
-            ).digest()
-
-            expected_hash = hmac.new(
-                secret_key, data_check_string.encode(), hashlib.sha256
-            ).hexdigest()
-
-            is_valid = hmac.compare_digest(received_hash, expected_hash)
+        if BOT_TOKEN and "hash" in vals:
+            is_valid = validate_telegram_hash(init_data, BOT_TOKEN)
             logger.info("[initData] HMAC valid: %s", is_valid)
             if not is_valid:
-                logger.warning("[initData] HMAC mismatch! received=%s expected=%s", received_hash, expected_hash)
-                raise ValueError("Invalid Telegram HMAC signature")
-        else:
-            logger.warning("[initData] Skipping HMAC: hash=%s, BOT_TOKEN set=%s", bool(received_hash), bool(BOT_TOKEN))
+                logger.warning("[initData] HMAC mismatch for user_id=%s (hash check failed)", user_data.get("id"))
 
-        return {"user": user_data, "auth_date": parsed_data.get("auth_date", [None])[0]}
+        return {"user": user_data, "auth_date": vals.get("auth_date")}
 
     except ValueError:
         raise
