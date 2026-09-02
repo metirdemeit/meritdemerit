@@ -172,27 +172,35 @@ def parse_init_data(init_data: str) -> dict:
 
 
 def extract_telegram_id(init_data: str) -> int:
-    """Parse initData and return telegram user id."""
-    try:
-        result = parse_init_data(init_data)
-        return int(result["user"]["id"])
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        logger.error("[initData] extract_telegram_id error: %s", e)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid initData")
-
-
-async def find_user_by_telegram_id(telegram_id: int) -> Union[Student, Teacher, Admin, None]:
+async def find_user_by_telegram_id(telegram_id: int | None) -> Union[Student, Teacher, Admin, None]:
+    if not telegram_id:
+        return None
     user = await Student.get_or_none(telegram_id=telegram_id)
-    if not user:
-        user = await Teacher.get_or_none(telegram_id=telegram_id)
-    if not user:
-        user = await Admin.get_or_none(telegram_id=telegram_id)
+    if user:
+        return user
+    user = await Teacher.get_or_none(telegram_id=telegram_id)
+    if user:
+        return user
+    user = await Admin.get_or_none(telegram_id=telegram_id)
     return user
 
 
+def extract_telegram_id(init_data: str | None) -> int | None:
+    if not init_data:
+        return None
+    try:
+        parsed = parse_init_data(init_data)
+        user_info = parsed.get("user", {})
+        return user_info.get("id")
+    except Exception as e:
+        logger.warning("[extract_telegram_id] Failed to parse initData: %s", e)
+        return None
+
+
 async def authenticate_user(username: str, password: str) -> Union[Student, Teacher, Admin, None]:
+    username = username.strip()
+    password = password.strip()
+
     user = await Student.get_or_none(username=username)
     if not user:
         user = await Teacher.get_or_none(username=username)
@@ -214,8 +222,6 @@ class TelegramInitDataLogin(BaseModel):
     def _resolve_init_data(self):
         if not self.init_data and self.initData:
             self.init_data = self.initData
-        if not self.init_data:
-            raise ValueError("init_data is required")
         return self
 
 
@@ -229,8 +235,6 @@ class TelegramLoginWithCredentials(BaseModel):
     def _resolve_init_data(self):
         if not self.init_data and self.initData:
             self.init_data = self.initData
-        if not self.init_data:
-            raise ValueError("init_data is required")
         return self
 
 
@@ -306,8 +310,6 @@ async def first_time_login(data: TelegramLoginWithCredentials, request: Request)
             detail="Username and password cannot be empty",
         )
 
-    existing_user = await find_user_by_telegram_id(telegram_id)
-
     user = await authenticate_user(data.username, data.password)
     if not user:
         _limiter.failure(key)
@@ -318,21 +320,17 @@ async def first_time_login(data: TelegramLoginWithCredentials, request: Request)
 
     logger.info("[/login] Authenticated: %s (id=%s, current tg=%s)", user.username, user.id, user.telegram_id)
 
-    if user.telegram_id is not None:
+    if telegram_id:
+        existing_user = await find_user_by_telegram_id(telegram_id)
+        if existing_user and existing_user.id != user.id and type(existing_user) == type(user):
+            existing_user.telegram_id = None
+            await existing_user.save(update_fields=["telegram_id"])
+            logger.info("[/login] Unlinked telegram_id=%s from previous user=%s", telegram_id, existing_user.username)
+
         if user.telegram_id != telegram_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Your account is already linked to a different Telegram account.",
-            )
-    else:
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="This Telegram account is already linked to another user.",
-            )
-        user.telegram_id = telegram_id
-        await user.save(update_fields=["telegram_id"])
-        logger.info("[/login] Linked telegram_id=%s to user=%s", telegram_id, user.username)
+            user.telegram_id = telegram_id
+            await user.save(update_fields=["telegram_id"])
+            logger.info("[/login] Linked telegram_id=%s to user=%s", telegram_id, user.username)
 
     _limiter.success(key)
     role = get_user_role(user)
