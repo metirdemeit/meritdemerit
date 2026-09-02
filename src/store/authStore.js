@@ -85,9 +85,17 @@ export const useAuthStore = create((set) => ({
     let initData = window.Telegram?.WebApp?.initData;
     if (!initData) {
       initData = localStorage.getItem('tg_init_data') || sessionStorage.getItem('tg_init_data');
+      if (!import.meta.env.DEV && initData && initData.includes('dev_mock_')) {
+        localStorage.removeItem('tg_init_data');
+        sessionStorage.removeItem('tg_init_data');
+        initData = null;
+      }
     }
     if (!initData) {
       initData = getCookie('initData');
+      if (!import.meta.env.DEV && initData && initData.includes('dev_mock_')) {
+        initData = null;
+      }
     }
     if (!initData && isDevMode()) {
       const savedUsername = getSavedUsername();
@@ -115,7 +123,7 @@ export const useAuthStore = create((set) => ({
           initData: initData,
           ...(telegramId ? { telegram_id: telegramId } : {}),
         },
-        { skipErrorToast: true, skipUnauthorizedSignal: true }
+        { skipErrorToast: true, skipUnauthorizedSignal: true, skipRetry: true }
       );
 
       if (data?.access_token) {
