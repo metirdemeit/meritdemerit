@@ -171,7 +171,6 @@ def parse_init_data(init_data: str) -> dict:
         raise ValueError(f"Failed to parse initData: {e}")
 
 
-def extract_telegram_id(init_data: str) -> int:
 async def find_user_by_telegram_id(telegram_id: int | None) -> Union[Student, Teacher, Admin, None]:
     if not telegram_id:
         return None
