@@ -187,13 +187,52 @@ async def find_user_by_telegram_id(telegram_id: int | None) -> Union[Student, Te
 def extract_telegram_id(init_data: str | None) -> int | None:
     if not init_data:
         return None
-    try:
-        parsed = parse_init_data(init_data)
-        user_info = parsed.get("user", {})
-        return user_info.get("id")
-    except Exception as e:
-        logger.warning("[extract_telegram_id] Failed to parse initData: %s", e)
+    
+    raw_str = str(init_data).strip()
+    if not raw_str:
         return None
+
+    # Fallback 1: Try parse_init_data standard
+    try:
+        parsed = parse_init_data(raw_str)
+        user_info = parsed.get("user", {})
+        if user_info and user_info.get("id"):
+            return int(user_info["id"])
+    except Exception:
+        pass
+
+    # Fallback 2: Robust unquoting and query parsing
+    try:
+        if "tgWebAppData=" in raw_str:
+            parsed_qs = urllib.parse.parse_qs(raw_str.replace("?", "&"))
+            if "tgWebAppData" in parsed_qs:
+                raw_str = parsed_qs["tgWebAppData"][0]
+            elif "#tgWebAppData=" in raw_str:
+                raw_str = raw_str.split("#tgWebAppData=")[1].split("&")[0]
+
+        unquoted = urllib.parse.unquote(raw_str)
+        if "%" in unquoted:
+            unquoted = urllib.parse.unquote(unquoted)
+
+        vals = dict(urllib.parse.parse_qsl(unquoted, keep_blank_values=True))
+        if "user" in vals:
+            user_data = json.loads(vals["user"])
+            if user_data and user_data.get("id"):
+                return int(user_data["id"])
+    except Exception as e:
+        logger.warning("[extract_telegram_id] Fallback 2 error: %s", e)
+
+    # Fallback 3: Regex match for "id":123456789
+    try:
+        import re
+        unquoted = urllib.parse.unquote(raw_str)
+        match = re.search(r'"id"\s*:\s*(\d+)', raw_str) or re.search(r'"id"\s*:\s*(\d+)', unquoted)
+        if match:
+            return int(match.group(1))
+    except Exception as e:
+        logger.warning("[extract_telegram_id] Regex fallback error: %s", e)
+
+    return None
 
 
 async def authenticate_user(username: str, password: str) -> Union[Student, Teacher, Admin, None]:
@@ -227,6 +266,7 @@ class TelegramInitDataLogin(BaseModel):
 class TelegramLoginWithCredentials(BaseModel):
     init_data: str | None = Field(None)
     initData: str | None = Field(None, exclude=True)
+    telegram_id: int | None = Field(None)
     username: str
     password: str
 
@@ -298,7 +338,7 @@ async def first_time_login(data: TelegramLoginWithCredentials, request: Request)
     """
     First-time login: username/password + link Telegram account via initData.
     """
-    telegram_id = extract_telegram_id(data.init_data)
+    telegram_id = data.telegram_id or extract_telegram_id(data.init_data)
     if not telegram_id:
         hdr_init = request.headers.get("x-telegram-init-data") or request.headers.get("initdata")
         if hdr_init:
