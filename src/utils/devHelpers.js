@@ -75,8 +75,16 @@ export const extractTelegramIdFromInitData = (initData) => {
   if (!initData) return null;
   
   try {
-    let rawStr = initData;
-    if (typeof rawStr === 'string' && (rawStr.includes('%3D') || rawStr.includes('%26'))) {
+    let rawStr = String(initData);
+    if (rawStr.includes('tgWebAppData=')) {
+      try {
+        const search = new URLSearchParams(rawStr.replace('?', '&'));
+        if (search.has('tgWebAppData')) {
+          rawStr = search.get('tgWebAppData');
+        }
+      } catch {}
+    }
+    if (rawStr.includes('%3D') || rawStr.includes('%26') || rawStr.includes('%22')) {
       try {
         rawStr = decodeURIComponent(rawStr);
       } catch {}
@@ -96,7 +104,13 @@ export const extractTelegramIdFromInitData = (initData) => {
           userData = JSON.parse(decodeURIComponent(userParam));
         }
       }
-      return userData?.id ? Number(userData.id) : null;
+      if (userData?.id) return Number(userData.id);
+    }
+
+    // Regex fallback for {"id": 123456789}
+    const match = rawStr.match(/"id"\s*:\s*(\d+)/);
+    if (match && match[1]) {
+      return Number(match[1]);
     }
   } catch (error) {
     if (import.meta.env.DEV) console.error('Error extracting telegram_id from initData:', error);
