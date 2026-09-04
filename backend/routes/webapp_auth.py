@@ -398,7 +398,10 @@ class UserProfile(BaseModel):
 
 
 @router.get("/me", response_model=UserProfile)
-async def read_users_me(current_user: Union[Student, Teacher, Admin] = Depends(get_current_user)):
+async def read_users_me(
+    request: Request,
+    current_user: Union[Student, Teacher, Admin] = Depends(get_current_user)
+):
     role = get_user_role(current_user)
     class_id = None
     class_name = None
@@ -407,6 +410,24 @@ async def read_users_me(current_user: Union[Student, Teacher, Admin] = Depends(g
         if current_user.homeroom_class:
             class_id = current_user.homeroom_class.id
             class_name = current_user.homeroom_class.name
+
+    # Silent auto-linking of telegram_id if missing in DB
+    if current_user.telegram_id is None:
+        hdr_init = (
+            request.headers.get("x-telegram-init-data")
+            or request.headers.get("initdata")
+            or request.query_params.get("initData")
+            or request.query_params.get("init_data")
+        )
+        telegram_id = extract_telegram_id(hdr_init) if hdr_init else None
+        if telegram_id:
+            existing_user = await find_user_by_telegram_id(telegram_id)
+            if existing_user and (existing_user.id != current_user.id or type(existing_user) != type(current_user)):
+                existing_user.telegram_id = None
+                await existing_user.save(update_fields=["telegram_id"])
+            current_user.telegram_id = telegram_id
+            await current_user.save(update_fields=["telegram_id"])
+            logger.info("[/auth/me] Auto-linked telegram_id=%s to user=%s", telegram_id, current_user.username)
 
     return {
         "id": current_user.id,
