@@ -1,24 +1,41 @@
 // src/store/authStore.js
 import { create } from 'zustand';
 import { api } from '../services/api';
-import { setCookie, deleteCookie, getCookie } from '../utils/cookies';
+import { setCookie, deleteCookie } from '../utils/cookies';
 import { 
   isDevMode, 
   saveUsername, 
   clearSavedUsername,
-  generateMockInitData,
   extractTelegramIdFromInitData,
 } from '../utils/devHelpers';
 import { getTelegramInitData } from '../utils/telegramCheck';
 import toast from 'react-hot-toast';
 
+/** Persist initData in all storages so headers interceptor always finds it */
+function storeInitData(initData) {
+  if (!initData) return;
+  localStorage.setItem('tg_init_data', initData);
+  sessionStorage.setItem('tg_init_data', initData);
+  setCookie('initData', initData, 30);
+}
+
+/** Clear all session-related data */
+function clearSession() {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('tg_init_data');
+  sessionStorage.removeItem('tg_init_data');
+  deleteCookie('initData');
+  clearSavedUsername();
+}
+
 export const useAuthStore = create((set) => ({
   user: null,
   loading: false,
-
   isAuthenticated: false,
 
-  // === login ===
+  // =========================================================
+  // login — первый вход по логину/паролю
+  // =========================================================
   login: async (username, password) => {
     try {
       set({ loading: true });
@@ -27,11 +44,9 @@ export const useAuthStore = create((set) => ({
         saveUsername(username);
       }
 
-      let initData = getTelegramInitData();
+      const initData = getTelegramInitData();
       if (initData) {
-        localStorage.setItem('tg_init_data', initData);
-        sessionStorage.setItem('tg_init_data', initData);
-        setCookie('initData', initData, 30);
+        storeInitData(initData);
       }
 
       const telegramId = initData ? extractTelegramIdFromInitData(initData) : null;
@@ -55,12 +70,7 @@ export const useAuthStore = create((set) => ({
         role: data.role,
       };
 
-      set({
-        user: userObj,
-        isAuthenticated: true,
-        loading: false,
-      });
-
+      set({ user: userObj, isAuthenticated: true, loading: false });
       toast.success('Вход выполнен');
       return true;
     } catch (err) {
@@ -69,43 +79,26 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  // === silent auto-relogin helper ===
+  // =========================================================
+  // tryAutoRelogin — тихий авто-вход через Telegram ID
+  // НЕ вызывать если telegram_id был намеренно обнулён в БД.
+  // В этом случае /auth/quick вернёт 404 → возвращаем false.
+  // =========================================================
   tryAutoRelogin: async () => {
-    const { getCookie, setCookie } = await import('../utils/cookies');
-    const { extractTelegramIdFromInitData, generateMockInitData, getSavedUsername, isDevMode } = await import('../utils/devHelpers');
-
-    let initData = window.Telegram?.WebApp?.initData;
-    if (!initData) {
-      initData = localStorage.getItem('tg_init_data') || sessionStorage.getItem('tg_init_data');
-      if (!import.meta.env.DEV && initData && initData.includes('dev_mock_')) {
-        localStorage.removeItem('tg_init_data');
-        sessionStorage.removeItem('tg_init_data');
-        initData = null;
-      }
-    }
-    if (!initData) {
-      initData = getCookie('initData');
-      if (!import.meta.env.DEV && initData && initData.includes('dev_mock_')) {
-        initData = null;
-      }
-    }
-    if (!initData && isDevMode()) {
-      const savedUsername = getSavedUsername();
-      if (savedUsername) {
-        initData = generateMockInitData(savedUsername);
-      }
-    }
+    const initData = getTelegramInitData();
 
     if (!initData) {
       set({ loading: false });
       return false;
     }
 
-    localStorage.setItem('tg_init_data', initData);
-    sessionStorage.setItem('tg_init_data', initData);
-    setCookie('initData', initData, 30);
-
+    storeInitData(initData);
     const telegramId = extractTelegramIdFromInitData(initData);
+
+    if (!telegramId) {
+      set({ loading: false });
+      return false;
+    }
 
     try {
       const data = await api.post(
@@ -113,7 +106,7 @@ export const useAuthStore = create((set) => ({
         { 
           init_data: initData,
           initData: initData,
-          ...(telegramId ? { telegram_id: telegramId } : {}),
+          telegram_id: telegramId,
         },
         { skipErrorToast: true, skipUnauthorizedSignal: true, skipRetry: true }
       );
@@ -130,16 +123,12 @@ export const useAuthStore = create((set) => ({
           role: data.role,
         };
 
-        set({
-          user: userObj,
-          isAuthenticated: true,
-          loading: false,
-        });
+        set({ user: userObj, isAuthenticated: true, loading: false });
         return true;
       }
     } catch (err) {
       if (import.meta.env.DEV) {
-        console.warn('Auto-relogin error:', err);
+        console.warn('[tryAutoRelogin] failed:', err?.response?.status, err?.response?.data?.detail);
       }
     }
 
@@ -147,7 +136,11 @@ export const useAuthStore = create((set) => ({
     return false;
   },
 
-  // === profile check ===
+  // =========================================================
+  // fetchProfile — проверка валидности текущей сессии
+  // Если /auth/me возвращает 401 (telegram_id обнулён — сброс
+  // через терминал) → clearSession → показываем LoginPage.
+  // =========================================================
   fetchProfile: async (options = {}) => {
     try {
       set({ loading: true });
@@ -157,66 +150,58 @@ export const useAuthStore = create((set) => ({
         skipUnauthorizedSignal: options.silent,
       });
 
-      set({
-        user,
-        isAuthenticated: true,
-        loading: false,
-      });
+      set({ user, isAuthenticated: true, loading: false });
       return true;
-    } catch {
-      // Try silent auto-relogin before clearing session
-      const relogged = await useAuthStore.getState().tryAutoRelogin();
-      if (relogged) {
-        return true;
+    } catch (err) {
+      const status = err?.response?.status;
+
+      // 401 — telegram_id обнулён в БД (принудительный сброс):
+      // НЕ пробуем auto-relogin, т.к. /auth/quick тоже не найдёт юзера.
+      // Просто чистим сессию и показываем Login.
+      if (status === 401) {
+        clearSession();
+        set({ user: null, isAuthenticated: false, loading: false });
+        return false;
       }
 
-      localStorage.removeItem('access_token');
-      set({
-        user: null,
-        isAuthenticated: false,
-        loading: false,
-      });
+      // Другие ошибки (500, сеть) — пробуем тихий авто-ревход
+      const relogged = await useAuthStore.getState().tryAutoRelogin();
+      if (relogged) return true;
+
+      clearSession();
+      set({ user: null, isAuthenticated: false, loading: false });
       return false;
     }
   },
 
-  // === init on app start ===
+  // =========================================================
+  // initialize — вызывается при запуске приложения
+  // =========================================================
   initialize: async () => {
-    const { setCookie } = await import('../utils/cookies');
-    const tgInitData = window.Telegram?.WebApp?.initData;
-    if (tgInitData) {
-      localStorage.setItem('tg_init_data', tgInitData);
-      sessionStorage.setItem('tg_init_data', tgInitData);
-      setCookie('initData', tgInitData, 30);
+    // Сразу сохраняем свежий initData если есть
+    const initData = getTelegramInitData();
+    if (initData) {
+      storeInitData(initData);
     }
 
     const token = localStorage.getItem('access_token');
 
-    // Если токен есть — пытаемся проверить профиль (в тихом режиме)
     if (token) {
       const ok = await useAuthStore.getState().fetchProfile({ silent: true });
       if (ok) return;
     }
 
-    // Если нет валидного токена или запрос /auth/me вернул ошибку — пробуем silent auto relogin
+    // Нет токена или сессия невалидна — пробуем auto-relogin
     await useAuthStore.getState().tryAutoRelogin();
     set({ loading: false });
   },
 
-  // === logout ===
+  // =========================================================
+  // logout — нет кнопки в UI, но метод нужен для внутренних
+  // нужд (например программный выход)
+  // =========================================================
   logout: () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('tg_init_data');
-    sessionStorage.removeItem('tg_init_data');
-    deleteCookie('initData');
-    clearSavedUsername();
-
-    set({
-      user: null,
-      isAuthenticated: false,
-      loading: false,
-    });
-
-    toast.success('Вы вышли');
+    clearSession();
+    set({ user: null, isAuthenticated: false, loading: false });
   },
 }));
