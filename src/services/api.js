@@ -7,7 +7,7 @@ import {
   generateMockInitData,
   getSavedUsername,
 } from '../utils/devHelpers';
-import { getCookie } from '../utils/cookies';
+import { getTelegramInitData } from '../utils/telegramCheck';
 
 const apiClient = axios.create({
   baseURL: EXAMPLE_URL,
@@ -16,29 +16,6 @@ const apiClient = axios.create({
   },
 });
 
-// === helpers ===
-const getInitData = () => {
-  let initData = window.Telegram?.WebApp?.initData;
-  if (!initData) {
-    initData = localStorage.getItem('tg_init_data') || sessionStorage.getItem('tg_init_data');
-    if (!import.meta.env.DEV && initData && initData.includes('dev_mock_')) {
-      localStorage.removeItem('tg_init_data');
-      sessionStorage.removeItem('tg_init_data');
-      initData = null;
-    }
-  }
-  if (!initData) {
-    initData = getCookie('initData');
-    if (!import.meta.env.DEV && initData && initData.includes('dev_mock_')) {
-      initData = null;
-    }
-  }
-  if (!initData && isDevMode()) {
-    return generateMockInitData(getSavedUsername());
-  }
-  return initData || null;
-};
-
 // === request interceptor ===
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token');
@@ -46,7 +23,7 @@ apiClient.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  const initData = getInitData();
+  const initData = getTelegramInitData();
   if (initData) {
     config.headers['X-Telegram-Init-Data'] = initData;
   }

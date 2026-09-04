@@ -9,6 +9,7 @@ import {
   generateMockInitData,
   extractTelegramIdFromInitData,
 } from '../utils/devHelpers';
+import { getTelegramInitData } from '../utils/telegramCheck';
 import toast from 'react-hot-toast';
 
 export const useAuthStore = create((set) => ({
@@ -22,30 +23,11 @@ export const useAuthStore = create((set) => ({
     try {
       set({ loading: true });
 
-      // initData / telegram_id: реальный Telegram или фолбэк для DEV
-      let initData = window.Telegram?.WebApp?.initData;
-      if (!initData) {
-        try {
-          const searchParams = new URLSearchParams(window.location.search);
-          const hashStr = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash;
-          const hashParams = new URLSearchParams(hashStr);
-          initData = searchParams.get('tgWebAppData') || searchParams.get('initData') || searchParams.get('init_data') ||
-                     hashParams.get('tgWebAppData') || hashParams.get('initData') || hashParams.get('init_data');
-        } catch {}
-      }
-      if (!initData) {
-        initData = localStorage.getItem('tg_init_data') || sessionStorage.getItem('tg_init_data');
-        if (!import.meta.env.DEV && initData && initData.includes('dev_mock_')) {
-          localStorage.removeItem('tg_init_data');
-          sessionStorage.removeItem('tg_init_data');
-          initData = null;
-        }
-      }
-      if (!initData && username && isDevMode()) {
+      if (username && isDevMode()) {
         saveUsername(username);
-        initData = generateMockInitData(username);
       }
 
+      let initData = getTelegramInitData();
       if (initData) {
         localStorage.setItem('tg_init_data', initData);
         sessionStorage.setItem('tg_init_data', initData);
