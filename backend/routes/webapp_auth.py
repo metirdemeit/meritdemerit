@@ -299,6 +299,11 @@ async def first_time_login(data: TelegramLoginWithCredentials, request: Request)
     First-time login: username/password + link Telegram account via initData.
     """
     telegram_id = extract_telegram_id(data.init_data)
+    if not telegram_id:
+        hdr_init = request.headers.get("x-telegram-init-data") or request.headers.get("initdata")
+        if hdr_init:
+            telegram_id = extract_telegram_id(hdr_init)
+
     key = _bruteforce_key_from_request(request, telegram_id=telegram_id)
     _limiter.check(key)
     logger.info("[/login] telegram_id=%s, username=%s", telegram_id, data.username)
@@ -321,15 +326,15 @@ async def first_time_login(data: TelegramLoginWithCredentials, request: Request)
 
     if telegram_id:
         existing_user = await find_user_by_telegram_id(telegram_id)
-        if existing_user and existing_user.id != user.id and type(existing_user) == type(user):
+        if existing_user and (existing_user.id != user.id or type(existing_user) != type(user)):
             existing_user.telegram_id = None
             await existing_user.save(update_fields=["telegram_id"])
-            logger.info("[/login] Unlinked telegram_id=%s from previous user=%s", telegram_id, existing_user.username)
+            logger.info("[/login] Unlinked telegram_id=%s from previous %s (id=%s)", telegram_id, existing_user.__class__.__name__, existing_user.id)
 
         if user.telegram_id != telegram_id:
             user.telegram_id = telegram_id
             await user.save(update_fields=["telegram_id"])
-            logger.info("[/login] Linked telegram_id=%s to user=%s", telegram_id, user.username)
+            logger.info("[/login] Linked telegram_id=%s to %s (id=%s)", telegram_id, user.__class__.__name__, user.id)
 
     _limiter.success(key)
     role = get_user_role(user)
@@ -337,11 +342,16 @@ async def first_time_login(data: TelegramLoginWithCredentials, request: Request)
 
 
 @router.post("/quick")
-async def quick_login(data: TelegramInitDataLogin):
+async def quick_login(data: TelegramInitDataLogin, request: Request):
     """
     Quick login for users already linked with telegram_id.
     """
     telegram_id = extract_telegram_id(data.init_data)
+    if not telegram_id:
+        hdr_init = request.headers.get("x-telegram-init-data") or request.headers.get("initdata")
+        if hdr_init:
+            telegram_id = extract_telegram_id(hdr_init)
+
     logger.info("[/quick] telegram_id=%s", telegram_id)
 
     user = await find_user_by_telegram_id(telegram_id)
