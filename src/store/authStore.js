@@ -26,27 +26,28 @@ export const useAuthStore = create((set) => ({
       let initData = window.Telegram?.WebApp?.initData;
       if (!initData) {
         initData = localStorage.getItem('tg_init_data') || sessionStorage.getItem('tg_init_data');
+        if (!import.meta.env.DEV && initData && initData.includes('dev_mock_')) {
+          localStorage.removeItem('tg_init_data');
+          sessionStorage.removeItem('tg_init_data');
+          initData = null;
+        }
       }
       if (!initData && username && isDevMode()) {
         saveUsername(username);
         initData = generateMockInitData(username);
       }
 
-      if (!initData) {
-        const errorMsg = 'Приложение доступно только через Telegram Mini App';
-        toast.error(errorMsg);
-        throw new Error(errorMsg);
+      if (initData) {
+        localStorage.setItem('tg_init_data', initData);
+        sessionStorage.setItem('tg_init_data', initData);
+        setCookie('initData', initData, 30);
       }
 
-      localStorage.setItem('tg_init_data', initData);
-      sessionStorage.setItem('tg_init_data', initData);
-      setCookie('initData', initData, 30);
-      const telegramId = extractTelegramIdFromInitData(initData);
+      const telegramId = initData ? extractTelegramIdFromInitData(initData) : null;
       const payload = {
-        username,
-        password,
-        initData,
-        init_data: initData,
+        username: username.trim(),
+        password: password.trim(),
+        ...(initData ? { initData, init_data: initData } : {}),
         ...(telegramId ? { telegram_id: telegramId } : {}),
       };
 
