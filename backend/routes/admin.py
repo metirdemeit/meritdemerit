@@ -1,5 +1,6 @@
 from typing import List, Optional, Literal
 import csv
+from html import escape
 import io
 import zipfile
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -753,6 +754,112 @@ def _slice(items: list[PointHistoryResponse], page: int, size: int) -> list[Poin
     offset = (page - 1) * size
     return items[offset : offset + size]
 
+
+def _history_matches_filters(
+    item: PointHistoryResponse,
+    start_date: date | None,
+    end_date: date | None,
+    student: str | None,
+    teacher: str | None,
+    rule: str | None,
+    point_type: Literal["all", "merit", "demerit"],
+) -> bool:
+    item_date = item.created_at.date()
+    if start_date and item_date < start_date:
+        return False
+    if end_date and item_date > end_date:
+        return False
+    if student and student.lower() not in item.student_name.lower():
+        return False
+    if teacher and teacher.lower() not in item.teacher_name.lower():
+        return False
+    if rule and rule.lower() not in item.rule_description.lower():
+        return False
+    if point_type == "merit" and item.points_changed <= 0:
+        return False
+    if point_type == "demerit" and item.points_changed >= 0:
+        return False
+    return True
+
+
+async def _load_combined_history() -> list[PointHistoryResponse]:
+    ph = await PointHistory.all().prefetch_related("student", "student__school_class", "teacher", "rule")
+    aph = await AdminPointHistory.all().prefetch_related("student", "student__school_class", "rule", "admin")
+    return _build_combined_history(ph, aph)
+
+
+def _build_history_html(items: list[PointHistoryResponse]) -> str:
+    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    total_merits = sum(item.points_changed for item in items if item.points_changed > 0)
+    total_demerits = sum(item.points_changed for item in items if item.points_changed < 0)
+
+    rows = "\n".join(
+        f"""
+        <tr>
+          <td>{escape(item.created_at.strftime("%Y-%m-%d %H:%M"))}</td>
+          <td>{escape(item.student_name)}</td>
+          <td>{escape(item.student_class)}</td>
+          <td>{escape(item.teacher_name)}</td>
+          <td>{escape(item.rule_description)}</td>
+          <td class="points {'positive' if item.points_changed > 0 else 'negative'}">{item.points_changed:+d}</td>
+          <td>{escape(item.comment or '')}</td>
+        </tr>
+        """
+        for item in items
+    )
+
+    empty_row = ""
+    if not rows:
+        empty_row = '<tr><td colspan="7" class="empty">No history records found.</td></tr>'
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Students Points History</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; color: #1f2937; margin: 32px; }}
+    h1 {{ margin: 0 0 8px; font-size: 24px; }}
+    .meta {{ color: #6b7280; margin-bottom: 24px; }}
+    .summary {{ display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }}
+    .summary div {{ border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 12px; }}
+    table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
+    th, td {{ border: 1px solid #d1d5db; padding: 8px; text-align: left; vertical-align: top; }}
+    th {{ background: #f3f4f6; }}
+    .points {{ font-weight: 700; text-align: right; white-space: nowrap; }}
+    .positive {{ color: #047857; }}
+    .negative {{ color: #b91c1c; }}
+    .empty {{ text-align: center; color: #6b7280; padding: 24px; }}
+  </style>
+</head>
+<body>
+  <h1>Students Points History</h1>
+  <div class="meta">Generated from database at {escape(generated_at)}</div>
+  <div class="summary">
+    <div><strong>Records:</strong> {len(items)}</div>
+    <div><strong>Merit points:</strong> {total_merits:+d}</div>
+    <div><strong>Demerit points:</strong> {total_demerits:+d}</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Student</th>
+        <th>Class</th>
+        <th>Teacher / Admin</th>
+        <th>Rule</th>
+        <th>Points</th>
+        <th>Comment</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows or empty_row}
+    </tbody>
+  </table>
+</body>
+</html>"""
+
 # --- History ---
 
 @router.get("/history", response_model=HistoryPaginationResponse, summary="Get all point history")
@@ -887,6 +994,48 @@ async def delete_history_record(history_id: int):
         await student.save(update_fields=["points"])
         await admin_history.delete()
     return None
+
+
+@router.get(
+    "/history/export/html",
+    summary="Download students points history as HTML",
+)
+async def export_history_html(
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    student: str | None = Query(None),
+    teacher: str | None = Query(None),
+    rule: str | None = Query(None),
+    point_type: Literal["all", "merit", "demerit"] = Query("all"),
+):
+    """
+    Скачать историю баллов учеников из БД в HTML.
+    Фильтры совпадают с фильтрами админской вкладки Moderation.
+    """
+    if start_date and end_date and start_date > end_date:
+        raise HTTPException(status_code=400, detail="start_date cannot be after end_date")
+
+    all_items = await _load_combined_history()
+    filtered_items = [
+        item
+        for item in all_items
+        if _history_matches_filters(
+            item,
+            start_date=start_date,
+            end_date=end_date,
+            student=student.strip() if student else None,
+            teacher=teacher.strip() if teacher else None,
+            rule=rule.strip() if rule else None,
+            point_type=point_type,
+        )
+    ]
+    html = _build_history_html(filtered_items)
+    filename = f"students-points-history-{date.today().isoformat()}.html"
+    return Response(
+        content=html.encode("utf-8"),
+        media_type="text/html; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get(
