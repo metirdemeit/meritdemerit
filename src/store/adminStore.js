@@ -132,6 +132,22 @@ export const useAdminStore = create((set, get) => ({
     await api.del(`/admin/history/${id}`);
   },
 
+  downloadHistoryHtml: async (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.startDate) params.set('start_date', filters.startDate);
+    if (filters.endDate) params.set('end_date', filters.endDate);
+    if (filters.student?.trim()) params.set('student', filters.student.trim());
+    if (filters.teacher?.trim()) params.set('teacher', filters.teacher.trim());
+    if (filters.rule?.trim()) params.set('rule', filters.rule.trim());
+    if (filters.type && filters.type !== 'all') params.set('point_type', filters.type);
+
+    const query = params.toString();
+    return await api.get(
+      `/admin/history/export/html${query ? `?${query}` : ''}`,
+      { responseType: 'blob' }
+    );
+  },
+
   // === DASHBOARD ===
   fetchDashboard: async () => {
     try {

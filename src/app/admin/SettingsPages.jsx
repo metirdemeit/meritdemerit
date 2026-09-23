@@ -34,6 +34,7 @@ import {
   Search,
   CalendarToday,
   Clear,
+  FileDownload,
   Timer,
   NotificationsActive,
   Report,
@@ -49,6 +50,14 @@ import AssignmentTable from '../components/AssignmentTable';
 import TeachersStatTable from '../components/TeachersStatTable';
 import CommonRankingTable from '../components/CommonRankingTable';
 
+const parseFilterDate = (value, endOfDay = false) => {
+  if (!value) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+  return date;
+};
+
 export function SettingsPages() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -57,6 +66,7 @@ export function SettingsPages() {
     history,
     fetchHistory,
     deleteHistoryRecord,
+    downloadHistoryHtml,
     rankings,
     fetchAdminRanking,
     teacherStats,
@@ -68,6 +78,7 @@ export function SettingsPages() {
   const [selectedRecord, setSelectedRecord] = useState(null);
 
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [exportingHistory, setExportingHistory] = useState(false);
   const [loadingStats, setLoadingStats] = useState(false);
   const [errorHistory, setErrorHistory] = useState(null);
   const [errorStats, setErrorStats] = useState(null);
@@ -168,6 +179,26 @@ export function SettingsPages() {
     }
   };
 
+  const handleDownloadHistoryHtml = async () => {
+    setExportingHistory(true);
+    try {
+      const blob = await downloadHistoryHtml(filters);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `students-points-history-${new Date().toISOString().slice(0, 10)}.html`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast.success('HTML history downloaded');
+    } catch {
+      toast.error('Failed to download history');
+    } finally {
+      setExportingHistory(false);
+    }
+  };
+
   // Фильтрация истории
   const filteredHistory = useMemo(() => {
     if (!Array.isArray(history)) return [];
@@ -187,15 +218,13 @@ export function SettingsPages() {
       // 4. Поиск по дате (от)
       if (filters.startDate) {
         const itemDate = new Date(item.created_at);
-        const start = new Date(filters.startDate);
-        start.setHours(0, 0, 0, 0);
+        const start = parseFilterDate(filters.startDate);
         if (itemDate < start) return false;
       }
       // 5. Поиск по дате (до)
       if (filters.endDate) {
         const itemDate = new Date(item.created_at);
-        const end = new Date(filters.endDate);
-        end.setHours(23, 59, 59, 999);
+        const end = parseFilterDate(filters.endDate, true);
         if (itemDate > end) return false;
       }
       // 6. Тип (Merit / Demerit)
@@ -309,19 +338,36 @@ export function SettingsPages() {
                 <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>
                   Points History Moderation ({filteredHistory.length} / {history?.length || 0})
                 </Typography>
-                <Button
-                  size="small"
-                  startIcon={<FilterList />}
-                  onClick={() => setShowFilters(!showFilters)}
-                  sx={{
-                    color: activeFilterCount > 0 ? '#00D377' : '#9266FF',
-                    borderColor: activeFilterCount > 0 ? 'rgba(0,211,119,0.4)' : 'rgba(146,102,255,0.4)',
-                    textTransform: 'none',
-                  }}
-                  variant="outlined"
-                >
-                  Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
-                </Button>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    size="small"
+                    startIcon={<FileDownload />}
+                    onClick={handleDownloadHistoryHtml}
+                    disabled={exportingHistory}
+                    sx={{
+                      color: '#00D377',
+                      borderColor: 'rgba(0,211,119,0.4)',
+                      textTransform: 'none',
+                      minWidth: 98,
+                    }}
+                    variant="outlined"
+                  >
+                    {exportingHistory ? 'Exporting' : 'HTML'}
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<FilterList />}
+                    onClick={() => setShowFilters(!showFilters)}
+                    sx={{
+                      color: activeFilterCount > 0 ? '#00D377' : '#9266FF',
+                      borderColor: activeFilterCount > 0 ? 'rgba(0,211,119,0.4)' : 'rgba(146,102,255,0.4)',
+                      textTransform: 'none',
+                    }}
+                    variant="outlined"
+                  >
+                    Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
+                  </Button>
+                </Stack>
               </Box>
 
               {/* Панель интерактивных фильтров */}
