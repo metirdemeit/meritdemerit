@@ -183,15 +183,27 @@ export function SettingsPages() {
     setExportingHistory(true);
     try {
       const blob = await downloadHistoryHtml(filters);
+      const filename = `students-points-history-${new Date().toISOString().slice(0, 10)}.html`;
+      const file = new File([blob], filename, { type: blob.type || 'text/html' });
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Students Points History',
+        });
+        toast.success('Choose where to save or share HTML');
+        return;
+      }
+
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `students-points-history-${new Date().toISOString().slice(0, 10)}.html`;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(url);
-      toast.success('HTML history downloaded');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      toast.success('HTML download started');
     } catch {
       toast.error('Failed to download history');
     } finally {
