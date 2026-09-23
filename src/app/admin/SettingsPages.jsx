@@ -15,6 +15,10 @@ import {
   IconButton,
   Chip,
   Collapse,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   InputLabel,
   Select,
@@ -75,6 +79,7 @@ export function SettingsPages() {
 
   const [activeTab, setActiveTab] = useState('moderation');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
 
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -93,6 +98,7 @@ export function SettingsPages() {
     rule: '',
     type: 'all', // 'all', 'merit', 'demerit'
   });
+  const [exportFilters, setExportFilters] = useState(filters);
 
   const resetFilters = () => {
     setFilters({
@@ -179,10 +185,26 @@ export function SettingsPages() {
     }
   };
 
+  const openExportDialog = () => {
+    setExportFilters(filters);
+    setExportDialogOpen(true);
+  };
+
+  const resetExportFilters = () => {
+    setExportFilters({
+      startDate: '',
+      endDate: '',
+      student: '',
+      teacher: '',
+      rule: '',
+      type: 'all',
+    });
+  };
+
   const handleDownloadHistoryHtml = async () => {
     setExportingHistory(true);
     try {
-      const blob = await downloadHistoryHtml(filters);
+      const blob = await downloadHistoryHtml(exportFilters);
       const filename = `students-points-history-${new Date().toISOString().slice(0, 10)}.html`;
       const file = new File([blob], filename, { type: blob.type || 'text/html' });
 
@@ -192,6 +214,7 @@ export function SettingsPages() {
           title: 'Students Points History',
         });
         toast.success('Choose where to save or share HTML');
+        setExportDialogOpen(false);
         return;
       }
 
@@ -204,6 +227,7 @@ export function SettingsPages() {
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 60000);
       toast.success('HTML download started');
+      setExportDialogOpen(false);
     } catch {
       toast.error('Failed to download history');
     } finally {
@@ -354,7 +378,7 @@ export function SettingsPages() {
                   <Button
                     size="small"
                     startIcon={<FileDownload />}
-                    onClick={handleDownloadHistoryHtml}
+                    onClick={openExportDialog}
                     disabled={exportingHistory}
                     sx={{
                       color: '#00D377',
@@ -628,6 +652,151 @@ export function SettingsPages() {
         {activeTab === 'risk' && <RiskRegistryPage />}
       </Container>
 
+      <Dialog
+        open={exportDialogOpen}
+        onClose={() => !exportingHistory && setExportDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 100%)',
+            border: '1px solid rgba(146, 102, 255, 0.25)',
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: '#FFFFFF', fontWeight: 700, pb: 1 }}>
+          Export HTML History
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Grid container spacing={1.5} sx={{ mt: 0 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Student Name"
+                value={exportFilters.student}
+                onChange={(e) => setExportFilters({ ...exportFilters, student: e.target.value })}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search sx={{ color: '#5A5984', fontSize: 18 }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={filterFieldStyle}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Teacher / Admin"
+                value={exportFilters.teacher}
+                onChange={(e) => setExportFilters({ ...exportFilters, teacher: e.target.value })}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search sx={{ color: '#5A5984', fontSize: 18 }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={filterFieldStyle}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Rule Description"
+                value={exportFilters.rule}
+                onChange={(e) => setExportFilters({ ...exportFilters, rule: e.target.value })}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search sx={{ color: '#5A5984', fontSize: 18 }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={filterFieldStyle}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel sx={{ color: '#5A5984' }}>Type</InputLabel>
+                <Select
+                  value={exportFilters.type}
+                  label="Type"
+                  onChange={(e) => setExportFilters({ ...exportFilters, type: e.target.value })}
+                  sx={selectFieldStyle}
+                >
+                  <MenuItem value="all">All Types</MenuItem>
+                  <MenuItem value="merit">Merit (+ Points)</MenuItem>
+                  <MenuItem value="demerit">Demerit (- Points)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                label="From Date"
+                InputLabelProps={{ shrink: true }}
+                value={exportFilters.startDate}
+                onChange={(e) => setExportFilters({ ...exportFilters, startDate: e.target.value })}
+                sx={filterFieldStyle}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                label="To Date"
+                InputLabelProps={{ shrink: true }}
+                value={exportFilters.endDate}
+                onChange={(e) => setExportFilters({ ...exportFilters, endDate: e.target.value })}
+                sx={filterFieldStyle}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, pt: 0 }}>
+          <Button
+            onClick={resetExportFilters}
+            disabled={exportingHistory}
+            sx={{ color: '#EB2B4B', textTransform: 'none', mr: 'auto' }}
+          >
+            Reset
+          </Button>
+          <Button
+            onClick={() => setExportDialogOpen(false)}
+            disabled={exportingHistory}
+            sx={{ color: '#B8B7D9', textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDownloadHistoryHtml}
+            disabled={exportingHistory}
+            startIcon={exportingHistory ? <CircularProgress size={16} color="inherit" /> : <FileDownload />}
+            variant="contained"
+            sx={{
+              background: 'linear-gradient(135deg, #00D377 0%, #00A85F 100%)',
+              color: '#06170F',
+              fontWeight: 700,
+              textTransform: 'none',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #15E58B 0%, #00B86B 100%)',
+              },
+            }}
+          >
+            Download HTML
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog
         open={deleteDialogOpen}
@@ -658,4 +827,11 @@ const filterFieldStyle = {
   '& .MuiInputLabel-root': {
     color: '#5A5984',
   },
+};
+
+const selectFieldStyle = {
+  color: '#F4F4FF',
+  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(146, 102, 255, 0.3)' },
+  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(146, 102, 255, 0.5)' },
+  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#9266FF' },
 };
