@@ -9,8 +9,14 @@ import {
   ButtonGroup,
   CircularProgress,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Chip,
+  Stack,
 } from '@mui/material';
-import { Person, ArrowBack, School, Dashboard } from '@mui/icons-material';
+import { Person, ArrowBack, School, Dashboard, History as HistoryIcon } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { useTeacherStore } from '../../store/teacherStore';
 import { useCommonStore } from '../../store/commonStore';
@@ -21,7 +27,7 @@ import { AssignRulesDrawer } from '../components/dialogs/AssignRulesDrawer';
 import { HomeroomStatsWidget } from './components/HomeroomStatsWidget';
 
 export function StudentsPage() {
-  const { assignPoints, profile, fetchProfile } = useTeacherStore();
+  const { assignPoints, profile, fetchProfile, history: teacherHistory, fetchHistory: fetchTeacherHistory } = useTeacherStore();
   const {
     students,
     classes,
@@ -51,6 +57,8 @@ export function StudentsPage() {
   const [selectedRuleIds, setSelectedRuleIds] = useState([]);
   const [assignComment, setAssignComment] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [selectedStudentForHistory, setSelectedStudentForHistory] = useState(null);
 
   // Loading и ошибки по секциям
   const [loadingClasses, setLoadingClasses] = useState(false);
@@ -59,6 +67,14 @@ export function StudentsPage() {
   const [errorClasses, setErrorClasses] = useState(null);
   const [errorStudents, setErrorStudents] = useState(null);
   const [errorSearch, setErrorSearch] = useState(null);
+
+  const sortStudentsAlphabetically = (list = []) => {
+    return [...list].sort((a, b) => {
+      const nameA = `${a?.first_name || ''} ${a?.last_name || a?.username || ''}`.trim().toLowerCase();
+      const nameB = `${b?.first_name || ''} ${b?.last_name || b?.username || ''}`.trim().toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+  };
 
   // Initial load
   useEffect(() => {
@@ -84,7 +100,8 @@ export function StudentsPage() {
 
     loadClasses();
     loadStudents();
-  }, [fetchClasses, fetchStudents]);
+    fetchTeacherHistory({ page: 1, size: 200 });
+  }, [fetchClasses, fetchStudents, fetchTeacherHistory]);
 
   // Load students by class
   useEffect(() => {
@@ -120,7 +137,7 @@ export function StudentsPage() {
           setErrorSearch('Failed to search students');
           setSearchResults([]);
         } else {
-          setSearchResults(result || []);
+          setSearchResults(sortStudentsAlphabetically(result || []));
         }
         setLoadingSearch(false);
       } else {
@@ -132,8 +149,25 @@ export function StudentsPage() {
     return () => clearTimeout(delay);
   }, [searchQuery, searchStudents]);
 
-  // Assign points
+  const openStudentHistory = (student) => {
+    setSelectedStudentForHistory(student);
+    setHistoryDialogOpen(true);
+  };
+
   const handleStudentClick = (studentId) => {
+    const student = (students || []).find((item) => item.id === studentId) || (searchResults || []).find((item) => item.id === studentId);
+    if (student) {
+      openStudentHistory(student);
+      return;
+    }
+    setSelectedStudentIds([studentId]);
+    setSelectedRuleIds([]);
+    setAssignComment('');
+    setRulesOpen(true);
+  };
+
+  const handleAssignFromHistory = (studentId) => {
+    setHistoryDialogOpen(false);
     setSelectedStudentIds([studentId]);
     setSelectedRuleIds([]);
     setAssignComment('');
@@ -161,12 +195,12 @@ export function StudentsPage() {
       });
       toast.success('Points assigned');
       handleCloseRulesDrawer();
-      // Принудительный рефреш баллов сразу после выставки
       if (selectedClassId) {
         await fetchStudentsByClass(selectedClassId);
       } else {
         await fetchStudents(true);
       }
+      await fetchTeacherHistory({ page: 1, size: 200 });
     } catch (e) {
       toast.error('Failed to assign points');
     } finally {
@@ -195,7 +229,7 @@ export function StudentsPage() {
     setSearchResults([]);
   };
 
-  const studentsToShow = isInSearchMode ? searchResults : students;
+  const studentsToShow = sortStudentsAlphabetically(isInSearchMode ? searchResults : students);
 
   const selectedStudentName = useMemo(() => {
     if (selectedStudentIds.length === 1) {
@@ -216,12 +250,28 @@ export function StudentsPage() {
   };
 
   const homeroomStudents = useMemo(() => {
-    let list = students.filter((s) => isClassMatch(s, homeroomClass));
+    let list = sortStudentsAlphabetically(students.filter((s) => isClassMatch(s, homeroomClass)));
     if (showRiskOnly) {
       list = list.filter((s) => (s.points ?? 100) < 100);
     }
     return list;
   }, [students, homeroomClass, showRiskOnly]);
+
+  const selectedStudentHistory = useMemo(() => {
+    if (!selectedStudentForHistory) return [];
+    const studentId = selectedStudentForHistory.id;
+    const studentName = `${selectedStudentForHistory.first_name || ''} ${selectedStudentForHistory.last_name || ''}`.trim();
+    const studentUsername = selectedStudentForHistory.username;
+    return (teacherHistory || [])
+      .filter((entry) => {
+        const matchesId = String(entry.student_id) === String(studentId);
+        const matchesName = !!studentName && `${entry.student_name || ''}`.toLowerCase().includes(studentName.toLowerCase());
+        const matchesUsername = !!studentUsername && `${entry.student_name || ''}`.toLowerCase().includes(studentUsername.toLowerCase());
+        return matchesId || matchesName || matchesUsername;
+      })
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 8);
+  }, [selectedStudentForHistory, teacherHistory]);
 
   const handleHomeroomClassChange = (newClass) => {
     setSelectedHomeroomClass(newClass);
@@ -442,6 +492,83 @@ export function StudentsPage() {
           </>
         )}
       </Container>
+
+      <Dialog
+        open={historyDialogOpen}
+        onClose={() => setHistoryDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
+            border: '1px solid rgba(146, 102, 255, 0.25)',
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: '#F4F4FF', pb: 1 }}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <HistoryIcon sx={{ color: '#9266FF' }} />
+            {selectedStudentForHistory ? `${selectedStudentForHistory.first_name || ''} ${selectedStudentForHistory.last_name || ''}`.trim() || selectedStudentForHistory.username : 'Student history'}
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          {selectedStudentHistory.length === 0 ? (
+            <Alert severity="info" sx={{ backgroundColor: 'rgba(146, 102, 255, 0.1)', border: '1px solid rgba(146, 102, 255, 0.3)', color: '#F4F4FF' }}>
+              No points history found for this student yet.
+            </Alert>
+          ) : (
+            <Stack spacing={1.25}>
+              {selectedStudentHistory.map((entry) => (
+                <Box key={entry.id} sx={{ p: 1.5, borderRadius: 2, backgroundColor: 'rgba(146, 102, 255, 0.06)', border: '1px solid rgba(146, 102, 255, 0.15)' }}>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" gap={1}>
+                    <Typography sx={{ color: '#F4F4FF', fontWeight: 600 }}>
+                      {entry.rule_description || 'Point assignment'}
+                    </Typography>
+                    <Chip
+                      label={`${entry.points_changed > 0 ? '+' : ''}${entry.points_changed} pts`}
+                      size="small"
+                      sx={{
+                        backgroundColor: entry.points_changed >= 0 ? 'rgba(0, 211, 119, 0.2)' : 'rgba(235, 43, 75, 0.2)',
+                        color: entry.points_changed >= 0 ? '#00D377' : '#FF5A6A',
+                        border: `1px solid ${entry.points_changed >= 0 ? 'rgba(0, 211, 119, 0.3)' : 'rgba(235, 43, 75, 0.3)'}`,
+                      }}
+                    />
+                  </Box>
+                  <Typography variant="caption" sx={{ color: '#5A5984', display: 'block', mt: 0.75 }}>
+                    {new Date(entry.created_at).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#C7C6E2', mt: 0.5 }}>
+                    {entry.comment || 'No comment'}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, pt: 1 }}>
+          <Button
+            onClick={() => setHistoryDialogOpen(false)}
+            sx={{ color: '#5A5984' }}
+          >
+            Close
+          </Button>
+          {selectedStudentForHistory && (
+            <Button
+              variant="contained"
+              onClick={() => handleAssignFromHistory(selectedStudentForHistory.id)}
+              sx={{
+                background: 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #6932EB 0%, #5A2980 100%)',
+                },
+              }}
+            >
+              Assign points
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
 
       <AssignRulesDrawer
         open={rulesOpen}

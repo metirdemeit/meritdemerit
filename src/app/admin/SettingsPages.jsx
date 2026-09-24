@@ -205,6 +205,10 @@ export function SettingsPages() {
     setExportingHistory(true);
     try {
       const blob = await downloadHistoryHtml(exportFilters);
+      if (!(blob instanceof Blob)) {
+        throw new Error('Invalid export response');
+      }
+
       const filename = `students-points-history-${new Date().toISOString().slice(0, 10)}.html`;
       const file = new File([blob], filename, { type: blob.type || 'text/html' });
 
@@ -222,8 +226,34 @@ export function SettingsPages() {
       const link = document.createElement('a');
       link.href = url;
       link.download = filename;
+      link.rel = 'noopener';
+      link.style.display = 'none';
+
       document.body.appendChild(link);
-      link.click();
+
+      try {
+        link.click();
+      } catch (error) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+
+      const triggerFallback = () => {
+        const fallbackLink = document.createElement('a');
+        fallbackLink.href = url;
+        fallbackLink.target = '_blank';
+        fallbackLink.rel = 'noopener noreferrer';
+        fallbackLink.style.display = 'none';
+        document.body.appendChild(fallbackLink);
+        fallbackLink.click();
+        fallbackLink.remove();
+      };
+
+      window.setTimeout(() => {
+        if (document.visibilityState === 'visible') {
+          triggerFallback();
+        }
+      }, 1000);
+
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 60000);
       toast.success('HTML download started');

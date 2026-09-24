@@ -12,6 +12,11 @@ import {
   IconButton,
   Chip,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import { Visibility, VisibilityOff, AutoFixHigh } from '@mui/icons-material';
 import { CLASS_NAMES } from '../../../utils/constants';
@@ -27,6 +32,8 @@ const AddUserDialog = ({
   setFormData,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
+  const [confirmPasswordOpen, setConfirmPasswordOpen] = useState(false);
+  const [pendingPassword, setPendingPassword] = useState('');
 
   // Формула автоподсказки username: первая буква имени + "_" + фамилия (все строчными)
   const getRecommendedUsername = (firstName, lastName) => {
@@ -92,230 +99,304 @@ const AddUserDialog = ({
 
   const handleGeneratePassword = () => {
     const pass = generate8CharPassword();
-    setFormData({ ...formData, password: pass });
+    const usernameValue = (formData.username || recommendedUser || '').trim();
+
+    setPendingPassword(pass);
+    setFormData({
+      ...formData,
+      username: usernameValue || recommendedUser || '',
+      password: pass,
+    });
     setShowPassword(true);
+    setConfirmPasswordOpen(true);
+  };
+
+  const handleConfirmGeneratedPassword = () => {
+    if (!pendingPassword) return;
+    setFormData({ ...formData, password: pendingPassword });
+    setShowPassword(true);
+    setConfirmPasswordOpen(false);
+    setPendingPassword('');
   };
 
   return (
-    <Drawer
-      open={open}
-      onClose={onClose}
-      title={editingUser ? 'Edit User' : 'Add New User'}
-    >
-      <>
-        <Grid container spacing={2} sx={{ mt: 1 }}>
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="First Name"
-              value={formData.first_name || ''}
-              onChange={(e) => handleFirstNameChange(e.target.value)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: '#F4F4FF',
-                  '& fieldset': {
-                    borderColor: 'rgba(146, 102, 255, 0.3)',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: 'rgba(146, 102, 255, 0.5)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#9266FF',
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: '#5A5984',
-                },
-              }}
-            />
-          </Grid>
-
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Last Name"
-              value={formData.last_name || ''}
-              onChange={(e) => handleLastNameChange(e.target.value)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: '#F4F4FF',
-                  '& fieldset': {
-                    borderColor: 'rgba(146, 102, 255, 0.3)',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: 'rgba(146, 102, 255, 0.5)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#9266FF',
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: '#5A5984',
-                },
-              }}
-            />
-          </Grid>
-
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Username"
-              value={formData.username || ''}
-              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: '#F4F4FF',
-                  '& fieldset': {
-                    borderColor: 'rgba(146, 102, 255, 0.3)',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: 'rgba(146, 102, 255, 0.5)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#9266FF',
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: '#5A5984',
-                },
-              }}
-            />
-            {recommendedUser && formData.username !== recommendedUser && (
-              <Box sx={{ mt: 1 }}>
-                <Chip
-                  label={`Suggestion: ${recommendedUser}`}
-                  size="small"
-                  onClick={() => setFormData({ ...formData, username: recommendedUser })}
-                  sx={{
-                    backgroundColor: 'rgba(146, 102, 255, 0.15)',
-                    color: '#9266FF',
-                    border: '1px solid rgba(146, 102, 255, 0.3)',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      backgroundColor: 'rgba(146, 102, 255, 0.3)',
+    <>
+      <Drawer
+        open={open}
+        onClose={onClose}
+        title={editingUser ? 'Edit User' : 'Add New User'}
+      >
+        <>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="First Name"
+                value={formData.first_name || ''}
+                onChange={(e) => handleFirstNameChange(e.target.value)}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: '#F4F4FF',
+                    '& fieldset': {
+                      borderColor: 'rgba(146, 102, 255, 0.3)',
                     },
-                  }}
-                />
-              </Box>
+                    '&:hover fieldset': {
+                      borderColor: 'rgba(146, 102, 255, 0.5)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#9266FF',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: '#5A5984',
+                  },
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Last Name"
+                value={formData.last_name || ''}
+                onChange={(e) => handleLastNameChange(e.target.value)}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: '#F4F4FF',
+                    '& fieldset': {
+                      borderColor: 'rgba(146, 102, 255, 0.3)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: 'rgba(146, 102, 255, 0.5)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#9266FF',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: '#5A5984',
+                  },
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Username"
+                value={formData.username || ''}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: '#F4F4FF',
+                    '& fieldset': {
+                      borderColor: 'rgba(146, 102, 255, 0.3)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: 'rgba(146, 102, 255, 0.5)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#9266FF',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: '#5A5984',
+                  },
+                }}
+              />
+              {recommendedUser && formData.username !== recommendedUser && (
+                <Box sx={{ mt: 1 }}>
+                  <Chip
+                    label={`Suggestion: ${recommendedUser}`}
+                    size="small"
+                    onClick={() => setFormData({ ...formData, username: recommendedUser })}
+                    sx={{
+                      backgroundColor: 'rgba(146, 102, 255, 0.15)',
+                      color: '#9266FF',
+                      border: '1px solid rgba(146, 102, 255, 0.3)',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: 'rgba(146, 102, 255, 0.3)',
+                      },
+                    }}
+                  />
+                </Box>
+              )}
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password || ''}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Button
+                        size="small"
+                        startIcon={<AutoFixHigh sx={{ fontSize: 16 }} />}
+                        onClick={handleGeneratePassword}
+                        sx={{
+                          color: '#00D377',
+                          borderColor: 'rgba(0, 211, 119, 0.4)',
+                          textTransform: 'none',
+                          fontSize: '0.75rem',
+                          py: 0.5,
+                          px: 1,
+                          mr: 0.5,
+                          '&:hover': {
+                            backgroundColor: 'rgba(0, 211, 119, 0.15)',
+                            borderColor: '#00D377',
+                          },
+                        }}
+                        variant="outlined"
+                      >
+                        Generate
+                      </Button>
+                      <IconButton
+                        size="small"
+                        onClick={() => setShowPassword(!showPassword)}
+                        sx={{ color: '#5A5984' }}
+                      >
+                        {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: '#F4F4FF',
+                    '& fieldset': {
+                      borderColor: 'rgba(146, 102, 255, 0.3)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: 'rgba(146, 102, 255, 0.5)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#9266FF',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: '#5A5984',
+                  },
+                }}
+              />
+            </Grid>
+
+            {userType === 'student' && (
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel sx={{ color: '#5A5984' }}>Class</InputLabel>
+                  <Select
+                    value={formData.class_name || ''}
+                    label="Class"
+                    onChange={(e) => setFormData({ ...formData, class_name: e.target.value })}
+                    sx={{
+                      color: '#F4F4FF',
+                      '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(146, 102, 255, 0.3)' },
+                      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(146, 102, 255, 0.5)' },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#9266FF' },
+                    }}
+                  >
+                    {CLASS_NAMES.map((name) => (
+                      <MenuItem key={name} value={name}>{name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
             )}
           </Grid>
 
-          <Grid item xs={12}>
-            <TextField
+          <Box sx={{ display: 'flex', gap: 2, mt: 3, pt: 3, borderTop: '1px solid rgba(146, 102, 255, 0.2)' }}>
+            <Button 
+              onClick={onClose} 
+              variant="outlined"
+              sx={{ 
+                color: '#5A5984',
+                borderColor: 'rgba(146, 102, 255, 0.3)',
+                '&:hover': {
+                  borderColor: 'rgba(146, 102, 255, 0.5)',
+                }
+              }}
               fullWidth
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              value={formData.password || ''}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <Button
-                      size="small"
-                      startIcon={<AutoFixHigh sx={{ fontSize: 16 }} />}
-                      onClick={handleGeneratePassword}
-                      sx={{
-                        color: '#00D377',
-                        borderColor: 'rgba(0, 211, 119, 0.4)',
-                        textTransform: 'none',
-                        fontSize: '0.75rem',
-                        py: 0.5,
-                        px: 1,
-                        mr: 0.5,
-                        '&:hover': {
-                          backgroundColor: 'rgba(0, 211, 119, 0.15)',
-                          borderColor: '#00D377',
-                        },
-                      }}
-                      variant="outlined"
-                    >
-                      Generate
-                    </Button>
-                    <IconButton
-                      size="small"
-                      onClick={() => setShowPassword(!showPassword)}
-                      sx={{ color: '#5A5984' }}
-                    >
-                      {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={onSubmit}
+              variant="contained"
               sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: '#F4F4FF',
-                  '& fieldset': {
-                    borderColor: 'rgba(146, 102, 255, 0.3)',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: 'rgba(146, 102, 255, 0.5)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#9266FF',
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: '#5A5984',
+                background: 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #6932EB 0%, #5A2980 100%)',
                 },
               }}
-            />
-          </Grid>
+              fullWidth
+            >
+              {editingUser ? 'Update' : 'Create'}
+            </Button>
+          </Box>
+        </>
+      </Drawer>
 
-          {userType === 'student' && (
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel sx={{ color: '#5A5984' }}>Class</InputLabel>
-                <Select
-                  value={formData.class_name || ''}
-                  label="Class"
-                  onChange={(e) => setFormData({ ...formData, class_name: e.target.value })}
-                  sx={{
-                    color: '#F4F4FF',
-                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(146, 102, 255, 0.3)' },
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(146, 102, 255, 0.5)' },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#9266FF' },
-                  }}
-                >
-                  {CLASS_NAMES.map((name) => (
-                    <MenuItem key={name} value={name}>{name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          )}
-        </Grid>
-
-        <Box sx={{ display: 'flex', gap: 2, mt: 3, pt: 3, borderTop: '1px solid rgba(146, 102, 255, 0.2)' }}>
-          <Button 
-            onClick={onClose} 
-            variant="outlined"
-            sx={{ 
-              color: '#5A5984',
-              borderColor: 'rgba(146, 102, 255, 0.3)',
-              '&:hover': {
-                borderColor: 'rgba(146, 102, 255, 0.5)',
-              }
-            }}
-            fullWidth
+      <Dialog
+        open={confirmPasswordOpen}
+        onClose={() => setConfirmPasswordOpen(false)}
+        PaperProps={{
+          sx: {
+            background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
+            border: '1px solid rgba(146, 102, 255, 0.25)',
+            borderRadius: 2,
+            color: '#F4F4FF',
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: '#F4F4FF' }}>Generate login and password</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: '#C7C6E2' }}>
+            New credentials will be saved immediately after confirmation. Make sure these values are correct:
+          </DialogContentText>
+          <Box sx={{ mt: 2, p: 2, borderRadius: 2, backgroundColor: 'rgba(146, 102, 255, 0.08)', border: '1px solid rgba(146, 102, 255, 0.2)' }}>
+            <Typography variant="body2" sx={{ color: '#5A5984', mb: 0.5 }}>
+              Login
+            </Typography>
+            <Typography variant="body1" sx={{ color: '#F4F4FF', fontWeight: 600, mb: 1 }}>
+              {formData.username || recommendedUser || '—'}
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#5A5984', mb: 0.5 }}>
+              Password
+            </Typography>
+            <Typography variant="body1" sx={{ color: '#00D377', fontWeight: 700 }}>
+              {pendingPassword || '—'}
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setConfirmPasswordOpen(false)}
+            sx={{ color: '#5A5984' }}
           >
             Cancel
           </Button>
           <Button
-            onClick={onSubmit}
+            onClick={handleConfirmGeneratedPassword}
             variant="contained"
             sx={{
-              background: 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)',
+              background: 'linear-gradient(135deg, #00D377 0%, #00B865 100%)',
+              color: '#06170F',
+              fontWeight: 700,
               '&:hover': {
-                background: 'linear-gradient(135deg, #6932EB 0%, #5A2980 100%)',
+                background: 'linear-gradient(135deg, #18E387 0%, #00C463 100%)',
               },
             }}
-            fullWidth
           >
-            {editingUser ? 'Update' : 'Create'}
+            Confirm and save
           </Button>
-        </Box>
-      </>
-    </Drawer>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 

@@ -11,7 +11,9 @@ import {
   CircularProgress,
   Alert,
   Grid,
+  Button,
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import {} from '@mui/icons-material';
 import { useAuthStore } from '../../store/authStore';
 import { useAdminStore } from '../../store/adminStore';
@@ -21,7 +23,8 @@ import CommonRankingTable from '../components/CommonRankingTable';
 export function DashboardPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
   const { dashboard, fetchDashboard } = useAdminStore();
   const { rankings, fetchRankings } = useCommonStore();
 
@@ -29,6 +32,13 @@ export function DashboardPage() {
   const [loadingRankings, setLoadingRankings] = useState(false);
   const [errorDashboard, setErrorDashboard] = useState(null);
   const [errorRankings, setErrorRankings] = useState(null);
+
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -72,23 +82,43 @@ export function DashboardPage() {
   return (
     <Box sx={{ minHeight: '100vh', pb: 2 }}>
       {/* Header Section */}
-      {/* Header Section */}
       <Box
         sx={styles.headerSection}
       >
         <Container maxWidth="sm">
-          <Box display="flex" alignItems="center">
-            <Avatar sx={styles.avatar}>
-              {user?.first_name?.[0]}{user?.last_name?.[0]}
-            </Avatar>
-            <Box>
-              <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>
-                {user?.first_name} {user?.last_name}
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#5A5984' }}>
-                Admin • @{user?.username}
-              </Typography>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Box display="flex" alignItems="center">
+              <Avatar sx={styles.avatar}>
+                {user?.first_name?.[0]}{user?.last_name?.[0]}
+              </Avatar>
+              <Box>
+                <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>
+                  {user?.first_name} {user?.last_name}
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#5A5984' }}>
+                  Admin • @{user?.username}
+                </Typography>
+              </Box>
             </Box>
+
+            {isAdmin && (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleLogout}
+                sx={{
+                  color: '#F4F4FF',
+                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                  textTransform: 'none',
+                  '&:hover': {
+                    borderColor: '#F4F4FF',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  },
+                }}
+              >
+                Log out
+              </Button>
+            )}
           </Box>
         </Container>
       </Box>
