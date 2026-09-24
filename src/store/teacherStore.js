@@ -29,7 +29,9 @@ export const useTeacherStore = create((set, get) => ({
   // === HISTORY ===
   fetchHistory: async ({ page = 1, size = 5 } = {}) => {
     try {
-      const data = await api.get(`/teacher/me/history?page=${page}&size=${size}`);
+      const safePage = Number(page) > 0 ? Number(page) : 1;
+      const safeSize = Math.min(Number(size) || 5, 100);
+      const data = await api.get(`/teacher/me/history?page=${safePage}&size=${safeSize}`);
       const items = Array.isArray(data) ? data : (data?.items || []);
       set({ history: items });
       return data;

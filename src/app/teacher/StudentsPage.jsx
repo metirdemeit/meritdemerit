@@ -98,9 +98,13 @@ export function StudentsPage() {
       setLoadingStudents(false);
     };
 
+    const loadTeacherHistory = async () => {
+      await fetchTeacherHistory({ page: 1, size: 100 });
+    };
+
     loadClasses();
     loadStudents();
-    fetchTeacherHistory({ page: 1, size: 200 });
+    loadTeacherHistory();
   }, [fetchClasses, fetchStudents, fetchTeacherHistory]);
 
   // Load students by class
@@ -200,7 +204,7 @@ export function StudentsPage() {
       } else {
         await fetchStudents(true);
       }
-      await fetchTeacherHistory({ page: 1, size: 200 });
+      await fetchTeacherHistory({ page: 1, size: 100 });
     } catch (e) {
       toast.error('Failed to assign points');
     } finally {
