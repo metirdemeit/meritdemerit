@@ -76,6 +76,8 @@ export function StudentsPage() {
     });
   };
 
+  const normalizeStudentName = (value) => `${value || ''}`.trim().toLowerCase().replace(/\s+/g, ' ');
+
   // Initial load
   useEffect(() => {
     const loadClasses = async () => {
@@ -153,8 +155,35 @@ export function StudentsPage() {
     return () => clearTimeout(delay);
   }, [searchQuery, searchStudents]);
 
-  const openStudentHistory = (student) => {
+  const openStudentHistory = async (student) => {
     setSelectedStudentForHistory(student);
+
+    const loadedHistory = teacherHistory?.length ? teacherHistory : await fetchTeacherHistory({ page: 1, size: 100 });
+    const historyItems = Array.isArray(loadedHistory) ? loadedHistory : (loadedHistory?.items || []);
+    if (historyItems.length > 0) {
+      const historyMatches = historyItems.filter((entry) => {
+        const entryStudentId = entry?.student_id ?? entry?.student?.id ?? entry?.user_id ?? entry?.studentId;
+        const entryName = normalizeStudentName(entry?.student_name || `${entry?.student?.first_name || ''} ${entry?.student?.last_name || ''}`);
+        const studentFullName = normalizeStudentName(`${student?.first_name || ''} ${student?.last_name || ''}`);
+        const studentUsername = normalizeStudentName(student?.username);
+        const entryUsername = normalizeStudentName(entry?.student_username || entry?.username || entry?.student?.username);
+
+        return (
+          String(entryStudentId) === String(student?.id) ||
+          entryName.includes(studentFullName) ||
+          studentFullName.includes(entryName) ||
+          entryUsername === studentUsername ||
+          entryUsername.includes(studentUsername) ||
+          studentUsername.includes(entryUsername)
+        );
+      });
+
+      if (historyMatches.length > 0) {
+        setHistoryDialogOpen(true);
+        return;
+      }
+    }
+
     setHistoryDialogOpen(true);
   };
 
@@ -264,13 +293,17 @@ export function StudentsPage() {
   const selectedStudentHistory = useMemo(() => {
     if (!selectedStudentForHistory) return [];
     const studentId = selectedStudentForHistory.id;
-    const studentName = `${selectedStudentForHistory.first_name || ''} ${selectedStudentForHistory.last_name || ''}`.trim();
-    const studentUsername = selectedStudentForHistory.username;
-    return (teacherHistory || [])
+    const studentName = normalizeStudentName(`${selectedStudentForHistory.first_name || ''} ${selectedStudentForHistory.last_name || ''}`);
+    const studentUsername = normalizeStudentName(selectedStudentForHistory.username);
+    const historyItems = Array.isArray(teacherHistory) ? teacherHistory : (teacherHistory?.items || []);
+
+    return historyItems
       .filter((entry) => {
-        const matchesId = String(entry.student_id) === String(studentId);
-        const matchesName = !!studentName && `${entry.student_name || ''}`.toLowerCase().includes(studentName.toLowerCase());
-        const matchesUsername = !!studentUsername && `${entry.student_name || ''}`.toLowerCase().includes(studentUsername.toLowerCase());
+        const matchesId = String(entry?.student_id ?? entry?.student?.id ?? entry?.user_id ?? entry?.studentId) === String(studentId);
+        const entryName = normalizeStudentName(entry?.student_name || `${entry?.student?.first_name || ''} ${entry?.student?.last_name || ''}`);
+        const entryUsername = normalizeStudentName(entry?.student_username || entry?.username || entry?.student?.username);
+        const matchesName = !!studentName && (entryName.includes(studentName) || studentName.includes(entryName));
+        const matchesUsername = !!studentUsername && (entryUsername === studentUsername || entryUsername.includes(studentUsername) || studentUsername.includes(entryUsername));
         return matchesId || matchesName || matchesUsername;
       })
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))

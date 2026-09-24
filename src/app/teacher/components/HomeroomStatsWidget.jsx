@@ -40,6 +40,8 @@ export function HomeroomStatsWidget({
   const standardCount = students.filter((s) => (s.points ?? 100) >= 100 && (s.points ?? 100) <= 130).length;
   const demeritCount = students.filter((s) => (s.points ?? 100) < 100).length;
 
+  const attentionCount = demeritCount;
+
   return (
     <Card
       sx={{
@@ -64,6 +66,20 @@ export function HomeroomStatsWidget({
               </Typography>
             </Box>
           </Box>
+
+          {attentionCount > 0 && (
+            <Chip
+              icon={<WarningAmber sx={{ fontSize: 18 }} />}
+              label={`Attention: ${attentionCount} students`}
+              color="warning"
+              sx={{
+                backgroundColor: 'rgba(255, 193, 7, 0.18)',
+                color: '#FFD54F',
+                border: '1px solid rgba(255, 193, 7, 0.4)',
+                fontWeight: 700,
+              }}
+            />
+          )}
 
           {/* Селектор выбора закрепленного класса */}
           {onSelectClass && (
