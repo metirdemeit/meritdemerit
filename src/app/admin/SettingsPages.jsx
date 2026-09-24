@@ -223,26 +223,32 @@ export function SettingsPages() {
       }
 
       const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = filename;
-      anchor.target = '_blank';
-      anchor.rel = 'noopener noreferrer';
-      anchor.style.display = 'none';
-      document.body.appendChild(anchor);
+      const isDesktopWebView = /Electron|WebView|Telegram|TWA|desktop/i.test(navigator.userAgent || '') || !!window?.ReactNativeWebView;
 
-      const shouldOpenInTab = typeof window !== 'undefined' && (window.navigator.userAgent.includes('Android') || window.navigator.userAgent.includes('iPhone') || window.navigator.userAgent.includes('iPad'));
-      const fallbackWindow = shouldOpenInTab ? window.open(url, '_blank', 'noopener,noreferrer') : null;
-
-      try {
-        if (!fallbackWindow) {
-          anchor.click();
+      if (isDesktopWebView) {
+        const newTab = window.open('', '_blank', 'noopener,noreferrer');
+        if (newTab) {
+          newTab.location.href = url;
+        } else {
+          window.location.href = url;
         }
-      } catch {
-        window.open(url, '_blank', 'noopener,noreferrer');
+      } else {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.rel = 'noopener';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+
+        try {
+          link.click();
+        } catch {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
+
+        link.remove();
       }
 
-      anchor.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 60000);
       toast.success('HTML download started');
       setExportDialogOpen(false);

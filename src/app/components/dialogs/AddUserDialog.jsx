@@ -134,6 +134,7 @@ const AddUserDialog = ({
     setShowPassword(false);
   };
 
+  const shouldShowPassword = showPassword || Boolean(formData.password || pendingPassword);
   const visibleUsername = (formData.username || recommendedUser || '').trim() || '—';
   const visiblePassword = formData.password || pendingPassword || '—';
 
@@ -249,9 +250,10 @@ const AddUserDialog = ({
               <TextField
                 fullWidth
                 label="Password"
-                type={showPassword ? 'text' : 'password'}
+                type={shouldShowPassword ? 'text' : 'password'}
                 value={formData.password || ''}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                helperText={formData.password ? 'Password is visible and will be saved.' : 'Generated or custom password will be shown here.'}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -281,7 +283,7 @@ const AddUserDialog = ({
                         onClick={handlePasswordToggle}
                         sx={{ color: '#5A5984' }}
                       >
-                        {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                        {shouldShowPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                       </IconButton>
                     </InputAdornment>
                   ),

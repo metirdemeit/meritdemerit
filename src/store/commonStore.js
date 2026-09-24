@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { api } from '../services/api';
 
+const sortStudentsByName = (list = []) => {
+  return [...list].sort((a, b) => {
+    const getName = (item) => `${item?.first_name || ''} ${item?.last_name || item?.username || ''}`.trim().toLowerCase();
+    return getName(a).localeCompare(getName(b));
+  });
+};
+
 export const useCommonStore = create((set, get) => ({
   // === STATE ===
   classes: [],
@@ -43,7 +50,7 @@ export const useCommonStore = create((set, get) => ({
 
     try {
       const data = await api.get('/students');
-      set({ students: data || [] });
+      set({ students: sortStudentsByName(data || []) });
       return data;
     } catch (err) {
       if (import.meta.env.DEV) console.error('fetchStudents failed', err);
@@ -67,7 +74,7 @@ export const useCommonStore = create((set, get) => ({
     if (!classId) return null;
     try {
       const data = await api.get(`/classes/${classId}/students`);
-      set({ students: data || [] });
+      set({ students: sortStudentsByName(data || []) });
       return data;
     } catch (err) {
       if (import.meta.env.DEV) console.error('fetchStudentsByClass failed', err);
@@ -79,7 +86,7 @@ export const useCommonStore = create((set, get) => ({
     if (!query?.trim()) return [];
     try {
       const data = await api.get(`/students/search?q=${encodeURIComponent(query)}`);
-      set({ students: data || [] });
+      set({ students: sortStudentsByName(data || []) });
       return data;
     } catch (err) {
       if (import.meta.env.DEV) console.error('searchStudents failed', err);
