@@ -223,38 +223,26 @@ export function SettingsPages() {
       }
 
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      link.rel = 'noopener';
-      link.style.display = 'none';
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+      anchor.style.display = 'none';
+      document.body.appendChild(anchor);
 
-      document.body.appendChild(link);
+      const shouldOpenInTab = typeof window !== 'undefined' && (window.navigator.userAgent.includes('Android') || window.navigator.userAgent.includes('iPhone') || window.navigator.userAgent.includes('iPad'));
+      const fallbackWindow = shouldOpenInTab ? window.open(url, '_blank', 'noopener,noreferrer') : null;
 
       try {
-        link.click();
-      } catch (error) {
+        if (!fallbackWindow) {
+          anchor.click();
+        }
+      } catch {
         window.open(url, '_blank', 'noopener,noreferrer');
       }
 
-      const triggerFallback = () => {
-        const fallbackLink = document.createElement('a');
-        fallbackLink.href = url;
-        fallbackLink.target = '_blank';
-        fallbackLink.rel = 'noopener noreferrer';
-        fallbackLink.style.display = 'none';
-        document.body.appendChild(fallbackLink);
-        fallbackLink.click();
-        fallbackLink.remove();
-      };
-
-      window.setTimeout(() => {
-        if (document.visibilityState === 'visible') {
-          triggerFallback();
-        }
-      }, 1000);
-
-      link.remove();
+      anchor.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 60000);
       toast.success('HTML download started');
       setExportDialogOpen(false);

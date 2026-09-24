@@ -233,8 +233,16 @@ export function StudentsBlog() {
     setAssignComment('');
   };
 
+  const sortStudentsAlphabetically = (list = []) => {
+    return [...list].sort((a, b) => {
+      const nameA = `${a?.first_name || ''} ${a?.last_name || a?.username || ''}`.trim().toLowerCase();
+      const nameB = `${b?.first_name || ''} ${b?.last_name || b?.username || ''}`.trim().toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+  };
+
   // Определяем какие студенты показывать: результаты поиска или локальная фильтрация
-  const studentsToShow = isInSearchMode ? students : students;
+  const studentsToShow = sortStudentsAlphabetically(isInSearchMode ? students : students);
   return (
     <>
       {/* Search Bar */}

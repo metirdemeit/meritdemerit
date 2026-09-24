@@ -113,17 +113,38 @@ const AddUserDialog = ({
 
   const handleConfirmGeneratedPassword = () => {
     if (!pendingPassword) return;
-    setFormData({ ...formData, password: pendingPassword });
+    setFormData({ ...formData, password: pendingPassword, username: (formData.username || recommendedUser || '').trim() || recommendedUser || '' });
     setShowPassword(true);
     setConfirmPasswordOpen(false);
     setPendingPassword('');
   };
 
+  const handlePasswordToggle = () => {
+    setShowPassword((prev) => !prev);
+  };
+
+  const handleClosePasswordDialog = () => {
+    setConfirmPasswordOpen(false);
+    setPendingPassword('');
+  };
+
+  const handleCloseDialog = () => {
+    setConfirmPasswordOpen(false);
+    setPendingPassword('');
+    setShowPassword(false);
+  };
+
+  const visibleUsername = (formData.username || recommendedUser || '').trim() || '—';
+  const visiblePassword = formData.password || pendingPassword || '—';
+
   return (
     <>
       <Drawer
         open={open}
-        onClose={onClose}
+        onClose={() => {
+          handleCloseDialog();
+          onClose();
+        }}
         title={editingUser ? 'Edit User' : 'Add New User'}
       >
         <>
@@ -257,7 +278,7 @@ const AddUserDialog = ({
                       </Button>
                       <IconButton
                         size="small"
-                        onClick={() => setShowPassword(!showPassword)}
+                        onClick={handlePasswordToggle}
                         sx={{ color: '#5A5984' }}
                       >
                         {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
@@ -343,7 +364,7 @@ const AddUserDialog = ({
 
       <Dialog
         open={confirmPasswordOpen}
-        onClose={() => setConfirmPasswordOpen(false)}
+        onClose={handleClosePasswordDialog}
         PaperProps={{
           sx: {
             background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
@@ -363,19 +384,19 @@ const AddUserDialog = ({
               Login
             </Typography>
             <Typography variant="body1" sx={{ color: '#F4F4FF', fontWeight: 600, mb: 1 }}>
-              {formData.username || recommendedUser || '—'}
+              {visibleUsername}
             </Typography>
             <Typography variant="body2" sx={{ color: '#5A5984', mb: 0.5 }}>
               Password
             </Typography>
             <Typography variant="body1" sx={{ color: '#00D377', fontWeight: 700 }}>
-              {pendingPassword || '—'}
+              {visiblePassword}
             </Typography>
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button
-            onClick={() => setConfirmPasswordOpen(false)}
+            onClick={handleClosePasswordDialog}
             sx={{ color: '#5A5984' }}
           >
             Cancel
