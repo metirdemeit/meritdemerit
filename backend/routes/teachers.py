@@ -29,6 +29,8 @@ class TeacherProfile(BaseModel):
 
 class TeacherHistoryResponse(BaseModel):
     id: int
+    student_id: int | None = None
+    student_username: str | None = None
     student_name: str
     student_class: str
     rule_description: str
@@ -38,6 +40,8 @@ class TeacherHistoryResponse(BaseModel):
 
 class TeacherHistoryDetail(BaseModel):
     id: int
+    student_id: int | None = None
+    student_username: str | None = None
     student_name: str
     student_class: str
     rule_description: str
@@ -93,9 +97,6 @@ async def assign_points(assignment: WorkflowAssignment, teacher: Teacher = Depen
     """
     if not assignment.student_ids or not assignment.rule_ids:
         raise HTTPException(status_code=400, detail="Student and rule IDs cannot be empty.")
-
-    if not assignment.comment or not assignment.comment.strip():
-        raise HTTPException(status_code=400, detail="Комментарий обязателен при выставлении баллов.")
 
     # Validate rules exist
     rules = await DisciplineRule.filter(id__in=assignment.rule_ids)
@@ -172,21 +173,28 @@ async def get_teacher_history(
     
     items = []
     for record in history:
+        student_id = None
+        student_username = None
         student_name = "Удаленный ученик"
         student_class = "Без класса"
+        
         if record.student:
-            student_name = f"{record.student.first_name} {record.student.last_name or ''}".strip()
+            student_id = record.student.id
+            student_username = record.student.username
+            student_name = f"{record.student.first_name} {record.student.last_name}".strip()
             if record.student.school_class:
                 student_class = record.student.school_class.name
-
-        rule_desc = record.rule.description if record.rule else "—"
-
+        
+        rule_description = record.rule.description if record.rule else "—"
+        
         items.append(
             TeacherHistoryResponse(
                 id=record.id,
+                student_id=student_id,
+                student_username=student_username,
                 student_name=student_name,
                 student_class=student_class,
-                rule_description=rule_desc,
+                rule_description=rule_description,
                 points_changed=record.points_changed,
                 comment=record.comment,
                 created_at=record.created_at
@@ -220,20 +228,27 @@ async def get_assignment_detail(
     if record.teacher_id != teacher.id:
         raise HTTPException(status_code=403, detail="You can only view your own assignments")
     
+    student_id = None
+    student_username = None
     student_name = "Удаленный ученик"
     student_class = "Без класса"
+    
     if record.student:
-        student_name = f"{record.student.first_name} {record.student.last_name or ''}".strip()
+        student_id = record.student.id
+        student_username = record.student.username
+        student_name = f"{record.student.first_name} {record.student.last_name}".strip()
         if record.student.school_class:
             student_class = record.student.school_class.name
-
-    rule_desc = record.rule.description if record.rule else "—"
-
+    
+    rule_description = record.rule.description if record.rule else "—"
+    
     return TeacherHistoryDetail(
         id=record.id,
+        student_id=student_id,
+        student_username=student_username,
         student_name=student_name,
         student_class=student_class,
-        rule_description=rule_desc,
+        rule_description=rule_description,
         points_changed=record.points_changed,
         comment=record.comment,
         created_at=record.created_at,
