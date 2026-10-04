@@ -29,10 +29,11 @@ export const useStudentStore = create((set, get) => ({
   },
 
   // === HISTORY ===
-  fetchHistory: async ({ page = 1, size = 5 } = {}) => {
+  fetchHistory: async ({ page = 1, size = 100 } = {}) => {
     try {
       const data = await api.get(`/students/me/history?page=${page}&size=${size}`);
-      set({ history: data || [] });
+      const items = Array.isArray(data) ? data : (data?.items || []);
+      set({ history: items });
       return data;
     } catch (err) {
       if (import.meta.env.DEV) console.error('student.fetchHistory failed', err);

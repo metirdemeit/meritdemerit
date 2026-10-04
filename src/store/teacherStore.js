@@ -27,10 +27,10 @@ export const useTeacherStore = create((set, get) => ({
   },
 
   // === HISTORY ===
-  fetchHistory: async ({ page = 1, size = 5 } = {}) => {
+  fetchHistory: async ({ page = 1, size = 100 } = {}) => {
     try {
       const safePage = Number(page) > 0 ? Number(page) : 1;
-      const safeSize = Math.min(Number(size) || 5, 100);
+      const safeSize = Math.min(Number(size) || 100, 100);
       const data = await api.get(`/teacher/me/history?page=${safePage}&size=${safeSize}`);
       const items = Array.isArray(data) ? data : (data?.items || []);
       set({ history: items });
@@ -55,31 +55,70 @@ export const useTeacherStore = create((set, get) => ({
   fetchStudentFullHistory: async (studentId) => {
     if (!studentId) return null;
     try {
-      const data = await api.get(
-        `/teacher/students/${studentId}/history?page=1&size=10000`,
+      const firstPage = await api.get(
+        `/teacher/students/${studentId}/history?page=1&size=100`,
         { skipErrorToast: true }
       );
-      return data;
-    } catch (err) {
-      if (import.meta.env.DEV) console.error('teacher.fetchStudentFullHistory failed', err);
-      // Fallback 1: Try admin student history endpoint if accessible
-      try {
-        const adminData = await api.get(
-          `/admin/students/${studentId}/history?page=1&size=10000`,
-          { skipErrorToast: true }
-        );
-        if (adminData) return adminData;
-      } catch {
-        // Ignore fallback 1 error
+      if (firstPage) {
+        const items = Array.isArray(firstPage) ? [...firstPage] : [...(firstPage?.items || [])];
+        const totalPages = Number(firstPage?.total_pages) || 1;
+        if (totalPages > 1) {
+          const pageRequests = [];
+          for (let p = 2; p <= totalPages; p++) {
+            pageRequests.push(
+              api.get(`/teacher/students/${studentId}/history?page=${p}&size=100`, { skipErrorToast: true }).catch(() => null)
+            );
+          }
+          const responses = await Promise.all(pageRequests);
+          responses.forEach((res) => {
+            if (res) {
+              const more = Array.isArray(res) ? res : (res?.items || []);
+              items.push(...more);
+            }
+          });
+        }
+        return items;
       }
-
-      // Fallback 2: Filter from teacher's loaded history
-      const localHistory = get().history || [];
-      return localHistory.filter((item) => {
-        const entryId = item.student_id ?? item.user_id ?? item.studentId;
-        return String(entryId) === String(studentId);
-      });
+    } catch {
+      // Ignore
     }
+
+    // Fallback 1: Try admin student history endpoint if accessible
+    try {
+      const adminData = await api.get(
+        `/admin/students/${studentId}/history?page=1&size=100`,
+        { skipErrorToast: true }
+      );
+      if (adminData) {
+        const items = Array.isArray(adminData) ? [...adminData] : [...(adminData?.items || [])];
+        const totalPages = Number(adminData?.total_pages) || 1;
+        if (totalPages > 1) {
+          const pageRequests = [];
+          for (let p = 2; p <= totalPages; p++) {
+            pageRequests.push(
+              api.get(`/admin/students/${studentId}/history?page=${p}&size=100`, { skipErrorToast: true }).catch(() => null)
+            );
+          }
+          const responses = await Promise.all(pageRequests);
+          responses.forEach((res) => {
+            if (res) {
+              const more = Array.isArray(res) ? res : (res?.items || []);
+              items.push(...more);
+            }
+          });
+        }
+        return items;
+      }
+    } catch {
+      // Ignore fallback 1 error
+    }
+
+    // Fallback 2: Filter from teacher's loaded history
+    const localHistory = get().history || [];
+    return localHistory.filter((item) => {
+      const entryId = item.student_id ?? item.user_id ?? item.studentId;
+      return String(entryId) === String(studentId);
+    });
   },
 
   deleteHistoryRecord: async (historyId) => {

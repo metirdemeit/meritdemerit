@@ -10,6 +10,8 @@ export const useAdminStore = create((set, get) => ({
   // Данные, которые не кэшируем
   dashboard: null,
   history: [],
+  totalHistoryCount: 0,
+  loadingHistoryFull: false,
   rankings: [],
   teacherStats: [],
 
@@ -115,15 +117,81 @@ export const useAdminStore = create((set, get) => ({
 
   // === HISTORY ===
   fetchHistory: async (filterId) => {
-    const url = filterId ? `/admin/history/${filterId}` : '/admin/history?page=1&size=10000';
+    if (filterId) {
+      try {
+        const data = await api.get(`/admin/history/${filterId}`);
+        const items = Array.isArray(data) ? data : (data?.items || []);
+        set({ history: items, totalHistoryCount: items.length });
+        return data;
+      } catch (err) {
+        if (import.meta.env.DEV) console.error('fetchHistory by id failed', err);
+        return null;
+      }
+    }
+
     try {
-      const data = await api.get(url);
-      const items = Array.isArray(data) ? data : (data?.items || []);
-      set({ history: items });
-      return data;
+      // 1. Первая страница с максимальным разрешённым бэкендом размером size=100
+      const firstPageData = await api.get('/admin/history?page=1&size=100');
+      if (!firstPageData) return null;
+
+      const firstItems = Array.isArray(firstPageData) ? firstPageData : (firstPageData?.items || []);
+      const totalPages = Number(firstPageData?.total_pages) || 1;
+      const totalCount = Number(firstPageData?.total_count) || firstItems.length;
+
+      // Мгновенно обновляем стейт первой порцией
+      set({ history: firstItems, totalHistoryCount: totalCount });
+
+      if (totalPages <= 1) {
+        return firstPageData;
+      }
+
+      // 2. Если страниц несколько, подгружаем всю историю школы пачками по 5 страниц
+      set({ loadingHistoryFull: true });
+      const remainingPages = [];
+      for (let p = 2; p <= totalPages; p++) {
+        remainingPages.push(p);
+      }
+
+      const allRemainingItems = [];
+      const batchSize = 5;
+      for (let i = 0; i < remainingPages.length; i += batchSize) {
+        const batch = remainingPages.slice(i, i + batchSize);
+        const responses = await Promise.all(
+          batch.map((p) =>
+            api.get(`/admin/history?page=${p}&size=100`, { skipErrorToast: true }).catch(() => null)
+          )
+        );
+        responses.forEach((res) => {
+          if (res) {
+            const items = Array.isArray(res) ? res : (res?.items || []);
+            allRemainingItems.push(...items);
+          }
+        });
+      }
+
+      const completeHistory = [...firstItems, ...allRemainingItems];
+      set({
+        history: completeHistory,
+        totalHistoryCount: completeHistory.length,
+        loadingHistoryFull: false,
+      });
+
+      return {
+        ...firstPageData,
+        items: completeHistory,
+        total_count: completeHistory.length,
+      };
     } catch (err) {
       if (import.meta.env.DEV) console.error('fetchHistory failed', err);
-      return null;
+      try {
+        const fallback = await api.get('/admin/history');
+        const items = Array.isArray(fallback) ? fallback : (fallback?.items || []);
+        set({ history: items, totalHistoryCount: items.length, loadingHistoryFull: false });
+        return fallback;
+      } catch {
+        set({ loadingHistoryFull: false });
+        return null;
+      }
     }
   },
 

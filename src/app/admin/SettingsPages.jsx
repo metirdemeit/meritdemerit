@@ -70,6 +70,8 @@ export function SettingsPages() {
   const { user } = useAuthStore();
   const {
     history,
+    loadingHistoryFull,
+    totalHistoryCount,
     fetchHistory,
     deleteHistoryRecord,
     downloadHistoryHtml,
@@ -507,9 +509,24 @@ export function SettingsPages() {
           >
             <CardContent sx={{ p: 2 }}>
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>
-                  Points History Moderation ({filteredHistory.length} / {history?.length || 0})
-                </Typography>
+                <Box display="flex" alignItems="center" gap={1.5}>
+                  <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>
+                    Points History Moderation ({filteredHistory.length} / {totalHistoryCount || history?.length || 0})
+                  </Typography>
+                  {loadingHistoryFull && (
+                    <Chip
+                      size="small"
+                      icon={<CircularProgress size={12} sx={{ color: '#9266FF' }} />}
+                      label="Loading full history..."
+                      sx={{
+                        backgroundColor: 'rgba(146, 102, 255, 0.15)',
+                        color: '#C7C6E2',
+                        border: '1px solid rgba(146, 102, 255, 0.3)',
+                        fontSize: '0.75rem',
+                      }}
+                    />
+                  )}
+                </Box>
                 <Stack direction="row" spacing={1}>
                   <Button
                     size="small"
