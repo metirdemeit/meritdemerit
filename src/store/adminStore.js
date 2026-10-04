@@ -148,6 +148,28 @@ export const useAdminStore = create((set, get) => ({
     );
   },
 
+  downloadHistoryCsv: async (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.startDate) params.set('start_date', filters.startDate);
+    if (filters.endDate) params.set('end_date', filters.endDate);
+    if (filters.student?.trim()) params.set('student', filters.student.trim());
+    if (filters.teacher?.trim()) params.set('teacher', filters.teacher.trim());
+    if (filters.rule?.trim()) params.set('rule', filters.rule.trim());
+    if (filters.type && filters.type !== 'all') params.set('point_type', filters.type);
+    if (filters.schoolClass?.trim()) params.set('school_class', filters.schoolClass.trim());
+
+    const query = params.toString();
+    try {
+      return await api.get(
+        `/admin/history/export/csv${query ? `?${query}` : ''}`,
+        { responseType: 'blob' }
+      );
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('downloadHistoryCsv failed', err);
+      return null;
+    }
+  },
+
   // === DASHBOARD ===
   fetchDashboard: async () => {
     try {

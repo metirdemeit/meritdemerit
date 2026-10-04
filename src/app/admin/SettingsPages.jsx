@@ -71,6 +71,7 @@ export function SettingsPages() {
     fetchHistory,
     deleteHistoryRecord,
     downloadHistoryHtml,
+    downloadHistoryCsv,
     rankings,
     fetchAdminRanking,
     teacherStats,
@@ -94,6 +95,7 @@ export function SettingsPages() {
     startDate: '',
     endDate: '',
     student: '',
+    schoolClass: '',
     teacher: '',
     rule: '',
     type: 'all', // 'all', 'merit', 'demerit'
@@ -105,6 +107,7 @@ export function SettingsPages() {
       startDate: '',
       endDate: '',
       student: '',
+      schoolClass: '',
       teacher: '',
       rule: '',
       type: 'all',
@@ -116,6 +119,7 @@ export function SettingsPages() {
     if (filters.startDate) count++;
     if (filters.endDate) count++;
     if (filters.student.trim()) count++;
+    if (filters.schoolClass.trim()) count++;
     if (filters.teacher.trim()) count++;
     if (filters.rule.trim()) count++;
     if (filters.type !== 'all') count++;
@@ -195,6 +199,7 @@ export function SettingsPages() {
       startDate: '',
       endDate: '',
       student: '',
+      schoolClass: '',
       teacher: '',
       rule: '',
       type: 'all',
@@ -259,6 +264,66 @@ export function SettingsPages() {
     }
   };
 
+  const handleDownloadHistoryCsv = async (customFilters = exportFilters) => {
+    setExportingHistory(true);
+    try {
+      let blob = null;
+      try {
+        blob = await downloadHistoryCsv(customFilters);
+      } catch (e) {
+        if (import.meta.env.DEV) console.warn('Backend CSV export endpoint fallback', e);
+      }
+
+      if (!(blob instanceof Blob)) {
+        const headers = ['ID', 'Date', 'Student', 'Class', 'Teacher/Admin', 'Type', 'Points', 'Rule', 'Comment'];
+        const itemsToExport = activeTab === 'moderation' ? filteredHistory : (history || []);
+        const rows = (itemsToExport || []).map((item) => [
+          item.id,
+          item.created_at ? new Date(item.created_at).toLocaleString('ru-RU') : '',
+          `"${(item.student_name || '').replace(/"/g, '""')}"`,
+          `"${(item.student_class || item.class_name || '').replace(/"/g, '""')}"`,
+          `"${(item.teacher_name || '').replace(/"/g, '""')}"`,
+          item.points_changed > 0 ? 'Merit' : item.points_changed < 0 ? 'Demerit' : 'Neutral',
+          item.points_changed,
+          `"${(item.rule_description || '').replace(/"/g, '""')}"`,
+          `"${(item.comment || '').replace(/"/g, '""')}"`,
+        ]);
+
+        const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+        blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      }
+
+      const filename = `students-points-history-${new Date().toISOString().slice(0, 10)}.csv`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.rel = 'noopener';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+
+      toast.success('CSV file download started');
+      setExportDialogOpen(false);
+    } catch {
+      toast.error('Failed to download CSV');
+    } finally {
+      setExportingHistory(false);
+    }
+  };
+
+  const getItemDateString = (dateVal) => {
+    if (!dateVal) return '';
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
   // Фильтрация истории
   const filteredHistory = useMemo(() => {
     if (!Array.isArray(history)) return [];
@@ -267,27 +332,30 @@ export function SettingsPages() {
       if (filters.student.trim() && !item.student_name?.toLowerCase().includes(filters.student.trim().toLowerCase())) {
         return false;
       }
-      // 2. Поиск по учителю
+      // 2. Поиск по классу
+      if (filters.schoolClass?.trim()) {
+        const className = (item.student_class || item.class_name || '').toLowerCase();
+        if (!className.includes(filters.schoolClass.trim().toLowerCase())) return false;
+      }
+      // 3. Поиск по учителю
       if (filters.teacher.trim() && !item.teacher_name?.toLowerCase().includes(filters.teacher.trim().toLowerCase())) {
         return false;
       }
-      // 3. Поиск по правилу
+      // 4. Поиск по правилу
       if (filters.rule.trim() && !item.rule_description?.toLowerCase().includes(filters.rule.trim().toLowerCase())) {
         return false;
       }
-      // 4. Поиск по дате (от)
+      // 5. Поиск по дате (от)
       if (filters.startDate) {
-        const itemDate = new Date(item.created_at);
-        const start = parseFilterDate(filters.startDate);
-        if (itemDate < start) return false;
+        const itemDateStr = getItemDateString(item.created_at);
+        if (itemDateStr && itemDateStr < filters.startDate) return false;
       }
-      // 5. Поиск по дате (до)
+      // 6. Поиск по дате (до)
       if (filters.endDate) {
-        const itemDate = new Date(item.created_at);
-        const end = parseFilterDate(filters.endDate, true);
-        if (itemDate > end) return false;
+        const itemDateStr = getItemDateString(item.created_at);
+        if (itemDateStr && itemDateStr > filters.endDate) return false;
       }
-      // 6. Тип (Merit / Demerit)
+      // 7. Тип (Merit / Demerit)
       if (filters.type === 'merit' && item.points_changed <= 0) return false;
       if (filters.type === 'demerit' && item.points_changed >= 0) return false;
 
@@ -402,17 +470,32 @@ export function SettingsPages() {
                   <Button
                     size="small"
                     startIcon={<FileDownload />}
-                    onClick={openExportDialog}
+                    onClick={() => handleDownloadHistoryCsv(filters)}
                     disabled={exportingHistory}
                     sx={{
                       color: '#00D377',
                       borderColor: 'rgba(0,211,119,0.4)',
                       textTransform: 'none',
-                      minWidth: 98,
+                      minWidth: 80,
                     }}
                     variant="outlined"
                   >
-                    {exportingHistory ? 'Exporting' : 'HTML'}
+                    CSV
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<FileDownload />}
+                    onClick={openExportDialog}
+                    disabled={exportingHistory}
+                    sx={{
+                      color: '#9266FF',
+                      borderColor: 'rgba(146,102,255,0.4)',
+                      textTransform: 'none',
+                      minWidth: 80,
+                    }}
+                    variant="outlined"
+                  >
+                    HTML
                   </Button>
                   <Button
                     size="small"
@@ -450,6 +533,25 @@ export function SettingsPages() {
                         label="Student Name"
                         value={filters.student}
                         onChange={(e) => setFilters({ ...filters, student: e.target.value })}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Search sx={{ color: '#5A5984', fontSize: 18 }} />
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={filterFieldStyle}
+                      />
+                    </Grid>
+
+                    {/* Фильтр по классу */}
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Class / Grade (e.g. 9A)"
+                        value={filters.schoolClass}
+                        onChange={(e) => setFilters({ ...filters, schoolClass: e.target.value })}
                         InputProps={{
                           startAdornment: (
                             <InputAdornment position="start">
@@ -690,7 +792,7 @@ export function SettingsPages() {
         }}
       >
         <DialogTitle sx={{ color: '#FFFFFF', fontWeight: 700, pb: 1 }}>
-          Export HTML History
+          Export History Data
         </DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
           <Grid container spacing={1.5} sx={{ mt: 0 }}>
@@ -701,6 +803,23 @@ export function SettingsPages() {
                 label="Student Name"
                 value={exportFilters.student}
                 onChange={(e) => setExportFilters({ ...exportFilters, student: e.target.value })}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search sx={{ color: '#5A5984', fontSize: 18 }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={filterFieldStyle}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Class / Grade (e.g. 9A)"
+                value={exportFilters.schoolClass || ''}
+                onChange={(e) => setExportFilters({ ...exportFilters, schoolClass: e.target.value })}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -786,7 +905,7 @@ export function SettingsPages() {
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2, pt: 0 }}>
+        <DialogActions sx={{ px: 3, pb: 2, pt: 0, gap: 1 }}>
           <Button
             onClick={resetExportFilters}
             disabled={exportingHistory}
@@ -802,7 +921,7 @@ export function SettingsPages() {
             Cancel
           </Button>
           <Button
-            onClick={handleDownloadHistoryHtml}
+            onClick={() => handleDownloadHistoryCsv(exportFilters)}
             disabled={exportingHistory}
             startIcon={exportingHistory ? <CircularProgress size={16} color="inherit" /> : <FileDownload />}
             variant="contained"
@@ -813,6 +932,24 @@ export function SettingsPages() {
               textTransform: 'none',
               '&:hover': {
                 background: 'linear-gradient(135deg, #15E58B 0%, #00B86B 100%)',
+              },
+            }}
+          >
+            Download CSV
+          </Button>
+          <Button
+            onClick={handleDownloadHistoryHtml}
+            disabled={exportingHistory}
+            startIcon={exportingHistory ? <CircularProgress size={16} color="inherit" /> : <FileDownload />}
+            variant="outlined"
+            sx={{
+              borderColor: 'rgba(146, 102, 255, 0.5)',
+              color: '#9266FF',
+              fontWeight: 700,
+              textTransform: 'none',
+              '&:hover': {
+                borderColor: '#9266FF',
+                backgroundColor: 'rgba(146, 102, 255, 0.1)',
               },
             }}
           >

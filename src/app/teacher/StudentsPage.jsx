@@ -59,6 +59,7 @@ export function StudentsPage() {
   const [isAssigning, setIsAssigning] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedStudentForHistory, setSelectedStudentForHistory] = useState(null);
+  const [studentFullHistory, setStudentFullHistory] = useState([]);
 
   // Loading и ошибки по секциям
   const [loadingClasses, setLoadingClasses] = useState(false);
@@ -158,30 +159,20 @@ export function StudentsPage() {
   const openStudentHistory = async (student) => {
     setSelectedStudentForHistory(student);
 
-    const loadedHistory = teacherHistory?.length ? teacherHistory : await fetchTeacherHistory({ page: 1, size: 100 });
-    const historyItems = Array.isArray(loadedHistory) ? loadedHistory : (loadedHistory?.items || []);
-    if (historyItems.length > 0) {
-      const historyMatches = historyItems.filter((entry) => {
-        const entryStudentId = entry?.student_id ?? entry?.student?.id ?? entry?.user_id ?? entry?.studentId;
-        const entryName = normalizeStudentName(entry?.student_name || `${entry?.student?.first_name || ''} ${entry?.student?.last_name || ''}`);
-        const studentFullName = normalizeStudentName(`${student?.first_name || ''} ${student?.last_name || ''}`);
-        const studentUsername = normalizeStudentName(student?.username);
-        const entryUsername = normalizeStudentName(entry?.student_username || entry?.username || entry?.student?.username);
-
-        return (
-          String(entryStudentId) === String(student?.id) ||
-          entryName.includes(studentFullName) ||
-          studentFullName.includes(entryName) ||
-          entryUsername === studentUsername ||
-          entryUsername.includes(studentUsername) ||
-          studentUsername.includes(entryUsername)
-        );
-      });
-
-      if (historyMatches.length > 0) {
+    try {
+      // Load full student history (all teacher and admin actions)
+      const fullHistory = await fetchStudentFullHistory(student.id);
+      
+      if (fullHistory && fullHistory.length > 0) {
+        setStudentFullHistory(fullHistory);
         setHistoryDialogOpen(true);
         return;
       }
+      
+      setStudentFullHistory([]);
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('Failed to fetch student full history:', err);
+      setStudentFullHistory([]);
     }
 
     setHistoryDialogOpen(true);
@@ -291,24 +282,12 @@ export function StudentsPage() {
   }, [students, homeroomClass, showRiskOnly]);
 
   const selectedStudentHistory = useMemo(() => {
-    if (!selectedStudentForHistory) return [];
-    const studentId = selectedStudentForHistory.id;
-    const studentName = normalizeStudentName(`${selectedStudentForHistory.first_name || ''} ${selectedStudentForHistory.last_name || ''}`);
-    const studentUsername = normalizeStudentName(selectedStudentForHistory.username);
-    const historyItems = Array.isArray(teacherHistory) ? teacherHistory : (teacherHistory?.items || []);
-
-    return historyItems
-      .filter((entry) => {
-        const matchesId = String(entry?.student_id ?? entry?.student?.id ?? entry?.user_id ?? entry?.studentId) === String(studentId);
-        const entryName = normalizeStudentName(entry?.student_name || `${entry?.student?.first_name || ''} ${entry?.student?.last_name || ''}`);
-        const entryUsername = normalizeStudentName(entry?.student_username || entry?.username || entry?.student?.username);
-        const matchesName = !!studentName && (entryName.includes(studentName) || studentName.includes(entryName));
-        const matchesUsername = !!studentUsername && (entryUsername === studentUsername || entryUsername.includes(studentUsername) || studentUsername.includes(entryUsername));
-        return matchesId || matchesName || matchesUsername;
-      })
+    if (!selectedStudentForHistory || !studentFullHistory.length) return [];
+    
+    return studentFullHistory
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
       .slice(0, 8);
-  }, [selectedStudentForHistory, teacherHistory]);
+  }, [selectedStudentForHistory, studentFullHistory]);
 
   const handleHomeroomClassChange = (newClass) => {
     setSelectedHomeroomClass(newClass);
