@@ -25,6 +25,7 @@ import {
   MenuItem,
   Stack,
   InputAdornment,
+  Autocomplete,
 } from '@mui/material';
 import {
   Delete,
@@ -45,6 +46,7 @@ import {
 } from '@mui/icons-material';
 import { useAuthStore } from '../../store/authStore';
 import { useAdminStore } from '../../store/adminStore';
+import { useCommonStore } from '../../store/commonStore';
 import toast from 'react-hot-toast';
 import DetentionManager from './components/DetentionManager';
 import InterventionsManager from './components/InterventionsManager';
@@ -76,7 +78,52 @@ export function SettingsPages() {
     fetchAdminRanking,
     teacherStats,
     fetchTeacherStats,
+    teachers,
+    fetchTeachers,
   } = useAdminStore();
+  const { students, fetchStudents, classes, fetchClasses } = useCommonStore();
+
+  useEffect(() => {
+    fetchTeachers();
+    fetchStudents();
+    fetchClasses();
+  }, [fetchTeachers, fetchStudents, fetchClasses]);
+
+  const studentOptions = useMemo(() => {
+    const set = new Set();
+    (history || []).forEach((item) => {
+      if (item.student_name) set.add(item.student_name);
+    });
+    (students || []).forEach((s) => {
+      const name = `${s.first_name || ''} ${s.last_name || ''}`.trim();
+      if (name) set.add(name);
+    });
+    return Array.from(set).sort();
+  }, [history, students]);
+
+  const teacherOptions = useMemo(() => {
+    const set = new Set();
+    (history || []).forEach((item) => {
+      if (item.teacher_name) set.add(item.teacher_name);
+    });
+    (teachers || []).forEach((t) => {
+      const name = `${t.first_name || ''} ${t.last_name || ''}`.trim();
+      if (name) set.add(name);
+    });
+    return Array.from(set).sort();
+  }, [history, teachers]);
+
+  const classOptions = useMemo(() => {
+    const set = new Set();
+    (history || []).forEach((item) => {
+      const cls = item.student_class || item.class_name;
+      if (cls) set.add(cls);
+    });
+    (classes || []).forEach((c) => {
+      if (c.name) set.add(c.name);
+    });
+    return Array.from(set).sort();
+  }, [history, classes]);
 
   const [activeTab, setActiveTab] = useState('moderation');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -527,58 +574,82 @@ export function SettingsPages() {
                   <Grid container spacing={1.5}>
                     {/* Фильтр по студенту */}
                     <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        label="Student Name"
+                      <Autocomplete
+                        freeSolo
+                        options={studentOptions}
                         value={filters.student}
-                        onChange={(e) => setFilters({ ...filters, student: e.target.value })}
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <Search sx={{ color: '#5A5984', fontSize: 18 }} />
-                            </InputAdornment>
-                          ),
-                        }}
-                        sx={filterFieldStyle}
+                        onInputChange={(e, newValue) => setFilters({ ...filters, student: newValue || '' })}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            fullWidth
+                            size="small"
+                            label="Student Name"
+                            InputProps={{
+                              ...params.InputProps,
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <Search sx={{ color: '#5A5984', fontSize: 18 }} />
+                                </InputAdornment>
+                              ),
+                            }}
+                            sx={filterFieldStyle}
+                          />
+                        )}
                       />
                     </Grid>
 
                     {/* Фильтр по классу */}
                     <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        label="Class / Grade (e.g. 9A)"
+                      <Autocomplete
+                        freeSolo
+                        options={classOptions}
                         value={filters.schoolClass}
-                        onChange={(e) => setFilters({ ...filters, schoolClass: e.target.value })}
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <Search sx={{ color: '#5A5984', fontSize: 18 }} />
-                            </InputAdornment>
-                          ),
-                        }}
-                        sx={filterFieldStyle}
+                        onInputChange={(e, newValue) => setFilters({ ...filters, schoolClass: newValue || '' })}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            fullWidth
+                            size="small"
+                            label="Class / Grade (e.g. 9A)"
+                            InputProps={{
+                              ...params.InputProps,
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <Search sx={{ color: '#5A5984', fontSize: 18 }} />
+                                </InputAdornment>
+                              ),
+                            }}
+                            sx={filterFieldStyle}
+                          />
+                        )}
                       />
                     </Grid>
 
                     {/* Фильтр по учителю */}
                     <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        label="Teacher / Admin"
+                      <Autocomplete
+                        freeSolo
+                        options={teacherOptions}
                         value={filters.teacher}
-                        onChange={(e) => setFilters({ ...filters, teacher: e.target.value })}
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <Search sx={{ color: '#5A5984', fontSize: 18 }} />
-                            </InputAdornment>
-                          ),
-                        }}
-                        sx={filterFieldStyle}
+                        onInputChange={(e, newValue) => setFilters({ ...filters, teacher: newValue || '' })}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            fullWidth
+                            size="small"
+                            label="Teacher / Admin"
+                            InputProps={{
+                              ...params.InputProps,
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <Search sx={{ color: '#5A5984', fontSize: 18 }} />
+                                </InputAdornment>
+                              ),
+                            }}
+                            sx={filterFieldStyle}
+                          />
+                        )}
                       />
                     </Grid>
 
@@ -797,54 +868,78 @@ export function SettingsPages() {
         <DialogContent sx={{ pt: 1 }}>
           <Grid container spacing={1.5} sx={{ mt: 0 }}>
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Student Name"
+              <Autocomplete
+                freeSolo
+                options={studentOptions}
                 value={exportFilters.student}
-                onChange={(e) => setExportFilters({ ...exportFilters, student: e.target.value })}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search sx={{ color: '#5A5984', fontSize: 18 }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={filterFieldStyle}
+                onInputChange={(e, newValue) => setExportFilters({ ...exportFilters, student: newValue || '' })}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    size="small"
+                    label="Student Name"
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search sx={{ color: '#5A5984', fontSize: 18 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={filterFieldStyle}
+                  />
+                )}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Class / Grade (e.g. 9A)"
+              <Autocomplete
+                freeSolo
+                options={classOptions}
                 value={exportFilters.schoolClass || ''}
-                onChange={(e) => setExportFilters({ ...exportFilters, schoolClass: e.target.value })}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search sx={{ color: '#5A5984', fontSize: 18 }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={filterFieldStyle}
+                onInputChange={(e, newValue) => setExportFilters({ ...exportFilters, schoolClass: newValue || '' })}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    size="small"
+                    label="Class / Grade (e.g. 9A)"
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search sx={{ color: '#5A5984', fontSize: 18 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={filterFieldStyle}
+                  />
+                )}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Teacher / Admin"
+              <Autocomplete
+                freeSolo
+                options={teacherOptions}
                 value={exportFilters.teacher}
-                onChange={(e) => setExportFilters({ ...exportFilters, teacher: e.target.value })}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search sx={{ color: '#5A5984', fontSize: 18 }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={filterFieldStyle}
+                onInputChange={(e, newValue) => setExportFilters({ ...exportFilters, teacher: newValue || '' })}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    size="small"
+                    label="Teacher / Admin"
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search sx={{ color: '#5A5984', fontSize: 18 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={filterFieldStyle}
+                  />
+                )}
               />
             </Grid>
             <Grid item xs={12} sm={6}>

@@ -55,7 +55,7 @@ export const useTeacherStore = create((set, get) => ({
   fetchStudentFullHistory: async (studentId) => {
     if (!studentId) return null;
     try {
-      const data = await api.get(`/teacher/students/${studentId}/history?page=1&size=100`);
+      const data = await api.get(`/teacher/students/${studentId}/history?page=1&size=10000`);
       return data;
     } catch (err) {
       if (import.meta.env.DEV) console.error('teacher.fetchStudentFullHistory failed', err);

@@ -27,7 +27,14 @@ import { AssignRulesDrawer } from '../components/dialogs/AssignRulesDrawer';
 import { HomeroomStatsWidget } from './components/HomeroomStatsWidget';
 
 export function StudentsPage() {
-  const { assignPoints, profile, fetchProfile, history: teacherHistory, fetchHistory: fetchTeacherHistory } = useTeacherStore();
+  const {
+    assignPoints,
+    profile,
+    fetchProfile,
+    history: teacherHistory,
+    fetchHistory: fetchTeacherHistory,
+    fetchStudentFullHistory,
+  } = useTeacherStore();
   const {
     students,
     classes,
@@ -42,8 +49,10 @@ export function StudentsPage() {
   // Режим просмотра: 'all' | 'homeroom'
   const [viewMode, setViewMode] = useState('all');
 
-  // Закрепленный класс учителя (из профиля бэкенда или переключенный временно)
-  const [selectedHomeroomClass, setSelectedHomeroomClass] = useState(null);
+  // Закрепленный класс учителя (из localStorage, профиля бэкенда или переключенный временно)
+  const [selectedHomeroomClass, setSelectedHomeroomClass] = useState(() => {
+    return typeof window !== 'undefined' ? localStorage.getItem('teacher_homeroom_class') : null;
+  });
   const homeroomClass = selectedHomeroomClass || profile?.homeroom_class_name || '10-A';
 
   const [showRiskOnly, setShowRiskOnly] = useState(false);
@@ -160,16 +169,10 @@ export function StudentsPage() {
     setSelectedStudentForHistory(student);
 
     try {
-      // Load full student history (all teacher and admin actions)
+      // Load full student history (all points assigned by teachers and admins)
       const fullHistory = await fetchStudentFullHistory(student.id);
-      
-      if (fullHistory && fullHistory.length > 0) {
-        setStudentFullHistory(fullHistory);
-        setHistoryDialogOpen(true);
-        return;
-      }
-      
-      setStudentFullHistory([]);
+      const historyItems = Array.isArray(fullHistory) ? fullHistory : (fullHistory?.items || []);
+      setStudentFullHistory(historyItems);
     } catch (err) {
       if (import.meta.env.DEV) console.error('Failed to fetch student full history:', err);
       setStudentFullHistory([]);
@@ -180,10 +183,14 @@ export function StudentsPage() {
 
   const handleStudentClick = (studentId) => {
     const student = (students || []).find((item) => item.id === studentId) || (searchResults || []).find((item) => item.id === studentId);
-    if (student) {
+
+    // In 'homeroom' (My Class) view: clicking student shows student's full point history
+    if (viewMode === 'homeroom' && student) {
       openStudentHistory(student);
       return;
     }
+
+    // In 'all' (All Classes) view: clicking student directly opens points assignment drawer
     setSelectedStudentIds([studentId]);
     setSelectedRuleIds([]);
     setAssignComment('');
@@ -291,6 +298,9 @@ export function StudentsPage() {
 
   const handleHomeroomClassChange = (newClass) => {
     setSelectedHomeroomClass(newClass);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('teacher_homeroom_class', newClass);
+    }
     toast.success(`Homeroom class set to ${newClass}`);
   };
 

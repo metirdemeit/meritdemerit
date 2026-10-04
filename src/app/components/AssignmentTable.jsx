@@ -132,7 +132,7 @@ export default function AssignmentTable({
         <TableFooter>
           <TableRow>
             <TablePagination
-              rowsPerPageOptions={[10, 20, 50]}
+              rowsPerPageOptions={[10, 25, 50, 100, 500]}
               colSpan={onDelete ? 7 : 6}
               count={assignmentList.length}
               rowsPerPage={rowsPerPage}

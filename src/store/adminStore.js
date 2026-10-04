@@ -115,7 +115,7 @@ export const useAdminStore = create((set, get) => ({
 
   // === HISTORY ===
   fetchHistory: async (filterId) => {
-    const url = filterId ? `/admin/history/${filterId}` : '/admin/history';
+    const url = filterId ? `/admin/history/${filterId}` : '/admin/history?page=1&size=10000';
     try {
       const data = await api.get(url);
       const items = Array.isArray(data) ? data : (data?.items || []);
