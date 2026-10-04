@@ -436,7 +436,7 @@ export function SettingsPages() {
           mb: 2,
         }}
       >
-        <Container maxWidth="sm">
+        <Container maxWidth="lg">
           <Box display="flex" alignItems="center">
             <Settings sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
             <Box>
@@ -451,7 +451,7 @@ export function SettingsPages() {
         </Container>
       </Box>
 
-      <Container maxWidth="sm" sx={{ px: 2 }}>
+      <Container maxWidth="lg" sx={{ px: 2 }}>
         {/* Модульные вкладки навигации (вертикальный стек) */}
         <Grid container spacing={1.5} direction="column" sx={{ mb: 2 }}>
           {navTabs.map((tab) => {
@@ -870,7 +870,7 @@ export function SettingsPages() {
         open={exportDialogOpen}
         onClose={() => !exportingHistory && setExportDialogOpen(false)}
         fullWidth
-        maxWidth="sm"
+        maxWidth="lg"
         PaperProps={{
           sx: {
             background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 100%)',

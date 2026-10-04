@@ -323,7 +323,7 @@ export function StudentsPage() {
         mt: 0,
         mb: 2,
       }}>
-        <Container maxWidth="sm">
+        <Container maxWidth="lg">
           <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
             <Box display="flex" alignItems="center">
               <School sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
@@ -378,7 +378,7 @@ export function StudentsPage() {
         </Container>
       </Box>
 
-      <Container maxWidth="sm" sx={{ px: 2 }}>
+      <Container maxWidth="lg" sx={{ px: 2 }}>
         {/* Error Alerts */}
         {(errorClasses || errorStudents || errorSearch) && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -525,7 +525,7 @@ export function StudentsPage() {
       <Dialog
         open={historyDialogOpen}
         onClose={() => setHistoryDialogOpen(false)}
-        maxWidth="sm"
+        maxWidth="lg"
         fullWidth
         PaperProps={{
           sx: {

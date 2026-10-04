@@ -73,7 +73,7 @@ export function DashboardPage() {
 
   if (errorDashboard) {
     return (
-      <Container maxWidth="sm" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
         <Alert severity="error">{errorDashboard}</Alert>
       </Container>
     );
@@ -85,7 +85,7 @@ export function DashboardPage() {
       <Box
         sx={styles.headerSection}
       >
-        <Container maxWidth="sm">
+        <Container maxWidth="lg">
           <Box display="flex" alignItems="center" justifyContent="space-between">
             <Box display="flex" alignItems="center">
               <Avatar sx={styles.avatar}>
@@ -123,7 +123,7 @@ export function DashboardPage() {
         </Container>
       </Box>
 
-      <Container maxWidth="sm" sx={{ px: 2 }}>
+      <Container maxWidth="lg" sx={{ px: 2 }}>
         {/* Statistics Cards */}
         <Box display="flex" gap={2} mb={3}>
           <Card sx={styles.totalStudentsCard}>

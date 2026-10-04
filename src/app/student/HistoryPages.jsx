@@ -57,7 +57,7 @@ export function HistoryPages() {
           mb: 2,
         }}
       >
-        <Container maxWidth="sm">
+        <Container maxWidth="lg">
           <Box display="flex" alignItems="center" mb={3}>
             <HistoryIcon sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
             <Box>
@@ -72,7 +72,7 @@ export function HistoryPages() {
         </Container>
       </Box>
 
-      <Container maxWidth="sm" sx={{ px: 2 }}>
+      <Container maxWidth="lg" sx={{ px: 2 }}>
 
         {/* Point History Section */}
         <Card sx={{ 

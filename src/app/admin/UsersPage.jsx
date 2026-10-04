@@ -21,7 +21,7 @@ export function UsersPage() {
     <Box sx={{ minHeight: '100vh', pb: 2 }}>
       {/* Header Section */}
       <Box sx={styles.headerSection}>
-        <Container maxWidth="sm">
+        <Container maxWidth="lg">
           <Box display="flex" alignItems="center" mb={3}>
             <Person sx={styles.icon} />
             <Box>
@@ -55,7 +55,7 @@ export function UsersPage() {
         </Container>
       </Box>
 
-      <Container maxWidth="sm" sx={{ px: 2 }}>
+      <Container maxWidth="lg" sx={{ px: 2 }}>
         {/* Render appropriate page based on mode */}
         {mode === 'students' && <StudentsBlog />}
         {mode === 'teachers' && <TeachersBlog />}

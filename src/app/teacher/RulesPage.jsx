@@ -117,7 +117,7 @@ export function RulesPage() {
         mt: 0,
         mb: 2,
       }}>
-        <Container maxWidth="sm">
+        <Container maxWidth="lg">
           <Box display="flex" alignItems="center" mb={3}>
             <RuleIcon sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
             <Box>
@@ -132,7 +132,7 @@ export function RulesPage() {
         </Container>
       </Box>
 
-      <Container maxWidth="sm" sx={{ px: 2 }}>
+      <Container maxWidth="lg" sx={{ px: 2 }}>
         {(errorRules || errorClasses) && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {errorRules || errorClasses}

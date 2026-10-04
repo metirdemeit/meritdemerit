@@ -176,7 +176,7 @@ export function TeachersBlog() {
 
   if (error) {
     return (
-      <Container maxWidth="sm" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
         <Typography sx={{ color: 'red' }}>Error: {error}</Typography>
       </Container>
     );

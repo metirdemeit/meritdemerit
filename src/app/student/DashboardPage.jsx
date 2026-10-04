@@ -89,7 +89,7 @@ export function DashboardPage() {
 
   if (errorProfile) {
     return (
-      <Container maxWidth="sm" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
         <Alert severity="error">{errorProfile}</Alert>
       </Container>
     );
@@ -113,7 +113,7 @@ export function DashboardPage() {
           mb: 2,
         }}
       >
-        <Container maxWidth="sm">
+        <Container maxWidth="lg">
           <Box display="flex" alignItems="center" mb={3}>
             <Person sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
             <Box>
@@ -128,7 +128,7 @@ export function DashboardPage() {
         </Container>
       </Box>
 
-      <Container maxWidth="sm" sx={{ px: 2 }}>
+      <Container maxWidth="lg" sx={{ px: 2 }}>
         {/* Карточка профиля студента */}
         <Card sx={{ 
           background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',

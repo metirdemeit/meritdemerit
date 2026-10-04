@@ -240,7 +240,7 @@ export function CodesPages() {
 
   if (errorPage) {
     return (
-      <Container maxWidth="sm" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
         <Alert severity="error">{errorPage}</Alert>
       </Container>
     );
@@ -264,7 +264,7 @@ export function CodesPages() {
           mb: 2,
         }}
       >
-        <Container maxWidth="sm">
+        <Container maxWidth="lg">
           <Box display="flex" alignItems="center" mb={3}>
             <Code sx={{ fontSize: 32, color: '#9c27b0', mr: 2 }} />
             <Box>
@@ -279,7 +279,7 @@ export function CodesPages() {
         </Container>
       </Box>
 
-      <Container maxWidth="sm" sx={{ px: 2 }}>
+      <Container maxWidth="lg" sx={{ px: 2 }}>
         {/* Add Rule Button */}
         <Button
           fullWidth

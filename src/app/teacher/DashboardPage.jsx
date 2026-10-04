@@ -137,7 +137,7 @@ export function DashboardPage() {
           mb: 2,
         }}
       >
-        <Container maxWidth="sm">
+        <Container maxWidth="lg">
           <Box display="flex" alignItems="center" mb={3}>
             <HistoryIcon sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
             <Box>
@@ -152,7 +152,7 @@ export function DashboardPage() {
         </Container>
       </Box>
 
-      <Container maxWidth="sm" sx={{ px: 2 }}>
+      <Container maxWidth="lg" sx={{ px: 2 }}>
         {/* Homeroom Class Quick Status & Alert */}
         {riskStudents.length > 0 && (
           <Alert
