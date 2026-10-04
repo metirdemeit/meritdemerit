@@ -69,6 +69,7 @@ export function StudentsPage() {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedStudentForHistory, setSelectedStudentForHistory] = useState(null);
   const [studentFullHistory, setStudentFullHistory] = useState([]);
+  const [loadingStudentHistory, setLoadingStudentHistory] = useState(false);
 
   // Loading и ошибки по секциям
   const [loadingClasses, setLoadingClasses] = useState(false);
@@ -167,6 +168,9 @@ export function StudentsPage() {
 
   const openStudentHistory = async (student) => {
     setSelectedStudentForHistory(student);
+    setStudentFullHistory([]);
+    setLoadingStudentHistory(true);
+    setHistoryDialogOpen(true);
 
     try {
       // Load full student history (all points assigned by teachers and admins)
@@ -176,9 +180,9 @@ export function StudentsPage() {
     } catch (err) {
       if (import.meta.env.DEV) console.error('Failed to fetch student full history:', err);
       setStudentFullHistory([]);
+    } finally {
+      setLoadingStudentHistory(false);
     }
-
-    setHistoryDialogOpen(true);
   };
 
   const handleStudentClick = (studentId) => {
@@ -291,9 +295,8 @@ export function StudentsPage() {
   const selectedStudentHistory = useMemo(() => {
     if (!selectedStudentForHistory || !studentFullHistory.length) return [];
     
-    return studentFullHistory
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .slice(0, 8);
+    return [...studentFullHistory]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [selectedStudentForHistory, studentFullHistory]);
 
   const handleHomeroomClassChange = (newClass) => {
@@ -538,8 +541,12 @@ export function StudentsPage() {
             {selectedStudentForHistory ? `${selectedStudentForHistory.first_name || ''} ${selectedStudentForHistory.last_name || ''}`.trim() || selectedStudentForHistory.username : 'Student history'}
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          {selectedStudentHistory.length === 0 ? (
+        <DialogContent sx={{ pt: 1, maxHeight: '60vh', overflowY: 'auto' }}>
+          {loadingStudentHistory ? (
+            <Box display="flex" justifyContent="center" alignItems="center" py={4}>
+              <CircularProgress sx={{ color: '#9266FF' }} />
+            </Box>
+          ) : selectedStudentHistory.length === 0 ? (
             <Alert severity="info" sx={{ backgroundColor: 'rgba(146, 102, 255, 0.1)', border: '1px solid rgba(146, 102, 255, 0.3)', color: '#F4F4FF' }}>
               No points history found for this student yet.
             </Alert>

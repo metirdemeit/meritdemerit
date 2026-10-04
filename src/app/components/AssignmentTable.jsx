@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -23,6 +23,10 @@ export default function AssignmentTable({
 }) {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  useEffect(() => {
+    setPage(0);
+  }, [assignments]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);

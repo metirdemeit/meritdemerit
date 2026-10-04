@@ -1,21 +1,15 @@
-// @ts-check
-
 import eslint from '@eslint/js';
-import tseslint from 'typescript-eslint';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 
-export default tseslint.config(
+export default [
+  eslint.configs.recommended,
   {
-    files: ['src/**/*.{js,jsx,mjs,cjs,ts,tsx}'],
-    extends: [
-      eslint.configs.recommended,
-      ...tseslint.configs.recommendedTypeChecked,
-    ],
+    files: ['src/**/*.{js,jsx,mjs,cjs}'],
     plugins: {
       react,
-      'react-hooks': reactHooks
+      'react-hooks': reactHooks,
     },
     languageOptions: {
       parserOptions: {
@@ -30,7 +24,10 @@ export default tseslint.config(
       },
     },
     rules: {
-      '@typescript-eslint/no-unused-expressions': 0,
+      ...react.configs['jsx-runtime'].rules,
+      'react/react-in-jsx-scope': 'off',
+      'react/prop-types': 'off',
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
-  }
-);
+  },
+];

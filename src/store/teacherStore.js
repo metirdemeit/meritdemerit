@@ -55,11 +55,30 @@ export const useTeacherStore = create((set, get) => ({
   fetchStudentFullHistory: async (studentId) => {
     if (!studentId) return null;
     try {
-      const data = await api.get(`/teacher/students/${studentId}/history?page=1&size=10000`);
+      const data = await api.get(
+        `/teacher/students/${studentId}/history?page=1&size=10000`,
+        { skipErrorToast: true }
+      );
       return data;
     } catch (err) {
       if (import.meta.env.DEV) console.error('teacher.fetchStudentFullHistory failed', err);
-      return null;
+      // Fallback 1: Try admin student history endpoint if accessible
+      try {
+        const adminData = await api.get(
+          `/admin/students/${studentId}/history?page=1&size=10000`,
+          { skipErrorToast: true }
+        );
+        if (adminData) return adminData;
+      } catch {
+        // Ignore fallback 1 error
+      }
+
+      // Fallback 2: Filter from teacher's loaded history
+      const localHistory = get().history || [];
+      return localHistory.filter((item) => {
+        const entryId = item.student_id ?? item.user_id ?? item.studentId;
+        return String(entryId) === String(studentId);
+      });
     }
   },
 

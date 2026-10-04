@@ -311,6 +311,47 @@ export function SettingsPages() {
     }
   };
 
+  const getItemDateString = (dateVal) => {
+    if (!dateVal) return '';
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const filterHistoryItems = (items = [], criteria = {}) => {
+    if (!Array.isArray(items)) return [];
+    return items.filter((item) => {
+      if (criteria.student?.trim() && !item.student_name?.toLowerCase().includes(criteria.student.trim().toLowerCase())) {
+        return false;
+      }
+      if (criteria.schoolClass?.trim()) {
+        const className = (item.student_class || item.class_name || '').toLowerCase();
+        if (!className.includes(criteria.schoolClass.trim().toLowerCase())) return false;
+      }
+      if (criteria.teacher?.trim() && !item.teacher_name?.toLowerCase().includes(criteria.teacher.trim().toLowerCase())) {
+        return false;
+      }
+      if (criteria.rule?.trim() && !item.rule_description?.toLowerCase().includes(criteria.rule.trim().toLowerCase())) {
+        return false;
+      }
+      if (criteria.startDate) {
+        const itemDateStr = getItemDateString(item.created_at);
+        if (itemDateStr && itemDateStr < criteria.startDate) return false;
+      }
+      if (criteria.endDate) {
+        const itemDateStr = getItemDateString(item.created_at);
+        if (itemDateStr && itemDateStr > criteria.endDate) return false;
+      }
+      if (criteria.type === 'merit' && item.points_changed <= 0) return false;
+      if (criteria.type === 'demerit' && item.points_changed >= 0) return false;
+
+      return true;
+    });
+  };
+
   const handleDownloadHistoryCsv = async (customFilters = exportFilters) => {
     setExportingHistory(true);
     try {
@@ -323,7 +364,7 @@ export function SettingsPages() {
 
       if (!(blob instanceof Blob)) {
         const headers = ['ID', 'Date', 'Student', 'Class', 'Teacher/Admin', 'Type', 'Points', 'Rule', 'Comment'];
-        const itemsToExport = activeTab === 'moderation' ? filteredHistory : (history || []);
+        const itemsToExport = filterHistoryItems(history || [], customFilters);
         const rows = (itemsToExport || []).map((item) => [
           item.id,
           item.created_at ? new Date(item.created_at).toLocaleString('ru-RU') : '',
@@ -361,53 +402,9 @@ export function SettingsPages() {
     }
   };
 
-  const getItemDateString = (dateVal) => {
-    if (!dateVal) return '';
-    const d = new Date(dateVal);
-    if (isNaN(d.getTime())) return '';
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  };
-
   // Фильтрация истории
   const filteredHistory = useMemo(() => {
-    if (!Array.isArray(history)) return [];
-    return history.filter((item) => {
-      // 1. Поиск по студенту
-      if (filters.student.trim() && !item.student_name?.toLowerCase().includes(filters.student.trim().toLowerCase())) {
-        return false;
-      }
-      // 2. Поиск по классу
-      if (filters.schoolClass?.trim()) {
-        const className = (item.student_class || item.class_name || '').toLowerCase();
-        if (!className.includes(filters.schoolClass.trim().toLowerCase())) return false;
-      }
-      // 3. Поиск по учителю
-      if (filters.teacher.trim() && !item.teacher_name?.toLowerCase().includes(filters.teacher.trim().toLowerCase())) {
-        return false;
-      }
-      // 4. Поиск по правилу
-      if (filters.rule.trim() && !item.rule_description?.toLowerCase().includes(filters.rule.trim().toLowerCase())) {
-        return false;
-      }
-      // 5. Поиск по дате (от)
-      if (filters.startDate) {
-        const itemDateStr = getItemDateString(item.created_at);
-        if (itemDateStr && itemDateStr < filters.startDate) return false;
-      }
-      // 6. Поиск по дате (до)
-      if (filters.endDate) {
-        const itemDateStr = getItemDateString(item.created_at);
-        if (itemDateStr && itemDateStr > filters.endDate) return false;
-      }
-      // 7. Тип (Merit / Demerit)
-      if (filters.type === 'merit' && item.points_changed <= 0) return false;
-      if (filters.type === 'demerit' && item.points_changed >= 0) return false;
-
-      return true;
-    });
+    return filterHistoryItems(history, filters);
   }, [history, filters]);
 
   // Модульные кнопки настроек
@@ -578,6 +575,7 @@ export function SettingsPages() {
                         freeSolo
                         options={studentOptions}
                         value={filters.student}
+                        onChange={(e, newValue) => setFilters({ ...filters, student: newValue || '' })}
                         onInputChange={(e, newValue) => setFilters({ ...filters, student: newValue || '' })}
                         renderInput={(params) => (
                           <TextField
@@ -605,6 +603,7 @@ export function SettingsPages() {
                         freeSolo
                         options={classOptions}
                         value={filters.schoolClass}
+                        onChange={(e, newValue) => setFilters({ ...filters, schoolClass: newValue || '' })}
                         onInputChange={(e, newValue) => setFilters({ ...filters, schoolClass: newValue || '' })}
                         renderInput={(params) => (
                           <TextField
@@ -632,6 +631,7 @@ export function SettingsPages() {
                         freeSolo
                         options={teacherOptions}
                         value={filters.teacher}
+                        onChange={(e, newValue) => setFilters({ ...filters, teacher: newValue || '' })}
                         onInputChange={(e, newValue) => setFilters({ ...filters, teacher: newValue || '' })}
                         renderInput={(params) => (
                           <TextField
@@ -872,6 +872,7 @@ export function SettingsPages() {
                 freeSolo
                 options={studentOptions}
                 value={exportFilters.student}
+                onChange={(e, newValue) => setExportFilters({ ...exportFilters, student: newValue || '' })}
                 onInputChange={(e, newValue) => setExportFilters({ ...exportFilters, student: newValue || '' })}
                 renderInput={(params) => (
                   <TextField
@@ -897,6 +898,7 @@ export function SettingsPages() {
                 freeSolo
                 options={classOptions}
                 value={exportFilters.schoolClass || ''}
+                onChange={(e, newValue) => setExportFilters({ ...exportFilters, schoolClass: newValue || '' })}
                 onInputChange={(e, newValue) => setExportFilters({ ...exportFilters, schoolClass: newValue || '' })}
                 renderInput={(params) => (
                   <TextField
@@ -922,6 +924,7 @@ export function SettingsPages() {
                 freeSolo
                 options={teacherOptions}
                 value={exportFilters.teacher}
+                onChange={(e, newValue) => setExportFilters({ ...exportFilters, teacher: newValue || '' })}
                 onInputChange={(e, newValue) => setExportFilters({ ...exportFilters, teacher: newValue || '' })}
                 renderInput={(params) => (
                   <TextField
