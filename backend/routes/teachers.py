@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from tortoise.transactions import in_transaction
 from datetime import datetime
 
-from backend.models import Teacher, Student, DisciplineRule, PointHistory, Class
+from backend.models import Teacher, Student, DisciplineRule, PointHistory, Class, AdminPointHistory
 from backend.utils.security import get_current_user, enforce_https
 from backend.utils.rules_helper import check_rule_limits_and_permissions, auto_trigger_interventions
 from tortoise.contrib.pydantic import pydantic_model_creator
@@ -52,6 +52,25 @@ class TeacherHistoryDetail(BaseModel):
 
 class PaginatedTeacherHistory(BaseModel):
     items: List[TeacherHistoryResponse]
+    total_count: int
+    page: int
+    size: int
+    total_pages: int
+
+class StudentHistoryEntryForTeacher(BaseModel):
+    id: int
+    teacher_name: str
+    role: str
+    created_by_role: str
+    rule_description: str
+    points_changed: int
+    comment: str
+    created_at: datetime
+    student_id: int | None = None
+    student_name: str | None = None
+
+class PaginatedStudentHistoryForTeacher(BaseModel):
+    items: List[StudentHistoryEntryForTeacher]
     total_count: int
     page: int
     size: int
@@ -281,3 +300,84 @@ async def delete_assignment(
         await history_record.delete()
     
     return None
+
+@router.get("/students/{student_id}/history", response_model=PaginatedStudentHistoryForTeacher, summary="Get student full points history for teacher")
+async def get_student_history_for_teacher(
+    student_id: int,
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(100, ge=1, le=100, description="Number of items per page"),
+    teacher: Teacher = Depends(get_current_teacher),
+):
+    """
+    Get a specific student's complete points history from all teachers and admins.
+    """
+    student = await Student.get_or_none(id=student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    teacher_history = await PointHistory.filter(student_id=student_id) \
+        .prefetch_related("teacher", "rule") \
+        .all()
+
+    admin_history = await AdminPointHistory.filter(student_id=student_id) \
+        .prefetch_related("admin", "rule") \
+        .all()
+
+    combined: list[StudentHistoryEntryForTeacher] = []
+
+    for record in teacher_history:
+        teacher_name = "Учитель"
+        if record.teacher:
+            teacher_name = f"{record.teacher.first_name} {record.teacher.last_name or ''}".strip()
+        rule_desc = record.rule.description if record.rule else "—"
+
+        combined.append(
+            StudentHistoryEntryForTeacher(
+                id=record.id,
+                teacher_name=teacher_name,
+                role="teacher",
+                created_by_role="teacher",
+                rule_description=rule_desc,
+                points_changed=record.points_changed,
+                comment=record.comment or "",
+                created_at=record.created_at,
+                student_id=student.id,
+                student_name=f"{student.first_name} {student.last_name or ''}".strip(),
+            )
+        )
+
+    for record in admin_history:
+        admin_name = "Администратор"
+        if record.admin:
+            admin_name = f"{record.admin.first_name} {record.admin.last_name or ''}".strip()
+        rule_desc = record.rule.description if record.rule else "—"
+
+        combined.append(
+            StudentHistoryEntryForTeacher(
+                id=record.id,
+                teacher_name=admin_name,
+                role="admin",
+                created_by_role="admin",
+                rule_description=rule_desc,
+                points_changed=record.points_changed,
+                comment=record.comment or "",
+                created_at=record.created_at,
+                student_id=student.id,
+                student_name=f"{student.first_name} {student.last_name or ''}".strip(),
+            )
+        )
+
+    combined.sort(key=lambda x: x.created_at, reverse=True)
+
+    offset = (page - 1) * size
+    sliced = combined[offset : offset + size]
+    total_count = len(combined)
+
+    return PaginatedStudentHistoryForTeacher(
+        items=sliced,
+        total_count=total_count,
+        page=page,
+        size=size,
+        total_pages=(total_count + size - 1) // size if total_count > 0 else 1,
+    )
+
