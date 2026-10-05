@@ -14,8 +14,6 @@ import AssignmentTable from '../components/AssignmentTable';
 
 export function HistoryPages() {
   const { history, fetchHistory } = useStudentStore();
-  const [page, setPage] = useState(1);
-  const pageSize = 20;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -24,7 +22,7 @@ export function HistoryPages() {
       setLoading(true);
       setError(null);
       try {
-        const data = await fetchHistory({ page, size: pageSize });
+        const data = await fetchHistory();
         if (!data) {
           setError('Failed to load history');
         }
@@ -36,7 +34,7 @@ export function HistoryPages() {
     };
 
     loadHistory();
-  }, [fetchHistory, page]);
+  }, [fetchHistory]);
 
 
   return (

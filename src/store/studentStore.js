@@ -29,12 +29,38 @@ export const useStudentStore = create((set, get) => ({
   },
 
   // === HISTORY ===
-  fetchHistory: async ({ page = 1, size = 100 } = {}) => {
+  fetchHistory: async ({ _page, _size } = {}) => {
     try {
-      const data = await api.get(`/students/me/history?page=${page}&size=${size}`);
-      const items = Array.isArray(data) ? data : (data?.items || []);
-      set({ history: items });
-      return data;
+      // Load first page at max backend size
+      const firstData = await api.get('/students/me/history?page=1&size=100');
+      if (!firstData) return null;
+
+      const firstItems = Array.isArray(firstData) ? firstData : (firstData?.items || []);
+      const totalPages = Number(firstData?.total_pages) || 1;
+
+      // Immediately show first batch
+      set({ history: firstItems });
+
+      if (totalPages <= 1) return firstData;
+
+      // Load remaining pages in parallel
+      const pageRequests = [];
+      for (let p = 2; p <= totalPages; p++) {
+        pageRequests.push(
+          api.get(`/students/me/history?page=${p}&size=100`, { skipErrorToast: true }).catch(() => null)
+        );
+      }
+      const responses = await Promise.all(pageRequests);
+      const allItems = [...firstItems];
+      responses.forEach((res) => {
+        if (res) {
+          const more = Array.isArray(res) ? res : (res?.items || []);
+          allItems.push(...more);
+        }
+      });
+
+      set({ history: allItems });
+      return { ...firstData, items: allItems, total_count: allItems.length };
     } catch (err) {
       if (import.meta.env.DEV) console.error('student.fetchHistory failed', err);
       return null;

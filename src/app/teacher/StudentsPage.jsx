@@ -16,7 +16,7 @@ import {
   Chip,
   Stack,
 } from '@mui/material';
-import { Person, ArrowBack, School, Dashboard, History as HistoryIcon } from '@mui/icons-material';
+import { Person, ArrowBack, School, Dashboard, History as HistoryIcon, WarningAmber } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { useTeacherStore } from '../../store/teacherStore';
 import { useCommonStore } from '../../store/commonStore';
@@ -292,6 +292,10 @@ export function StudentsPage() {
     return list;
   }, [students, homeroomClass, showRiskOnly]);
 
+  const riskStudents = useMemo(() => {
+    return students.filter((s) => isClassMatch(s, homeroomClass) && (s.points ?? 100) < 100);
+  }, [students, homeroomClass]);
+
   const selectedStudentHistory = useMemo(() => {
     if (!selectedStudentForHistory || !studentFullHistory.length) return [];
     
@@ -398,6 +402,31 @@ export function StudentsPage() {
               showRiskOnly={showRiskOnly}
               onToggleRiskFilter={() => setShowRiskOnly(!showRiskOnly)}
             />
+
+            {/* Attention Homeroom Teacher alert for the selected class */}
+            {riskStudents.length > 0 && (
+              <Alert
+                severity="warning"
+                icon={<WarningAmber fontSize="inherit" />}
+                sx={{
+                  mb: 3,
+                  backgroundColor: 'rgba(255, 152, 0, 0.12)',
+                  border: '1px solid rgba(255, 152, 0, 0.4)',
+                  color: '#FF9800',
+                  borderRadius: 2,
+                  '& .MuiAlert-icon': { color: '#FF9800' },
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  Attention Homeroom Teacher ({homeroomClass})
+                </Typography>
+                <Typography variant="body2">
+                  {riskStudents.length} student(s) in class {homeroomClass} currently have points below 100 (
+                  {riskStudents.map((s) => `${s.first_name || ''} ${s.last_name || s.username} (${s.points ?? 0} pts)`).join(', ')}
+                  ).
+                </Typography>
+              </Alert>
+            )}
 
             <Card sx={{
               background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
@@ -554,26 +583,52 @@ export function StudentsPage() {
             <Stack spacing={1.25}>
               {selectedStudentHistory.map((entry) => (
                 <Box key={entry.id} sx={{ p: 1.5, borderRadius: 2, backgroundColor: 'rgba(146, 102, 255, 0.06)', border: '1px solid rgba(146, 102, 255, 0.15)' }}>
-                  <Box display="flex" justifyContent="space-between" alignItems="center" gap={1}>
-                    <Typography sx={{ color: '#F4F4FF', fontWeight: 600 }}>
-                      {entry.rule_description || 'Point assignment'}
-                    </Typography>
+                  <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography sx={{ color: '#F4F4FF', fontWeight: 600 }}>
+                        {entry.rule_description || 'Point assignment'}
+                      </Typography>
+                      <Box display="flex" alignItems="center" gap={1} flexWrap="wrap" mt={0.5}>
+                        <Chip
+                          label={
+                            entry.teacher_name 
+                              ? `${entry.created_by_role === 'admin' ? 'Admin' : 'Teacher'}: ${entry.teacher_name}`
+                              : (entry.created_by_name || entry.assigned_by || entry.teacher?.full_name || (entry.created_by_role === 'admin' ? 'Admin' : 'Teacher / Admin'))
+                          }
+                          size="small"
+                          sx={{
+                            height: 20,
+                            fontSize: '0.75rem',
+                            backgroundColor: (entry.created_by_role === 'admin' || (entry.teacher_name && entry.teacher_name.toLowerCase().includes('admin')))
+                              ? 'rgba(255, 152, 0, 0.15)'
+                              : 'rgba(146, 102, 255, 0.15)',
+                            color: (entry.created_by_role === 'admin' || (entry.teacher_name && entry.teacher_name.toLowerCase().includes('admin')))
+                              ? '#FFB74D'
+                              : '#B39DDB',
+                            border: '1px solid rgba(146, 102, 255, 0.25)',
+                          }}
+                        />
+                        <Typography variant="caption" sx={{ color: '#8E8DAA' }}>
+                          {new Date(entry.created_at).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}
+                        </Typography>
+                      </Box>
+                    </Box>
                     <Chip
                       label={`${entry.points_changed > 0 ? '+' : ''}${entry.points_changed} pts`}
                       size="small"
                       sx={{
                         backgroundColor: entry.points_changed >= 0 ? 'rgba(0, 211, 119, 0.2)' : 'rgba(235, 43, 75, 0.2)',
                         color: entry.points_changed >= 0 ? '#00D377' : '#FF5A6A',
+                        fontWeight: 700,
                         border: `1px solid ${entry.points_changed >= 0 ? 'rgba(0, 211, 119, 0.3)' : 'rgba(235, 43, 75, 0.3)'}`,
                       }}
                     />
                   </Box>
-                  <Typography variant="caption" sx={{ color: '#5A5984', display: 'block', mt: 0.75 }}>
-                    {new Date(entry.created_at).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: '#C7C6E2', mt: 0.5 }}>
-                    {entry.comment || 'No comment'}
-                  </Typography>
+                  {entry.comment && (
+                    <Typography variant="body2" sx={{ color: '#C7C6E2', mt: 1, backgroundColor: 'rgba(0, 0, 0, 0.2)', p: 1, borderRadius: 1 }}>
+                      {entry.comment}
+                    </Typography>
+                  )}
                 </Box>
               ))}
             </Stack>

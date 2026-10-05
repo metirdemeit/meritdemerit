@@ -8,22 +8,23 @@ import {
   CircularProgress,
   Alert,
   Button,
-  List,
-  ListItem,
-  ListItemText,
   Chip,
 } from '@mui/material';
-import { Person, History as HistoryIcon } from '@mui/icons-material';
+import { Person, History as HistoryIcon, ArrowForward } from '@mui/icons-material';
 import { useAuthStore } from '../../store/authStore';
 import { useStudentStore } from '../../store/studentStore';
 import { useCommonStore } from '../../store/commonStore';
 import CommonRankingTable from '../components/CommonRankingTable';
+import { useNavigate } from 'react-router-dom';
 
 export function DashboardPage() {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const { 
     profile,
+    history,
     fetchProfile,
+    fetchHistory,
   } = useStudentStore();
   const {
     rankings,
@@ -70,7 +71,8 @@ export function DashboardPage() {
 
     loadProfile();
     loadRankings();
-  }, [fetchProfile, fetchRankings, user]);
+    fetchHistory();
+  }, [fetchProfile, fetchRankings, fetchHistory, user]);
 
   if (loadingProfile && !profile) {
     return (
@@ -174,7 +176,80 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* В Dashboard история не отображается; она перенесена на HistoryPages */}
+        {/* Recent History Section */}
+        {Array.isArray(history) && history.length > 0 && (
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
+            borderRadius: 2,
+            border: '1px solid rgba(146, 102, 255, 0.2)',
+            mb: 3,
+          }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <HistoryIcon sx={{ color: '#9266FF', fontSize: 20 }} />
+                  <Typography variant="h6" sx={{ color: '#F4F4FF', fontWeight: 400 }}>
+                    Recent Activity
+                  </Typography>
+                </Box>
+                <Button
+                  size="small"
+                  endIcon={<ArrowForward />}
+                  onClick={() => navigate('/student/history')}
+                  sx={{
+                    color: '#9266FF',
+                    textTransform: 'none',
+                    fontSize: '0.8rem',
+                    '&:hover': { color: '#b38bff' },
+                  }}
+                >
+                  View All ({history.length})
+                </Button>
+              </Box>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {history.slice(0, 5).map((item) => (
+                  <Box
+                    key={item.id}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      p: 1.5,
+                      borderRadius: 1.5,
+                      background: item.points_changed > 0
+                        ? 'rgba(0,211,119,0.07)'
+                        : 'rgba(235,43,75,0.07)',
+                      border: item.points_changed > 0
+                        ? '1px solid rgba(0,211,119,0.15)'
+                        : '1px solid rgba(235,43,75,0.15)',
+                    }}
+                  >
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="body2" sx={{ color: '#F4F4FF', fontWeight: 500, mb: 0.25 }} noWrap>
+                        {item.rule_description || 'Point assignment'}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#5A5984' }}>
+                        {item.teacher_name || 'Teacher'} · {new Date(item.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={`${item.points_changed > 0 ? '+' : ''}${item.points_changed}`}
+                      size="small"
+                      sx={{
+                        ml: 1,
+                        backgroundColor: item.points_changed > 0 ? 'rgba(0,211,119,0.2)' : 'rgba(235,43,75,0.2)',
+                        color: item.points_changed > 0 ? '#00D377' : '#EB2B4B',
+                        fontWeight: 700,
+                        border: item.points_changed > 0 ? '1px solid rgba(0,211,119,0.4)' : '1px solid rgba(235,43,75,0.4)',
+                      }}
+                    />
+                  </Box>
+                ))}
+              </Box>
+            </CardContent>
+          </Card>
+        )}
 
           {/* Ranking Section */}
         <Card sx={{ 

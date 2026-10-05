@@ -31,7 +31,10 @@ export function DashboardPage() {
   } = useTeacherStore();
   const { rankings, fetchRankings, students, fetchStudents } = useCommonStore();
 
-  const homeroomClass = profile?.homeroom_class_name || user?.homeroom_class_name || '10-A';
+  const [selectedHomeroomClass, setSelectedHomeroomClass] = useState(() => {
+    return typeof window !== 'undefined' ? localStorage.getItem('teacher_homeroom_class') : null;
+  });
+  const homeroomClass = selectedHomeroomClass || profile?.homeroom_class_name || user?.homeroom_class_name || '10-A';
 
   // Loading для каждой секции
   const [loadingHistory, setLoadingHistory] = useState(false);
