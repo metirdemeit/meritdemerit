@@ -60,7 +60,8 @@ export function DashboardPage() {
       try {
         await Promise.all([
           fetchRankings(),
-          useCommonStore.getState().fetchStudents()
+          useCommonStore.getState().fetchStudents(),
+          useCommonStore.getState().fetchClassRankings()
         ]);
       } catch (err) {
         setErrorRankings('Failed to load rankings');

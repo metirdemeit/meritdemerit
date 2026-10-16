@@ -14,6 +14,7 @@ export const useCommonStore = create((set, get) => ({
   students: [],
   rules: [],
   rankings: [],
+  classRankings: [],
   selectedClass: null,
   selectedStudent: null,
   selectedRule: null,
@@ -130,5 +131,56 @@ export const useCommonStore = create((set, get) => ({
       if (import.meta.env.DEV) console.error('fetchRankings failed', err);
       return null;
     }
+  },
+
+  fetchClassRankings: async () => {
+    try {
+      const data = await api.get('/class_average_ranking');
+      if (Array.isArray(data) && data.length > 0) {
+        const sorted = [...data].sort(
+          (a, b) => (Number(b.average_points) || 0) - (Number(a.average_points) || 0)
+        );
+        set({ classRankings: sorted });
+        return sorted;
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn('fetchClassRankings API failed, using fallback', err);
+    }
+
+    // Fallback: Calculate class averages directly from full students roster
+    let studentsList = get().students;
+    if (!studentsList?.length) {
+      studentsList = (await get().fetchStudents()) || [];
+    }
+
+    if (Array.isArray(studentsList) && studentsList.length > 0) {
+      const stats = {};
+      studentsList.forEach((s) => {
+        const clsName =
+          s?.school_class?.name ||
+          s?.class_name ||
+          (typeof s?.school_class === 'string' ? s.school_class : null);
+        if (!clsName) return;
+        const pts = Number(s?.points ?? s?.total_points ?? 100);
+        if (!stats[clsName]) {
+          stats[clsName] = { class_name: clsName, total: 0, count: 0 };
+        }
+        stats[clsName].total += pts;
+        stats[clsName].count += 1;
+      });
+
+      const computed = Object.values(stats)
+        .map((c) => ({
+          class_name: c.class_name,
+          average_points: c.count > 0 ? Number((c.total / c.count).toFixed(1)) : 0,
+          student_count: c.count,
+        }))
+        .sort((a, b) => b.average_points - a.average_points);
+
+      set({ classRankings: computed });
+      return computed;
+    }
+
+    return [];
   },
 }));

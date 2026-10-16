@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -11,7 +11,7 @@ import {
   ButtonGroup,
   Box,
 } from '@mui/material';
-import { Visibility, Groups } from '@mui/icons-material';
+import { Visibility, Groups, School } from '@mui/icons-material';
 import { useCommonStore } from '../../store/commonStore';
 
 /**
@@ -63,32 +63,67 @@ function getGradeGroup(ranking) {
 export default function CommonRankingTable({ rankings = [] }) {
   const [showFull, setShowFull] = useState(false);
   const [activeGroup, setActiveGroup] = useState('6-8');
-  const { students } = useCommonStore();
+  const { students, fetchStudents, classRankings, fetchClassRankings } = useCommonStore();
+
+  useEffect(() => {
+    if (!students || students.length === 0) {
+      fetchStudents();
+    }
+    if (!classRankings || classRankings.length === 0) {
+      fetchClassRankings();
+    }
+  }, [fetchStudents, fetchClassRankings, students, classRankings]);
 
   const rankingsList = Array.isArray(rankings) ? rankings : [];
 
-  let group6to8  = rankingsList.filter((item) => getGradeGroup(item) === '6-8');
-  let group9to12 = rankingsList.filter((item) => getGradeGroup(item) === '9-12');
+  // Merge full student roster with rankings to guarantee every student is included with latest points
+  const studentMap = new Map();
+  if (Array.isArray(students)) {
+    students.forEach((s) => {
+      if (s?.id) studentMap.set(s.id, { ...s });
+    });
+  }
 
-  // If a group is empty in the top-N list, fall back to full student list sorted by points
-  const fallback = (group, label) => {
-    if (group.length === 0 && Array.isArray(students) && students.length > 0) {
-      return students
-        .filter((s) => getGradeGroup(s) === label)
-        .sort((a, b) => (b.points || b.total_points || 0) - (a.points || a.total_points || 0));
+  rankingsList.forEach((r) => {
+    const id = r?.id || r?.student_id || r?.student?.id;
+    if (id && studentMap.has(id)) {
+      const existing = studentMap.get(id);
+      studentMap.set(id, {
+        ...existing,
+        ...r,
+        points: r.total_points ?? r.points ?? existing.points,
+      });
+    } else if (id) {
+      studentMap.set(id, { ...r });
     }
-    return group;
-  };
+  });
 
-  group6to8  = fallback(group6to8,  '6-8');
-  group9to12 = fallback(group9to12, '9-12');
+  const allStudentsList = studentMap.size > 0 ? Array.from(studentMap.values()) : rankingsList;
 
-  const currentGroupList = activeGroup === '6-8' ? group6to8 : group9to12;
-  const displayRankings  = showFull ? currentGroupList : currentGroupList.slice(0, 10);
-  const hasMore          = currentGroupList.length > 10;
+  const sortByPoints = (list) =>
+    [...list].sort((a, b) => {
+      const ptsA = Number(a?.total_points ?? a?.points ?? 0);
+      const ptsB = Number(b?.total_points ?? b?.points ?? 0);
+      return ptsB - ptsA;
+    });
+
+  const group6to8  = sortByPoints(allStudentsList.filter((s) => getGradeGroup(s) === '6-8'));
+  const group9to12 = sortByPoints(allStudentsList.filter((s) => getGradeGroup(s) === '9-12'));
+  const classesList = Array.isArray(classRankings) ? classRankings : [];
+
+  const isClassesTab = activeGroup === 'classes';
+  const currentList = isClassesTab
+    ? classesList
+    : activeGroup === '6-8'
+    ? group6to8
+    : group9to12;
+
+  const displayItems = showFull ? currentList : currentList.slice(0, 10);
+  const hasMore      = currentList.length > 10;
 
   const btnSx = (active) => ({
     py: 1,
+    fontSize: { xs: '0.75rem', sm: '0.85rem' },
     fontWeight: 600,
     color: active ? '#F4F4FF' : '#5A5984',
     background: active ? 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)' : 'transparent',
@@ -115,27 +150,61 @@ export default function CommonRankingTable({ rankings = [] }) {
         >
           9–12 классы
         </Button>
+        <Button
+          startIcon={<School />}
+          variant={activeGroup === 'classes' ? 'contained' : 'outlined'}
+          onClick={() => { setActiveGroup('classes'); setShowFull(false); }}
+          sx={btnSx(activeGroup === 'classes')}
+        >
+          Рейтинг классов
+        </Button>
       </ButtonGroup>
 
       <TableContainer sx={{ background: 'transparent', boxShadow: 'none' }}>
         <Table size="small">
           <TableHead>
-            <TableRow>
-              <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 40 }}>#</TableCell>
-              <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)' }}>Ученик</TableCell>
-              <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 60 }}>Баллы</TableCell>
-              <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 56 }}>Класс</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {displayRankings.length === 0 ? (
+            {isClassesTab ? (
               <TableRow>
-                <TableCell colSpan={4} sx={{ color: '#5A5984', textAlign: 'center', py: 4, border: 0 }}>
-                  Нет данных
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 40 }}>#</TableCell>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)' }}>Класс</TableCell>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 90, textAlign: 'right' }}>
+                  Средний балл
                 </TableCell>
               </TableRow>
             ) : (
-              displayRankings.map((ranking, index) => (
+              <TableRow>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 40 }}>#</TableCell>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)' }}>Ученик</TableCell>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 60 }}>Баллы</TableCell>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 56 }}>Класс</TableCell>
+              </TableRow>
+            )}
+          </TableHead>
+          <TableBody>
+            {displayItems.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={isClassesTab ? 3 : 4} sx={{ color: '#5A5984', textAlign: 'center', py: 4, border: 0 }}>
+                  Нет данных
+                </TableCell>
+              </TableRow>
+            ) : isClassesTab ? (
+              displayItems.map((item, index) => (
+                <TableRow key={item.class_id || item.class_name || index}>
+                  <TableCell sx={{ color: '#F4F4FF', fontWeight: 600, borderColor: 'rgba(255,255,255,0.06)' }}>
+                    {index + 1}
+                  </TableCell>
+                  <TableCell sx={{ color: '#F4F4FF', fontWeight: 600, borderColor: 'rgba(255,255,255,0.06)' }}>
+                    {item.class_name || '-'}
+                  </TableCell>
+                  <TableCell sx={{ color: '#00D377', fontWeight: 700, borderColor: 'rgba(255,255,255,0.06)', textAlign: 'right' }}>
+                    {typeof item.average_points === 'number'
+                      ? item.average_points.toFixed(1)
+                      : (item.average_points || 0)}
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              displayItems.map((ranking, index) => (
                 <TableRow key={ranking.id || index}>
                   <TableCell sx={{ color: '#F4F4FF', fontWeight: 600, borderColor: 'rgba(255,255,255,0.06)' }}>
                     {index + 1}
@@ -160,7 +229,7 @@ export default function CommonRankingTable({ rankings = [] }) {
           {hasMore && (
             <TableFooter>
               <TableRow>
-                <TableCell colSpan={4} sx={{ border: 0, textAlign: 'center', py: 2 }}>
+                <TableCell colSpan={isClassesTab ? 3 : 4} sx={{ border: 0, textAlign: 'center', py: 2 }}>
                   <Button
                     variant="outlined"
                     startIcon={<Visibility />}

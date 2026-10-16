@@ -31,3 +31,6 @@ dist-ssr
 *.sw?
 
 *.pem
+
+# Local-only AI context and knowledge base
+PROJECT_HISTORY.md

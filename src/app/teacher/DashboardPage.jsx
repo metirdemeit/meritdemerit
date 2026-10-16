@@ -29,7 +29,7 @@ export function DashboardPage() {
     deleteHistoryRecord,
     fetchProfile,
   } = useTeacherStore();
-  const { rankings, fetchRankings, students, fetchStudents } = useCommonStore();
+  const { rankings, fetchRankings, students, fetchStudents, fetchClassRankings } = useCommonStore();
 
   const [selectedHomeroomClass, setSelectedHomeroomClass] = useState(() => {
     return typeof window !== 'undefined' ? localStorage.getItem('teacher_homeroom_class') : null;
@@ -72,6 +72,7 @@ export function DashboardPage() {
     try {
       await fetchRankings();
       await fetchStudents();
+      if (fetchClassRankings) await fetchClassRankings();
     } finally {
       setLoadingRankings(false);
     }

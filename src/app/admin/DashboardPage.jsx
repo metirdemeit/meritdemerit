@@ -26,7 +26,7 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { dashboard, fetchDashboard } = useAdminStore();
-  const { rankings, fetchRankings } = useCommonStore();
+  const { rankings, fetchRankings, fetchClassRankings } = useCommonStore();
 
   const [loadingDashboard, setLoadingDashboard] = useState(false);
   const [loadingRankings, setLoadingRankings] = useState(false);
@@ -56,12 +56,13 @@ export function DashboardPage() {
       setErrorRankings(null);
       await fetchRankings();
       await useCommonStore.getState().fetchStudents();
+      if (fetchClassRankings) await fetchClassRankings();
       setLoadingRankings(false);
     };
 
     loadDashboard();
     loadRankings();
-  }, [fetchDashboard, fetchRankings]);
+  }, [fetchDashboard, fetchRankings, fetchClassRankings]);
 
   if (loadingDashboard && !dashboard) {
     return (

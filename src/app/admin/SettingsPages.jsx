@@ -531,21 +531,6 @@ export function SettingsPages() {
                   <Button
                     size="small"
                     startIcon={<FileDownload />}
-                    onClick={() => handleDownloadHistoryCsv(filters)}
-                    disabled={exportingHistory}
-                    sx={{
-                      color: '#00D377',
-                      borderColor: 'rgba(0,211,119,0.4)',
-                      textTransform: 'none',
-                      minWidth: 80,
-                    }}
-                    variant="outlined"
-                  >
-                    CSV
-                  </Button>
-                  <Button
-                    size="small"
-                    startIcon={<FileDownload />}
                     onClick={openExportDialog}
                     disabled={exportingHistory}
                     sx={{
@@ -1036,35 +1021,17 @@ export function SettingsPages() {
             Cancel
           </Button>
           <Button
-            onClick={() => handleDownloadHistoryCsv(exportFilters)}
+            onClick={handleDownloadHistoryHtml}
             disabled={exportingHistory}
             startIcon={exportingHistory ? <CircularProgress size={16} color="inherit" /> : <FileDownload />}
             variant="contained"
             sx={{
-              background: 'linear-gradient(135deg, #00D377 0%, #00A85F 100%)',
-              color: '#06170F',
+              background: 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)',
+              color: '#F4F4FF',
               fontWeight: 700,
               textTransform: 'none',
               '&:hover': {
-                background: 'linear-gradient(135deg, #15E58B 0%, #00B86B 100%)',
-              },
-            }}
-          >
-            Download CSV
-          </Button>
-          <Button
-            onClick={handleDownloadHistoryHtml}
-            disabled={exportingHistory}
-            startIcon={exportingHistory ? <CircularProgress size={16} color="inherit" /> : <FileDownload />}
-            variant="outlined"
-            sx={{
-              borderColor: 'rgba(146, 102, 255, 0.5)',
-              color: '#9266FF',
-              fontWeight: 700,
-              textTransform: 'none',
-              '&:hover': {
-                borderColor: '#9266FF',
-                backgroundColor: 'rgba(146, 102, 255, 0.1)',
+                background: 'linear-gradient(135deg, #A880FF 0%, #7942F5 100%)',
               },
             }}
           >
