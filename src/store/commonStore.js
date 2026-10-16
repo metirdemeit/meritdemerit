@@ -12,6 +12,7 @@ export const useCommonStore = create((set, get) => ({
   // === STATE ===
   classes: [],
   students: [],
+  allStudents: [],
   rules: [],
   rankings: [],
   classRankings: [],
@@ -46,12 +47,31 @@ export const useCommonStore = create((set, get) => ({
   },
 
   // === STUDENTS ===
+  fetchAllStudents: async (force = false) => {
+    if (get().allStudents?.length > 50 && !force) return get().allStudents;
+
+    try {
+      const data = await api.get('/students');
+      if (Array.isArray(data) && data.length > 0) {
+        set({ allStudents: data });
+        if (!get().students?.length) {
+          set({ students: sortStudentsByName(data) });
+        }
+        return data;
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('fetchAllStudents failed', err);
+    }
+    return get().allStudents || [];
+  },
+
   fetchStudents: async (force = false) => {
     if (get().students.length && !force) return get().students;
 
     try {
       const data = await api.get('/students');
-      set({ students: sortStudentsByName(data || []) });
+      const sorted = sortStudentsByName(data || []);
+      set({ students: sorted, allStudents: data || [] });
       return data;
     } catch (err) {
       if (import.meta.env.DEV) console.error('fetchStudents failed', err);

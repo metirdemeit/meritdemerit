@@ -63,26 +63,28 @@ function getGradeGroup(ranking) {
 export default function CommonRankingTable({ rankings = [] }) {
   const [showFull, setShowFull] = useState(false);
   const [activeGroup, setActiveGroup] = useState('6-8');
-  const { students, fetchStudents, classRankings, fetchClassRankings } = useCommonStore();
+  const { allStudents, fetchAllStudents, students, fetchStudents, classRankings, fetchClassRankings } = useCommonStore();
 
   useEffect(() => {
-    if (!students || students.length === 0) {
-      fetchStudents();
+    if (!allStudents || allStudents.length < 50) {
+      fetchAllStudents();
     }
     if (!classRankings || classRankings.length === 0) {
       fetchClassRankings();
     }
-  }, [fetchStudents, fetchClassRankings, students, classRankings]);
+  }, [fetchAllStudents, fetchClassRankings, allStudents, classRankings]);
 
   const rankingsList = Array.isArray(rankings) ? rankings : [];
 
   // Merge full student roster with rankings to guarantee every student is included with latest points
+  const fullRoster = (Array.isArray(allStudents) && allStudents.length > 0)
+    ? allStudents
+    : (Array.isArray(students) ? students : []);
+
   const studentMap = new Map();
-  if (Array.isArray(students)) {
-    students.forEach((s) => {
-      if (s?.id) studentMap.set(s.id, { ...s });
-    });
-  }
+  fullRoster.forEach((s) => {
+    if (s?.id) studentMap.set(s.id, { ...s });
+  });
 
   rankingsList.forEach((r) => {
     const id = r?.id || r?.student_id || r?.student?.id;
