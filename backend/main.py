@@ -80,6 +80,12 @@ async def lifespan(app: FastAPI):
             )""",
             'CREATE INDEX IF NOT EXISTS "idx_detention_student" ON "detention_history" ("student_id")',
             'CREATE INDEX IF NOT EXISTS "idx_detention_status"  ON "detention_history" ("status")',
+            # Migration 5: create system_setting table
+            """CREATE TABLE IF NOT EXISTS "system_setting" (
+                "key"        VARCHAR(100) NOT NULL PRIMARY KEY,
+                "value"      JSONB NOT NULL,
+                "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )""",
         ]
         for stmt in migration_stmts:
             await conn.execute_query(stmt)

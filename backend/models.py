@@ -176,3 +176,16 @@ class DetentionHistory(models.Model):
     class Meta:
         table = "detention_history"
 
+
+class SystemSetting(models.Model):
+    """Key-value system configuration (e.g. scoring status, deadlines)."""
+    key = fields.CharField(max_length=100, pk=True)
+    value = fields.JSONField()
+    updated_at = fields.DatetimeField(auto_now=True)
+
+    def __str__(self):
+        return f"SystemSetting({self.key})"
+
+    class Meta:
+        table = "system_setting"
+

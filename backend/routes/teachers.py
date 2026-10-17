@@ -2,9 +2,9 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
 from tortoise.transactions import in_transaction
-from datetime import datetime
+from datetime import datetime, timezone
 
-from backend.models import Teacher, Student, DisciplineRule, PointHistory, Class, AdminPointHistory
+from backend.models import Teacher, Student, DisciplineRule, PointHistory, Class, AdminPointHistory, SystemSetting
 from backend.utils.security import get_current_user, enforce_https
 from backend.utils.rules_helper import check_rule_limits_and_permissions, auto_trigger_interventions
 from tortoise.contrib.pydantic import pydantic_model_creator
@@ -116,6 +116,22 @@ async def assign_points(assignment: WorkflowAssignment, teacher: Teacher = Depen
     """
     if not assignment.student_ids or not assignment.rule_ids:
         raise HTTPException(status_code=400, detail="Student and rule IDs cannot be empty.")
+
+    # 0. Check school-wide scoring status and deadline
+    scoring_setting = await SystemSetting.get_or_none(key="scoring_status")
+    if scoring_setting and scoring_setting.value:
+        s_val = scoring_setting.value
+        if not s_val.get("isOpen", True):
+            reason = "Время выставления баллов истекло по таймеру" if s_val.get("closedReason") == "timer_expired" else "Приём баллов закрыт администрацией школы"
+            raise HTTPException(status_code=403, detail=reason)
+        deadline_str = s_val.get("deadline")
+        if deadline_str:
+            try:
+                deadline_dt = datetime.fromisoformat(deadline_str.replace("Z", "+00:00"))
+                if datetime.now(timezone.utc) > deadline_dt:
+                    raise HTTPException(status_code=403, detail="Приём баллов закрыт: время выставления баллов истекло.")
+            except (ValueError, TypeError):
+                pass
 
     # Validate rules exist
     rules = await DisciplineRule.filter(id__in=assignment.rule_ids)

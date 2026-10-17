@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.expressions import Q
 
-from backend.models import Student, Class, DisciplineRule
+from backend.models import Student, Class, DisciplineRule, SystemSetting
 from backend.utils.security import enforce_https, get_current_user
 
 router = APIRouter(dependencies=[Depends(enforce_https)])
@@ -188,3 +188,66 @@ async def get_classes_average_ranking(current_user: dict = Depends(get_current_u
 
     items.sort(key=lambda x: (-x.average_points, x.class_id))
     return items
+
+
+# --- School Scoring Status (Timer / Deadline) ---
+
+class ScoringStatusPayload(BaseModel):
+    isOpen: bool = True
+    deadline: Optional[str] = None
+    closedReason: Optional[str] = None
+    updatedAt: Optional[str] = None
+
+
+@router.get("/school/scoring-status", summary="Get school-wide scoring status and timer")
+async def get_scoring_status():
+    """
+    Publicly accessible endpoint for students, teachers, and admins.
+    Returns whether point assignment is currently open and the deadline.
+    """
+    setting = await SystemSetting.get_or_none(key="scoring_status")
+    if not setting:
+        return {
+            "isOpen": True,
+            "deadline": None,
+            "closedReason": None,
+            "updatedAt": None,
+        }
+
+    data = setting.value or {}
+    return {
+        "isOpen": bool(data.get("isOpen", True)),
+        "deadline": data.get("deadline"),
+        "closedReason": data.get("closedReason"),
+        "updatedAt": data.get("updatedAt"),
+    }
+
+
+@router.post("/school/scoring-status", summary="Update school-wide scoring status and timer")
+async def update_scoring_status(
+    payload: ScoringStatusPayload,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Update scoring status and deadline (requires authenticated admin).
+    """
+    role = current_user.get("role")
+    if role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can modify scoring status")
+
+    value = {
+        "isOpen": payload.isOpen,
+        "deadline": payload.deadline,
+        "closedReason": payload.closedReason,
+        "updatedAt": payload.updatedAt,
+    }
+
+    setting, _ = await SystemSetting.get_or_create(
+        key="scoring_status",
+        defaults={"value": value},
+    )
+    setting.value = value
+    await setting.save()
+
+    return setting.value
+
