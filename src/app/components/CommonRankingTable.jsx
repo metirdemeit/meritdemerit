@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -10,9 +10,25 @@ import {
   Button,
   ButtonGroup,
   Box,
+  Typography,
+  Chip,
+  Paper,
+  Stack,
+  Tooltip,
 } from '@mui/material';
-import { Visibility, Groups, School } from '@mui/icons-material';
+import { 
+  Visibility, 
+  Groups, 
+  School, 
+  ArrowDropUp, 
+  ArrowDropDown, 
+  Remove, 
+  EmojiEvents, 
+  TrackChanges,
+  Stars,
+} from '@mui/icons-material';
 import { useCommonStore } from '../../store/commonStore';
+import { useAuthStore } from '../../store/authStore';
 
 /**
  * Determine grade group from ranking item.
@@ -60,10 +76,74 @@ function getGradeGroup(ranking) {
   return '6-8';
 }
 
+function RankDeltaBadge({ delta }) {
+  if (typeof delta !== 'number' || delta === 0) {
+    return (
+      <Tooltip title="Позиция не изменилась" arrow>
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', color: '#6B7280', verticalAlign: 'middle', ml: 0.5 }}>
+          <Remove sx={{ fontSize: 14 }} />
+        </Box>
+      </Tooltip>
+    );
+  }
+
+  if (delta > 0) {
+    return (
+      <Tooltip title={`Поднялся на ${delta} ${delta === 1 ? 'позицию' : 'позиции'}`} arrow>
+        <Box 
+          component="span" 
+          sx={{ 
+            display: 'inline-flex', 
+            alignItems: 'center', 
+            color: '#10B981', 
+            fontWeight: 800, 
+            fontSize: '0.72rem',
+            verticalAlign: 'middle',
+            ml: 0.5,
+            backgroundColor: 'rgba(16, 185, 129, 0.12)',
+            px: 0.6,
+            py: 0.2,
+            borderRadius: 1,
+          }}
+        >
+          <ArrowDropUp sx={{ fontSize: 18, mr: -0.2, ml: -0.4 }} />
+          +{delta}
+        </Box>
+      </Tooltip>
+    );
+  }
+
+  const abs = Math.abs(delta);
+  return (
+    <Tooltip title={`Опустился на ${abs} ${abs === 1 ? 'позицию' : 'позиции'}`} arrow>
+      <Box 
+        component="span" 
+        sx={{ 
+          display: 'inline-flex', 
+          alignItems: 'center', 
+          color: '#EF4444', 
+          fontWeight: 800, 
+          fontSize: '0.72rem',
+          verticalAlign: 'middle',
+          ml: 0.5,
+          backgroundColor: 'rgba(239, 68, 68, 0.12)',
+          px: 0.6,
+          py: 0.2,
+          borderRadius: 1,
+        }}
+      >
+        <ArrowDropDown sx={{ fontSize: 18, mr: -0.2, ml: -0.4 }} />
+        -{abs}
+      </Box>
+    </Tooltip>
+  );
+}
+
 export default function CommonRankingTable({ rankings = [] }) {
   const [showFull, setShowFull] = useState(false);
   const [activeGroup, setActiveGroup] = useState('6-8');
-  const { allStudents, fetchAllStudents, students, fetchStudents, classRankings, fetchClassRankings } = useCommonStore();
+  const { user } = useAuthStore();
+  const { allStudents, fetchAllStudents, students, classRankings, fetchClassRankings } = useCommonStore();
 
   useEffect(() => {
     if (!allStudents || allStudents.length < 50) {
@@ -94,6 +174,9 @@ export default function CommonRankingTable({ rankings = [] }) {
         ...existing,
         ...r,
         points: r.total_points ?? r.points ?? existing.points,
+        rank_delta: r.rank_delta ?? existing.rank_delta,
+        current_rank: r.current_rank ?? existing.current_rank,
+        previous_rank: r.previous_rank ?? existing.previous_rank,
       });
     } else if (id) {
       studentMap.set(id, { ...r });
@@ -106,11 +189,12 @@ export default function CommonRankingTable({ rankings = [] }) {
     [...list].sort((a, b) => {
       const ptsA = Number(a?.total_points ?? a?.points ?? 0);
       const ptsB = Number(b?.total_points ?? b?.points ?? 0);
-      return ptsB - ptsA;
+      if (ptsB !== ptsA) return ptsB - ptsA;
+      return Number(a?.id || 0) - Number(b?.id || 0);
     });
 
-  const group6to8  = sortByPoints(allStudentsList.filter((s) => getGradeGroup(s) === '6-8'));
-  const group9to12 = sortByPoints(allStudentsList.filter((s) => getGradeGroup(s) === '9-12'));
+  const group6to8  = useMemo(() => sortByPoints(allStudentsList.filter((s) => getGradeGroup(s) === '6-8')), [allStudentsList]);
+  const group9to12 = useMemo(() => sortByPoints(allStudentsList.filter((s) => getGradeGroup(s) === '9-12')), [allStudentsList]);
   const classesList = Array.isArray(classRankings) ? classRankings : [];
 
   const isClassesTab = activeGroup === 'classes';
@@ -119,6 +203,47 @@ export default function CommonRankingTable({ rankings = [] }) {
     : activeGroup === '6-8'
     ? group6to8
     : group9to12;
+
+  // Auto-switch group tab to student's own group if student logged in
+  useEffect(() => {
+    if (user?.role === 'student') {
+      const userGroup = getGradeGroup(user);
+      if (userGroup && (userGroup === '6-8' || userGroup === '9-12')) {
+        setActiveGroup(userGroup);
+      }
+    }
+  }, [user]);
+
+  // Current logged in student rank computation
+  const myRankInfo = useMemo(() => {
+    if (!user || user.role !== 'student' || isClassesTab) return null;
+    const currentId = user.id;
+    const index = currentList.findIndex((item) => String(item.id) === String(currentId));
+    if (index === -1) return null;
+
+    const myItem = currentList[index];
+    const myRank = index + 1;
+    const prevItem = index > 0 ? currentList[index - 1] : null;
+
+    let pointsToOvertake = null;
+    let targetStudentName = null;
+    if (prevItem) {
+      const prevPoints = Number(prevItem?.total_points ?? prevItem?.points ?? 0);
+      const myPoints = Number(myItem?.total_points ?? myItem?.points ?? 0);
+      pointsToOvertake = (prevPoints - myPoints) + 1; // +1 point to overtake
+      targetStudentName = `${prevItem.first_name || ''} ${prevItem.last_name || ''}`.trim() || 'лидера';
+    }
+
+    return {
+      rank: myRank,
+      points: Number(myItem?.total_points ?? myItem?.points ?? 0),
+      delta: myItem?.rank_delta ?? 0,
+      prevItem,
+      pointsToOvertake,
+      targetStudentName,
+      isTop10: myRank <= 10,
+    };
+  }, [user, currentList, isClassesTab]);
 
   const displayItems = showFull ? currentList : currentList.slice(0, 10);
   const hasMore      = currentList.length > 10;
@@ -162,22 +287,93 @@ export default function CommonRankingTable({ rankings = [] }) {
         </Button>
       </ButtonGroup>
 
+      {/* Sticky My Rank Banner with Target Distance for Students */}
+      {myRankInfo && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2,
+            mb: 2.5,
+            borderRadius: 2.5,
+            background: 'linear-gradient(135deg, rgba(146, 102, 255, 0.2) 0%, rgba(105, 50, 235, 0.1) 100%)',
+            border: '1px solid rgba(146, 102, 255, 0.45)',
+            boxShadow: '0 6px 24px rgba(146, 102, 255, 0.15)',
+          }}
+        >
+          <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1.5}>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Box
+                sx={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'linear-gradient(135deg, #9266FF 0%, #6932EB 100%)',
+                  color: '#fff',
+                  fontWeight: 800,
+                  fontSize: '1.1rem',
+                  boxShadow: '0 4px 12px rgba(146, 102, 255, 0.4)',
+                }}
+              >
+                #{myRankInfo.rank}
+              </Box>
+              <Box>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography variant="subtitle2" sx={{ color: '#F4F4FF', fontWeight: 700 }}>
+                    Ваша позиция в рейтинге
+                  </Typography>
+                  <RankDeltaBadge delta={myRankInfo.delta} />
+                </Stack>
+                <Typography variant="caption" sx={{ color: '#C4A8FF', display: 'block' }}>
+                  Баллы: <strong style={{ color: '#FFFFFF' }}>{myRankInfo.points}</strong>
+                  {myRankInfo.isTop10 && ' · Вы в Топ-10 школы! 🔥'}
+                </Typography>
+              </Box>
+            </Stack>
+
+            {/* Target Distance Indicator */}
+            {myRankInfo.pointsToOvertake !== null && myRankInfo.pointsToOvertake > 0 && (
+              <Box
+                sx={{
+                  px: 1.5,
+                  py: 0.75,
+                  borderRadius: 2,
+                  backgroundColor: 'rgba(0, 211, 119, 0.12)',
+                  border: '1px solid rgba(0, 211, 119, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                }}
+              >
+                <TrackChanges sx={{ color: '#00D377', fontSize: 18 }} />
+                <Typography variant="caption" sx={{ color: '#E4FBEF', fontWeight: 600 }}>
+                  До #{myRankInfo.rank - 1} места ({myRankInfo.targetStudentName}):{' '}
+                  <strong style={{ color: '#00D377', fontSize: '0.85rem' }}>+{myRankInfo.pointsToOvertake} б.</strong>
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </Paper>
+      )}
+
       <TableContainer sx={{ background: 'transparent', boxShadow: 'none' }}>
         <Table size="small">
           <TableHead>
             {isClassesTab ? (
               <TableRow>
-                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 40 }}>#</TableCell>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 70 }}>#</TableCell>
                 <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)' }}>Класс</TableCell>
-                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 90, textAlign: 'right' }}>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 110, textAlign: 'right' }}>
                   Средний балл
                 </TableCell>
               </TableRow>
             ) : (
               <TableRow>
-                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 40 }}>#</TableCell>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 70 }}>#</TableCell>
                 <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)' }}>Ученик</TableCell>
-                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 60 }}>Баллы</TableCell>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 65 }}>Баллы</TableCell>
                 <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 56 }}>Класс</TableCell>
               </TableRow>
             )}
@@ -190,42 +386,77 @@ export default function CommonRankingTable({ rankings = [] }) {
                 </TableCell>
               </TableRow>
             ) : isClassesTab ? (
-              displayItems.map((item, index) => (
-                <TableRow key={item.class_id || item.class_name || index}>
-                  <TableCell sx={{ color: '#F4F4FF', fontWeight: 600, borderColor: 'rgba(255,255,255,0.06)' }}>
-                    {index + 1}
-                  </TableCell>
-                  <TableCell sx={{ color: '#F4F4FF', fontWeight: 600, borderColor: 'rgba(255,255,255,0.06)' }}>
-                    {item.class_name || '-'}
-                  </TableCell>
-                  <TableCell sx={{ color: '#00D377', fontWeight: 700, borderColor: 'rgba(255,255,255,0.06)', textAlign: 'right' }}>
-                    {typeof item.average_points === 'number'
-                      ? item.average_points.toFixed(1)
-                      : (item.average_points || 0)}
-                  </TableCell>
-                </TableRow>
-              ))
+              displayItems.map((item, index) => {
+                const delta = item.rank_delta ?? 0;
+                return (
+                  <TableRow key={item.class_id || item.class_name || index}>
+                    <TableCell sx={{ color: '#F4F4FF', fontWeight: 600, borderColor: 'rgba(255,255,255,0.06)' }}>
+                      <Box display="flex" alignItems="center">
+                        <span>{index + 1}</span>
+                        <RankDeltaBadge delta={delta} />
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ color: '#F4F4FF', fontWeight: 600, borderColor: 'rgba(255,255,255,0.06)' }}>
+                      {item.class_name || '-'}
+                    </TableCell>
+                    <TableCell sx={{ color: '#00D377', fontWeight: 700, borderColor: 'rgba(255,255,255,0.06)', textAlign: 'right' }}>
+                      {typeof item.average_points === 'number'
+                        ? item.average_points.toFixed(1)
+                        : (item.average_points || 0)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             ) : (
-              displayItems.map((ranking, index) => (
-                <TableRow key={ranking.id || index}>
-                  <TableCell sx={{ color: '#F4F4FF', fontWeight: 600, borderColor: 'rgba(255,255,255,0.06)' }}>
-                    {index + 1}
-                  </TableCell>
-                  <TableCell sx={{ color: '#F4F4FF', borderColor: 'rgba(255,255,255,0.06)' }}>
-                    {ranking?.first_name} {ranking?.last_name}
-                  </TableCell>
-                  <TableCell sx={{ color: '#9266FF', fontWeight: 700, borderColor: 'rgba(255,255,255,0.06)' }}>
-                    {ranking?.total_points ?? ranking?.points ?? 0}
-                  </TableCell>
-                  <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.06)' }}>
-                    {ranking?.class_name ||
-                      (typeof ranking?.school_class === 'string'
-                        ? ranking.school_class
-                        : ranking?.school_class?.name) ||
-                      '-'}
-                  </TableCell>
-                </TableRow>
-              ))
+              displayItems.map((ranking, index) => {
+                const isMe = user?.id && String(ranking.id) === String(user.id);
+                const delta = ranking?.rank_delta ?? 0;
+
+                return (
+                  <TableRow 
+                    key={ranking.id || index}
+                    sx={isMe ? {
+                      backgroundColor: 'rgba(146, 102, 255, 0.12)',
+                      outline: '1px solid rgba(146, 102, 255, 0.4)',
+                    } : {}}
+                  >
+                    <TableCell sx={{ color: isMe ? '#C4A8FF' : '#F4F4FF', fontWeight: 700, borderColor: 'rgba(255,255,255,0.06)' }}>
+                      <Box display="flex" alignItems="center">
+                        <span>{index + 1}</span>
+                        <RankDeltaBadge delta={delta} />
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ color: isMe ? '#FFFFFF' : '#F4F4FF', fontWeight: isMe ? 700 : 400, borderColor: 'rgba(255,255,255,0.06)' }}>
+                      {ranking?.first_name} {ranking?.last_name}
+                      {isMe && (
+                        <Chip
+                          label="Вы"
+                          size="small"
+                          sx={{
+                            ml: 1,
+                            height: 18,
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            backgroundColor: 'rgba(146, 102, 255, 0.3)',
+                            color: '#FFFFFF',
+                            border: '1px solid rgba(146, 102, 255, 0.6)',
+                          }}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell sx={{ color: '#9266FF', fontWeight: 700, borderColor: 'rgba(255,255,255,0.06)' }}>
+                      {ranking?.total_points ?? ranking?.points ?? 0}
+                    </TableCell>
+                    <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.06)' }}>
+                      {ranking?.class_name ||
+                        (typeof ranking?.school_class === 'string'
+                          ? ranking.school_class
+                          : ranking?.school_class?.name) ||
+                        '-'}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
           {hasMore && (
