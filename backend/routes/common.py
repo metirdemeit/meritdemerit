@@ -4,8 +4,8 @@ from pydantic import BaseModel
 from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.expressions import Q
 
-from backend.models import Student, Class, DisciplineRule, SystemSetting
-from backend.utils.security import enforce_https, get_current_user
+from backend.models import Student, Class, DisciplineRule, SystemSetting, Admin
+from backend.utils.security import enforce_https, get_current_user, get_current_admin
 
 router = APIRouter(dependencies=[Depends(enforce_https)])
 
@@ -226,14 +226,11 @@ async def get_scoring_status():
 @router.post("/school/scoring-status", summary="Update school-wide scoring status and timer")
 async def update_scoring_status(
     payload: ScoringStatusPayload,
-    current_user: dict = Depends(get_current_user),
+    current_admin: Admin = Depends(get_current_admin),
 ):
     """
     Update scoring status and deadline (requires authenticated admin).
     """
-    role = current_user.get("role")
-    if role != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can modify scoring status")
 
     value = {
         "isOpen": payload.isOpen,
