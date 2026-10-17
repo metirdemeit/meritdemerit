@@ -17,7 +17,7 @@ from backend.models import (
     AdminPointHistory, DetentionHistory, ExamWeek, LimitMD, Intervention
 )
 from backend.utils.rules_helper import check_rule_limits_and_permissions, auto_trigger_interventions
-from backend.utils.ranking_helper import recalculate_ranks
+from backend.utils.ranking_helper import recalculate_ranks, revert_student_rank_snapshot
 from backend.utils.security import get_current_admin, enforce_https
 from backend.utils.google_sheets import get_sheets_service, ensure_sheet, write_values
 from backend.utils.quarter_export import build_quarter_export_zip_bytes, load_quarter_export_rows
@@ -673,6 +673,7 @@ async def admin_assign_points(assignment: AdminAssignment, current_admin: Admin 
                         admin_id=current_admin.id,
                         rule_id=rule.id,
                         points_changed=rule.points,
+                        previous_rank_snapshot=student.current_rank,
                         comment=assignment.comment
                     )
                 )
@@ -856,12 +857,14 @@ async def delete_history_record(history_id: int):
     # Try teacher history first
     history_record = await PointHistory.get_or_none(id=history_id)
     if history_record:
+        student_id = history_record.student_id
+        snapshot = history_record.previous_rank_snapshot
         async with in_transaction():
-            student = await Student.get(id=history_record.student_id)
+            student = await Student.get(id=student_id)
             student.points -= history_record.points_changed
             await student.save(update_fields=["points"])
             await history_record.delete()
-        await recalculate_ranks()
+        await revert_student_rank_snapshot(student_id, snapshot)
         return None
 
     # Then try admin history
@@ -869,12 +872,14 @@ async def delete_history_record(history_id: int):
     if not admin_history:
         raise HTTPException(status_code=404, detail="History record not found")
 
+    student_id = admin_history.student_id
+    snapshot = admin_history.previous_rank_snapshot
     async with in_transaction():
-        student = await Student.get(id=admin_history.student_id)
+        student = await Student.get(id=student_id)
         student.points -= admin_history.points_changed
         await student.save(update_fields=["points"])
         await admin_history.delete()
-    await recalculate_ranks()
+    await revert_student_rank_snapshot(student_id, snapshot)
     return None
 
 
@@ -1106,6 +1111,7 @@ async def admin_workflow_assign_points(assignment: AdminAssignment, current_admi
                         admin_id=current_admin.id,
                         rule_id=rule.id,
                         points_changed=rule.points,
+                        previous_rank_snapshot=student.current_rank,
                         comment=assignment.comment
                     )
                 )

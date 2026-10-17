@@ -87,19 +87,37 @@ async def lifespan(app: FastAPI):
                 "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )""",
             # Migration 6: rank tracking for students and classes
+            # Add snapshot column to point history tables
+            'ALTER TABLE "pointhistory" ADD COLUMN IF NOT EXISTS "previous_rank_snapshot" INT NULL',
+            'ALTER TABLE "adminpointhistory" ADD COLUMN IF NOT EXISTS "previous_rank_snapshot" INT NULL',
             'ALTER TABLE "student" ADD COLUMN IF NOT EXISTS "current_rank" INT',
             'ALTER TABLE "student" ADD COLUMN IF NOT EXISTS "previous_rank" INT',
             'ALTER TABLE "class" ADD COLUMN IF NOT EXISTS "current_rank" INT',
             'ALTER TABLE "class" ADD COLUMN IF NOT EXISTS "previous_rank" INT',
-            """WITH ranked_students AS (
-                SELECT id, ROW_NUMBER() OVER (ORDER BY points DESC, id ASC) as rank
-                FROM "student"
+            # Seed initial ranks partitioned by grade group ('6-8' and '9-12')
+            r"""WITH class_groups AS (
+                SELECT s.id as student_id,
+                       CASE 
+                           WHEN substring(c.name from '\d+')::int BETWEEN 9 AND 12 THEN '9-12'
+                           ELSE '6-8'
+                       END as grade_grp
+                FROM "student" s
+                LEFT JOIN "class" c ON s.school_class_id = c.id
+            ),
+            ranked_students AS (
+                SELECT s.id,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY cg.grade_grp
+                           ORDER BY s.points DESC, s.id ASC
+                       ) as rank
+                FROM "student" s
+                JOIN class_groups cg ON s.id = cg.student_id
             )
             UPDATE "student" s
             SET current_rank = r.rank,
                 previous_rank = r.rank
             FROM ranked_students r
-            WHERE s.id = r.id AND s.current_rank IS NULL""",
+            WHERE s.id = r.id""",
             """WITH ranked_classes AS (
                 SELECT c.id, 
                        ROW_NUMBER() OVER (ORDER BY COALESCE(AVG(s.points), 0) DESC, c.id ASC) as rank

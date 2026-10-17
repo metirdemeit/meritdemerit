@@ -108,6 +108,7 @@ class PointHistory(models.Model):
     teacher = fields.ForeignKeyField("models.Teacher", related_name="given_points", null=True, on_delete=fields.SET_NULL)
     rule = fields.ForeignKeyField("models.DisciplineRule", related_name="applications")
     points_changed = fields.IntField()
+    previous_rank_snapshot = fields.IntField(null=True)
     comment = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
 
@@ -121,6 +122,7 @@ class AdminPointHistory(models.Model):
     admin = fields.ForeignKeyField("models.Admin", related_name="given_points_by_admin")
     rule = fields.ForeignKeyField("models.DisciplineRule", related_name="admin_applications")
     points_changed = fields.IntField()
+    previous_rank_snapshot = fields.IntField(null=True)
     comment = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
 

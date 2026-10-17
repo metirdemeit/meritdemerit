@@ -115,7 +115,7 @@ async def assign_points(assignment: WorkflowAssignment, teacher: Teacher = Depen
         history_records = []
         total_points_map = {student.id: 0 for student in students_to_update}
 
-        # Create history records and calculate total points
+        # Create history records and calculate total points with previous_rank_snapshot
         for rule in rules:
             for student in students_to_update:
                 total_points_map[student.id] += rule.points
@@ -125,6 +125,7 @@ async def assign_points(assignment: WorkflowAssignment, teacher: Teacher = Depen
                         teacher_id=teacher.id,
                         rule_id=rule.id,
                         points_changed=rule.points,
+                        previous_rank_snapshot=student.current_rank,
                         comment=assignment.comment
                     )
                 )
