@@ -113,6 +113,8 @@ VITE_DEV_STUDENT_PASS=...
 
 | Хеш коммита | Дата | Тип | Описание изменения |
 | :--- | :---: | :---: | :--- |
+| **`a8e4728`** | 2026-10-17 | `feat(ranking)` | Фронтенд: `CommonRankingTable` расширен полями `rank_delta`, `current_rank`, `previous_rank` при мерже роостера студентов; компонент `RankDeltaBadge` показывает зелёную стрелку ↑ / красную ↓ / тире рядом с позицией; баннер «Ваша позиция» с индикатором Target Distance для ученика. |
+| **`8346fd3`** | 2026-10-17 | `feat(ranking)` | Бэкенд: поля `previous_rank`/`current_rank` добавлены в модель `Student`; утилита `ranking_helper.recalculate_ranks()` пересчитывает ранги всех студентов после каждого изменения баллов (teacher assign, admin assign, admin workflow assign, delete history); миграция `4_add_rank_columns_to_student` заполняет `current_rank` через `ROW_NUMBER()`; `StudentWithClassResponse` возвращает `rank_delta = previous_rank − current_rank`. |
 | **`ec95ed7`** | 2026-10-17 | `fix(scoring)` | Добавлен виджет обратного отсчета дедлайна на главную панель администратора (`DashboardPage.jsx`), улучшена синхронизация и обработка сохранения состояния в `scoringStore.js`. |
 | **`6514975`** | 2026-10-17 | `fix(backend)` | Исправлена валидация администратора в `POST /school/scoring-status` через зависимость `get_current_admin` вместо словаря, предотвращён сброс дедлайна при перезаходе/перезагрузке. |
 | **`867ed8e`** | 2026-10-17 | `fix(timer,ui)` | Скрыт баннер при открытом бессрочном приёме баллов (виджет отображается только при активном дедлайне или закрытом приёме). |
