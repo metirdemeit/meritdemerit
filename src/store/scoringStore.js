@@ -90,9 +90,20 @@ export const useScoringStore = create((set, get) => ({
     };
 
     try {
-      await api.post('/school/scoring-status', payload, { skipErrorToast: true });
-    } catch {
-      // Fallback works even without backend update
+      const res = await api.post('/school/scoring-status', payload);
+      if (res) {
+        saveLocalFallback(res);
+        set({
+          isOpen: Boolean(res.isOpen),
+          deadline: res.deadline || null,
+          closedReason: res.closedReason || null,
+          updatedAt: res.updatedAt || payload.updatedAt,
+          loading: false,
+        });
+        return res;
+      }
+    } catch (err) {
+      console.warn('Backend update failed, using local fallback:', err);
     }
 
     saveLocalFallback(payload);

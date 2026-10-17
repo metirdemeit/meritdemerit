@@ -19,6 +19,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useAdminStore } from '../../store/adminStore';
 import { useCommonStore } from '../../store/commonStore';
 import CommonRankingTable from '../components/CommonRankingTable';
+import ScoringCountdownWidget from '../components/ScoringCountdownWidget';
 
 export function DashboardPage() {
   const theme = useTheme();
@@ -125,6 +126,9 @@ export function DashboardPage() {
       </Box>
 
       <Container maxWidth="lg" sx={{ px: 2 }}>
+        {/* Scoring Countdown Banner */}
+        <ScoringCountdownWidget />
+
         {/* Statistics Cards */}
         <Box display="flex" gap={2} mb={3}>
           <Card sx={styles.totalStudentsCard}>
