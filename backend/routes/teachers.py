@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from backend.models import Teacher, Student, DisciplineRule, PointHistory, Class, AdminPointHistory, SystemSetting
 from backend.utils.security import get_current_user, enforce_https
 from backend.utils.rules_helper import check_rule_limits_and_permissions, auto_trigger_interventions
+from backend.utils.ranking_helper import recalculate_ranks
 from tortoise.contrib.pydantic import pydantic_model_creator
 
 router = APIRouter(dependencies=[Depends(enforce_https)])
@@ -174,6 +175,9 @@ async def assign_points(assignment: WorkflowAssignment, teacher: Teacher = Depen
 
     # 2. Auto-trigger interventions if points dropped into risk zones
     await auto_trigger_interventions(students_to_update)
+
+    # 3. Recalculate ranks and update delta
+    await recalculate_ranks()
 
     return {
         "message": f"Points assigned successfully to {len(students_to_update)} students using {len(rules)} rules.",

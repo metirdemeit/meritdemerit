@@ -23,6 +23,9 @@ class StudentWithClassResponse(BaseModel):
     points: int
     class_name: str | None = None
     school_class: dict | None = None
+    current_rank: int | None = None
+    previous_rank: int | None = None
+    rank_delta: int | None = None
 
     @classmethod
     async def from_student(cls, student: Student):
@@ -34,6 +37,14 @@ class StudentWithClassResponse(BaseModel):
                 "id": student.school_class.id,
                 "name": student.school_class.name
             }
+        
+        c_rank = getattr(student, "current_rank", None)
+        p_rank = getattr(student, "previous_rank", None)
+        delta = None
+        if c_rank is not None and p_rank is not None:
+            # Positive delta = climbed up in rankings (e.g. was 5, now 3 -> +2)
+            delta = p_rank - c_rank
+
         return cls(
             id=student.id,
             username=student.username,
@@ -41,13 +52,19 @@ class StudentWithClassResponse(BaseModel):
             last_name=student.last_name,
             points=student.points,
             class_name=class_name_str,
-            school_class=school_class_data
+            school_class=school_class_data,
+            current_rank=c_rank,
+            previous_rank=p_rank,
+            rank_delta=delta,
         )
 class ClassAverageRankingItem(BaseModel):
     class_id: int
     class_name: str
     average_points: float
     student_count: int
+    current_rank: int | None = None
+    previous_rank: int | None = None
+    rank_delta: int | None = None
 
 # --- Classes Endpoints ---
 
@@ -177,12 +194,21 @@ async def get_classes_average_ranking(current_user: dict = Depends(get_current_u
         total_points = sum(s.points for s in students)
         avg_points = total_points / len(students)
 
+        c_rank = getattr(class_obj, "current_rank", None)
+        p_rank = getattr(class_obj, "previous_rank", None)
+        delta = None
+        if c_rank is not None and p_rank is not None:
+            delta = p_rank - c_rank
+
         items.append(
             ClassAverageRankingItem(
                 class_id=class_obj.id,
                 class_name=class_obj.name,
                 average_points=avg_points,
                 student_count=len(students),
+                current_rank=c_rank,
+                previous_rank=p_rank,
+                rank_delta=delta,
             )
         )
 

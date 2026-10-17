@@ -18,6 +18,9 @@ class Class(models.Model):
     """Class model for school classes like 6А, 11Б, etc."""
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=10, unique=True)  # e.g., "6А", "11Б"
+    current_rank = fields.IntField(null=True)
+    previous_rank = fields.IntField(null=True)
+
     def __str__(self):
         return f"Класс {self.name}"
 
@@ -26,6 +29,8 @@ class Student(User):
     """Student model."""
     school_class = fields.ForeignKeyField("models.Class", related_name="students")
     points = fields.IntField(default=100)
+    current_rank = fields.IntField(null=True)
+    previous_rank = fields.IntField(null=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.school_class.name})"

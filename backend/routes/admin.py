@@ -19,6 +19,7 @@ from backend.models import (
 )
 from backend.utils.rules_helper import check_rule_limits_and_permissions, auto_trigger_interventions
 from backend.utils.security import get_current_admin, enforce_https
+from backend.utils.ranking_helper import recalculate_ranks
 from backend.utils.google_sheets import get_sheets_service, ensure_sheet, write_values
 from backend.utils.quarter_export import build_quarter_export_zip_bytes, load_quarter_export_rows
 from tortoise.transactions import in_transaction
@@ -694,6 +695,8 @@ async def admin_assign_points(assignment: AdminAssignment, current_admin: Admin 
         # Bulk create history records
         await AdminPointHistory.bulk_create(history_records)
 
+    await recalculate_ranks()
+
     return {
         "message": f"Points assigned successfully to {len(students_to_update)} students using {len(rules)} rules.",
         "students_affected": len(students_to_update),
@@ -1280,6 +1283,8 @@ async def admin_workflow_assign_points(assignment: AdminAssignment, current_admi
 
     # 2. Auto-trigger interventions if points dropped into risk zones
     await auto_trigger_interventions(students_to_update)
+
+    await recalculate_ranks()
 
     return {
         "message": f"Points assigned successfully to {len(students_to_update)} students using {len(rules)} rules.",

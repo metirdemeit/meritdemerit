@@ -86,6 +86,32 @@ async def lifespan(app: FastAPI):
                 "value"      JSONB NOT NULL,
                 "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )""",
+            # Migration 6: rank tracking for students and classes
+            'ALTER TABLE "student" ADD COLUMN IF NOT EXISTS "current_rank" INT',
+            'ALTER TABLE "student" ADD COLUMN IF NOT EXISTS "previous_rank" INT',
+            'ALTER TABLE "class" ADD COLUMN IF NOT EXISTS "current_rank" INT',
+            'ALTER TABLE "class" ADD COLUMN IF NOT EXISTS "previous_rank" INT',
+            """WITH ranked_students AS (
+                SELECT id, ROW_NUMBER() OVER (ORDER BY points DESC, id ASC) as rank
+                FROM "student"
+            )
+            UPDATE "student" s
+            SET current_rank = r.rank,
+                previous_rank = r.rank
+            FROM ranked_students r
+            WHERE s.id = r.id AND s.current_rank IS NULL""",
+            """WITH ranked_classes AS (
+                SELECT c.id, 
+                       ROW_NUMBER() OVER (ORDER BY COALESCE(AVG(s.points), 0) DESC, c.id ASC) as rank
+                FROM "class" c
+                LEFT JOIN "student" s ON s.school_class_id = c.id
+                GROUP BY c.id
+            )
+            UPDATE "class" c
+            SET current_rank = rc.rank,
+                previous_rank = rc.rank
+            FROM ranked_classes rc
+            WHERE c.id = rc.id AND c.current_rank IS NULL""",
         ]
         for stmt in migration_stmts:
             await conn.execute_query(stmt)
