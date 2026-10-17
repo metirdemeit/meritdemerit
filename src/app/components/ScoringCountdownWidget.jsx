@@ -194,60 +194,8 @@ export default function ScoringCountdownWidget({ variant = 'default', sx = {} })
     );
   }
 
-  // State 3: Open indefinitely (no deadline set)
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        p: 1.5,
-        px: 2,
-        mb: 2.5,
-        borderRadius: 2.5,
-        background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(16, 185, 129, 0.03) 100%)',
-        border: '1px solid rgba(34, 197, 94, 0.25)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: 1.5,
-        ...sx,
-      }}
-    >
-      <Stack direction="row" spacing={1.5} alignItems="center">
-        <Box
-          sx={{
-            width: 34,
-            height: 34,
-            borderRadius: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(34, 197, 94, 0.2)',
-            color: '#4ADE80',
-          }}
-        >
-          <CheckCircleOutline sx={{ fontSize: 20 }} />
-        </Box>
-        <Box>
-          <Typography variant="body2" sx={{ color: '#4ADE80', fontWeight: 700 }}>
-            Приём баллов открыт
-          </Typography>
-          <Typography variant="caption" sx={{ color: '#86EFAC' }}>
-            Таймер не установлен (бессрочно)
-          </Typography>
-        </Box>
-      </Stack>
-      <Chip
-        label="Активно"
-        size="small"
-        sx={{
-          backgroundColor: 'rgba(34, 197, 94, 0.2)',
-          color: '#86EFAC',
-          fontWeight: 600,
-        }}
-      />
-    </Paper>
-  );
+  // State 3: Open indefinitely (no deadline set) -> do not display banner
+  return null;
 }
 
 function CountdownBox({ value, label, isHighlight = false }) {
