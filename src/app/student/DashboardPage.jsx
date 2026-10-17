@@ -15,6 +15,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useStudentStore } from '../../store/studentStore';
 import { useCommonStore } from '../../store/commonStore';
 import CommonRankingTable from '../components/CommonRankingTable';
+import ScoringCountdownWidget from '../components/ScoringCountdownWidget';
 import { useNavigate } from 'react-router-dom';
 
 export function DashboardPage() {
@@ -132,6 +133,9 @@ export function DashboardPage() {
       </Box>
 
       <Container maxWidth="lg" sx={{ px: 2 }}>
+        {/* Scoring Countdown Banner */}
+        <ScoringCountdownWidget />
+
         {/* Карточка профиля студента */}
         <Card sx={{ 
           background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',

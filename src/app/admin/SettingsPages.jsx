@@ -43,6 +43,7 @@ import {
   Timer,
   NotificationsActive,
   Report,
+  AlarmOn,
 } from '@mui/icons-material';
 import { useAuthStore } from '../../store/authStore';
 import { useAdminStore } from '../../store/adminStore';
@@ -51,6 +52,7 @@ import toast from 'react-hot-toast';
 import DetentionManager from './components/DetentionManager';
 import InterventionsManager from './components/InterventionsManager';
 import RiskRegistryPage from './RiskRegistryPage';
+import ScoringDeadlineManager from './components/ScoringDeadlineManager';
 import DeleteConfirmationDialog from '../components/dialogs/DeleteConfirmationDialog';
 import AssignmentTable from '../components/AssignmentTable';
 import TeachersStatTable from '../components/TeachersStatTable';
@@ -411,6 +413,7 @@ export function SettingsPages() {
 
   // Модульные кнопки настроек
   const navTabs = [
+    { id: 'scoring_deadline', label: 'Scoring Timer & Deadline', icon: <AlarmOn />, action: () => setActiveTab('scoring_deadline') },
     { id: 'moderation', label: 'Moderation', icon: <History />, action: handleModeration },
     { id: 'statistics', label: 'Statistics', icon: <Assessment />, action: handleStatistics },
     { id: 'detention', label: 'Detention Management', icon: <Timer />, action: () => setActiveTab('detention') },
@@ -840,6 +843,9 @@ export function SettingsPages() {
             </Card>
           </Box>
         )}
+
+        {/* Scoring Timer & Deadline Tab */}
+        {activeTab === 'scoring_deadline' && <ScoringDeadlineManager />}
 
         {/* Detention Management Tab */}
         {activeTab === 'detention' && <DetentionManager />}

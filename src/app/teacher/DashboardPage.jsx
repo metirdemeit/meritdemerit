@@ -18,6 +18,7 @@ import { useCommonStore } from '../../store/commonStore';
 import DeleteConfirmationDialog from '../components/dialogs/DeleteConfirmationDialog';
 import AssignmentTable from '../components/AssignmentTable';
 import CommonRankingTable from '../components/CommonRankingTable';
+import ScoringCountdownWidget from '../components/ScoringCountdownWidget';
 import { School, WarningAmber } from '@mui/icons-material';
 
 export function DashboardPage() {
@@ -157,6 +158,9 @@ export function DashboardPage() {
       </Box>
 
       <Container maxWidth="lg" sx={{ px: 2 }}>
+        {/* Scoring Period Countdown Banner */}
+        <ScoringCountdownWidget />
+
         {/* Homeroom Class Quick Status & Alert */}
         {riskStudents.length > 0 && (
           <Alert

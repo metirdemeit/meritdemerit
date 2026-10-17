@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { api } from '../services/api';
 import { useAuthStore } from './authStore';
+import { useScoringStore } from './scoringStore';
 
 export const useTeacherStore = create((set, get) => ({
   // === STATE ===
@@ -128,6 +129,21 @@ export const useTeacherStore = create((set, get) => ({
 
   // === WORKFLOW ===
   assignPoints: async (assignmentData) => {
+    // Check if scoring is currently allowed by school timer / admin
+    const scoringState = useScoringStore.getState();
+    if (!scoringState.isOpen) {
+      const msg = scoringState.closedReason === 'timer_expired'
+        ? 'Приём баллов закрыт: время по таймеру истекло!'
+        : 'Приём баллов временно закрыт администратором!';
+      toast.error(msg);
+      throw new Error(msg);
+    }
+    if (scoringState.deadline && new Date(scoringState.deadline).getTime() <= Date.now()) {
+      const msg = 'Приём баллов закрыт: время по таймеру истекло!';
+      toast.error(msg);
+      throw new Error(msg);
+    }
+
     return await api.post('/teacher/workflow/assign', assignmentData);
   },
 }));
