@@ -4,8 +4,8 @@ from pydantic import BaseModel
 from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.expressions import Q
 
-from backend.models import Student, Class, DisciplineRule, SystemSetting, Admin
-from backend.utils.security import enforce_https, get_current_user, get_current_admin
+from backend.models import Student, Class, DisciplineRule
+from backend.utils.security import enforce_https
 
 router = APIRouter(dependencies=[Depends(enforce_https)])
 
@@ -23,9 +23,10 @@ class StudentWithClassResponse(BaseModel):
     points: int
     class_name: str | None = None
     school_class: dict | None = None
+    # Rank delta: positive = moved up, negative = moved down, 0/None = no change
+    rank_delta: int | None = None
     current_rank: int | None = None
     previous_rank: int | None = None
-    rank_delta: int | None = None
 
     @classmethod
     async def from_student(cls, student: Student):
@@ -37,13 +38,12 @@ class StudentWithClassResponse(BaseModel):
                 "id": student.school_class.id,
                 "name": student.school_class.name
             }
-        
-        c_rank = getattr(student, "current_rank", None)
-        p_rank = getattr(student, "previous_rank", None)
-        delta = None
-        if c_rank is not None and p_rank is not None:
-            # Positive delta = climbed up in rankings (e.g. was 5, now 3 -> +2)
-            delta = p_rank - c_rank
+
+        # Compute rank delta: previous_rank - current_rank
+        # (lower rank number = higher position, so if current < previous → moved up → positive delta)
+        rank_delta = None
+        if student.previous_rank is not None and student.current_rank is not None:
+            rank_delta = student.previous_rank - student.current_rank
 
         return cls(
             id=student.id,
@@ -53,18 +53,15 @@ class StudentWithClassResponse(BaseModel):
             points=student.points,
             class_name=class_name_str,
             school_class=school_class_data,
-            current_rank=c_rank,
-            previous_rank=p_rank,
-            rank_delta=delta,
+            rank_delta=rank_delta,
+            current_rank=student.current_rank,
+            previous_rank=student.previous_rank,
         )
 class ClassAverageRankingItem(BaseModel):
     class_id: int
     class_name: str
     average_points: float
     student_count: int
-    current_rank: int | None = None
-    previous_rank: int | None = None
-    rank_delta: int | None = None
 
 # --- Classes Endpoints ---
 
@@ -154,12 +151,9 @@ async def get_rule_by_id(rule_id: int):
 # --- Ranking Endpoints ---
 
 @router.get("/ranking", response_model=List[StudentWithClassResponse], summary="Get top students ranking")
-async def get_top_ranking(
-    limit: int = Query(50, ge=1, le=100),
-    current_user: dict = Depends(get_current_user)
-):
+async def get_top_ranking(limit: int = Query(50, ge=1, le=100)):
     """
-    Get top students ranked by points (highest first, authenticated endpoint).
+    Get top students ranked by points (highest first, public endpoint).
     """
     students = (
         await Student.all()
@@ -179,26 +173,20 @@ async def get_top_ranking(
     response_model=List[ClassAverageRankingItem],
     summary="Get classes ranking by average points",
 )
-async def get_classes_average_ranking(current_user: dict = Depends(get_current_user)):
+async def get_classes_average_ranking():
     """
-    Get ranking of all classes by **average student points** (highest first, authenticated endpoint).
+    Get ranking of all classes by **average student points** (highest first, public endpoint).
     """
     classes = await Class.all().prefetch_related("students")
 
     items: list[ClassAverageRankingItem] = []
     for class_obj in classes:
-        students = [s for s in class_obj.students] if hasattr(class_obj, "students") else []
+        students = list(class_obj.students or [])
         if not students:
             continue
 
         total_points = sum(s.points for s in students)
         avg_points = total_points / len(students)
-
-        c_rank = getattr(class_obj, "current_rank", None)
-        p_rank = getattr(class_obj, "previous_rank", None)
-        delta = None
-        if c_rank is not None and p_rank is not None:
-            delta = p_rank - c_rank
 
         items.append(
             ClassAverageRankingItem(
@@ -206,71 +194,8 @@ async def get_classes_average_ranking(current_user: dict = Depends(get_current_u
                 class_name=class_obj.name,
                 average_points=avg_points,
                 student_count=len(students),
-                current_rank=c_rank,
-                previous_rank=p_rank,
-                rank_delta=delta,
             )
         )
 
     items.sort(key=lambda x: (-x.average_points, x.class_id))
     return items
-
-
-# --- School Scoring Status (Timer / Deadline) ---
-
-class ScoringStatusPayload(BaseModel):
-    isOpen: bool = True
-    deadline: Optional[str] = None
-    closedReason: Optional[str] = None
-    updatedAt: Optional[str] = None
-
-
-@router.get("/school/scoring-status", summary="Get school-wide scoring status and timer")
-async def get_scoring_status():
-    """
-    Publicly accessible endpoint for students, teachers, and admins.
-    Returns whether point assignment is currently open and the deadline.
-    """
-    setting = await SystemSetting.get_or_none(key="scoring_status")
-    if not setting:
-        return {
-            "isOpen": True,
-            "deadline": None,
-            "closedReason": None,
-            "updatedAt": None,
-        }
-
-    data = setting.value or {}
-    return {
-        "isOpen": bool(data.get("isOpen", True)),
-        "deadline": data.get("deadline"),
-        "closedReason": data.get("closedReason"),
-        "updatedAt": data.get("updatedAt"),
-    }
-
-
-@router.post("/school/scoring-status", summary="Update school-wide scoring status and timer")
-async def update_scoring_status(
-    payload: ScoringStatusPayload,
-    current_admin: Admin = Depends(get_current_admin),
-):
-    """
-    Update scoring status and deadline (requires authenticated admin).
-    """
-
-    value = {
-        "isOpen": payload.isOpen,
-        "deadline": payload.deadline,
-        "closedReason": payload.closedReason,
-        "updatedAt": payload.updatedAt,
-    }
-
-    setting, _ = await SystemSetting.get_or_create(
-        key="scoring_status",
-        defaults={"value": value},
-    )
-    setting.value = value
-    await setting.save()
-
-    return setting.value
-

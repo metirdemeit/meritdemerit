@@ -1,47 +1,46 @@
-# backend/utils/ranking_helper.py
-import logging
-from tortoise.transactions import in_transaction
-from backend.models import Student, Class
+"""
+ranking_helper.py
+~~~~~~~~~~~~~~~~~
+Utility for atomically recalculating and persisting student ranks.
 
-logger = logging.getLogger(__name__)
+Usage after any point change:
+    from backend.utils.ranking_helper import recalculate_ranks
+    await recalculate_ranks()
+
+How it works:
+  1. Fetch every student ordered by points DESC, id ASC (stable tie-break).
+  2. For each student:
+       previous_rank = current_rank   (shift the stored rank down)
+       current_rank  = new position
+  3. Bulk-update only the rank columns to keep it efficient.
+"""
+from backend.models import Student
 
 
-async def recalculate_ranks():
+async def recalculate_ranks() -> None:
     """
-    Recalculates current_rank and rotates previous_rank for all students and classes.
-    previous_rank <- current_rank
-    current_rank  <- new rank sorted by points DESC, id ASC
+    Recalculate and persist `previous_rank` and `current_rank` for all students.
+    Should be called inside (or immediately after) any transaction that changes points.
     """
-    try:
-        async with in_transaction() as conn:
-            # 1. Update students: previous_rank <- current_rank, then current_rank <- new row_number
-            await conn.execute_query("""
-                WITH ranked_students AS (
-                    SELECT id, 
-                           ROW_NUMBER() OVER (ORDER BY points DESC, id ASC) as new_rank
-                    FROM "student"
-                )
-                UPDATE "student" s
-                SET previous_rank = COALESCE(s.current_rank, r.new_rank),
-                    current_rank = r.new_rank
-                FROM ranked_students r
-                WHERE s.id = r.id;
-            """)
+    # Stable ordering: highest points first, lower id wins ties
+    students = await Student.all().order_by("-points", "id")
 
-            # 2. Update classes: previous_rank <- current_rank, then current_rank <- new row_number
-            await conn.execute_query("""
-                WITH ranked_classes AS (
-                    SELECT c.id,
-                           ROW_NUMBER() OVER (ORDER BY COALESCE(AVG(s.points), 0) DESC, c.id ASC) as new_rank
-                    FROM "class" c
-                    LEFT JOIN "student" s ON s.school_class_id = c.id
-                    GROUP BY c.id
-                )
-                UPDATE "class" c
-                SET previous_rank = COALESCE(c.current_rank, rc.new_rank),
-                    current_rank = rc.new_rank
-                FROM ranked_classes rc
-                WHERE c.id = rc.id;
-            """)
-    except Exception as e:
-        logger.error(f"Error recalculating ranks: {e}")
+    update_tasks = []
+    for rank, student in enumerate(students, start=1):
+        new_previous = student.current_rank  # what was current becomes previous
+        new_current = rank
+
+        # Skip if nothing changed (saves unnecessary DB writes)
+        if student.previous_rank == new_previous and student.current_rank == new_current:
+            continue
+
+        student.previous_rank = new_previous
+        student.current_rank = new_current
+        update_tasks.append(
+            student.save(update_fields=["previous_rank", "current_rank"])
+        )
+
+    # Run all saves concurrently for performance
+    if update_tasks:
+        import asyncio
+        await asyncio.gather(*update_tasks)

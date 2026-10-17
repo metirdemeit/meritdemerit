@@ -2,9 +2,9 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
 from tortoise.transactions import in_transaction
-from datetime import datetime, timezone
+from datetime import datetime
 
-from backend.models import Teacher, Student, DisciplineRule, PointHistory, Class, AdminPointHistory, SystemSetting
+from backend.models import Teacher, Student, DisciplineRule, PointHistory, Class
 from backend.utils.security import get_current_user, enforce_https
 from backend.utils.rules_helper import check_rule_limits_and_permissions, auto_trigger_interventions
 from backend.utils.ranking_helper import recalculate_ranks
@@ -30,8 +30,6 @@ class TeacherProfile(BaseModel):
 
 class TeacherHistoryResponse(BaseModel):
     id: int
-    student_id: int | None = None
-    student_username: str | None = None
     student_name: str
     student_class: str
     rule_description: str
@@ -41,8 +39,6 @@ class TeacherHistoryResponse(BaseModel):
 
 class TeacherHistoryDetail(BaseModel):
     id: int
-    student_id: int | None = None
-    student_username: str | None = None
     student_name: str
     student_class: str
     rule_description: str
@@ -53,25 +49,6 @@ class TeacherHistoryDetail(BaseModel):
 
 class PaginatedTeacherHistory(BaseModel):
     items: List[TeacherHistoryResponse]
-    total_count: int
-    page: int
-    size: int
-    total_pages: int
-
-class StudentHistoryEntryForTeacher(BaseModel):
-    id: int
-    teacher_name: str
-    role: str
-    created_by_role: str
-    rule_description: str
-    points_changed: int
-    comment: str
-    created_at: datetime
-    student_id: int | None = None
-    student_name: str | None = None
-
-class PaginatedStudentHistoryForTeacher(BaseModel):
-    items: List[StudentHistoryEntryForTeacher]
     total_count: int
     page: int
     size: int
@@ -118,21 +95,8 @@ async def assign_points(assignment: WorkflowAssignment, teacher: Teacher = Depen
     if not assignment.student_ids or not assignment.rule_ids:
         raise HTTPException(status_code=400, detail="Student and rule IDs cannot be empty.")
 
-    # 0. Check school-wide scoring status and deadline
-    scoring_setting = await SystemSetting.get_or_none(key="scoring_status")
-    if scoring_setting and scoring_setting.value:
-        s_val = scoring_setting.value
-        if not s_val.get("isOpen", True):
-            reason = "Время выставления баллов истекло по таймеру" if s_val.get("closedReason") == "timer_expired" else "Приём баллов закрыт администрацией школы"
-            raise HTTPException(status_code=403, detail=reason)
-        deadline_str = s_val.get("deadline")
-        if deadline_str:
-            try:
-                deadline_dt = datetime.fromisoformat(deadline_str.replace("Z", "+00:00"))
-                if datetime.now(timezone.utc) > deadline_dt:
-                    raise HTTPException(status_code=403, detail="Приём баллов закрыт: время выставления баллов истекло.")
-            except (ValueError, TypeError):
-                pass
+    if not assignment.comment or not assignment.comment.strip():
+        raise HTTPException(status_code=400, detail="Комментарий обязателен при выставлении баллов.")
 
     # Validate rules exist
     rules = await DisciplineRule.filter(id__in=assignment.rule_ids)
@@ -176,7 +140,7 @@ async def assign_points(assignment: WorkflowAssignment, teacher: Teacher = Depen
     # 2. Auto-trigger interventions if points dropped into risk zones
     await auto_trigger_interventions(students_to_update)
 
-    # 3. Recalculate ranks and update delta
+    # 3. Recalculate and persist global student ranks
     await recalculate_ranks()
 
     return {
@@ -210,35 +174,18 @@ async def get_teacher_history(
         .offset(offset) \
         .limit(size)
     
-    items = []
-    for record in history:
-        student_id = None
-        student_username = None
-        student_name = "Удаленный ученик"
-        student_class = "Без класса"
-        
-        if record.student:
-            student_id = record.student.id
-            student_username = record.student.username
-            student_name = f"{record.student.first_name} {record.student.last_name}".strip()
-            if record.student.school_class:
-                student_class = record.student.school_class.name
-        
-        rule_description = record.rule.description if record.rule else "—"
-        
-        items.append(
-            TeacherHistoryResponse(
-                id=record.id,
-                student_id=student_id,
-                student_username=student_username,
-                student_name=student_name,
-                student_class=student_class,
-                rule_description=rule_description,
-                points_changed=record.points_changed,
-                comment=record.comment,
-                created_at=record.created_at
-            )
+    items = [
+        TeacherHistoryResponse(
+            id=record.id,
+            student_name=f"{record.student.first_name} {record.student.last_name}",
+            student_class=record.student.school_class.name if record.student.school_class else "Без класса",
+            rule_description=record.rule.description,
+            points_changed=record.points_changed,
+            comment=record.comment,
+            created_at=record.created_at
         )
+        for record in history
+    ]
     
     return {
         "items": items,
@@ -267,27 +214,11 @@ async def get_assignment_detail(
     if record.teacher_id != teacher.id:
         raise HTTPException(status_code=403, detail="You can only view your own assignments")
     
-    student_id = None
-    student_username = None
-    student_name = "Удаленный ученик"
-    student_class = "Без класса"
-    
-    if record.student:
-        student_id = record.student.id
-        student_username = record.student.username
-        student_name = f"{record.student.first_name} {record.student.last_name}".strip()
-        if record.student.school_class:
-            student_class = record.student.school_class.name
-    
-    rule_description = record.rule.description if record.rule else "—"
-    
     return TeacherHistoryDetail(
         id=record.id,
-        student_id=student_id,
-        student_username=student_username,
-        student_name=student_name,
-        student_class=student_class,
-        rule_description=rule_description,
+        student_name=f"{record.student.first_name} {record.student.last_name}",
+        student_class=record.student.school_class.name if record.student.school_class else "Без класса",
+        rule_description=record.rule.description,
         points_changed=record.points_changed,
         comment=record.comment,
         created_at=record.created_at,
@@ -320,84 +251,3 @@ async def delete_assignment(
         await history_record.delete()
     
     return None
-
-@router.get("/students/{student_id}/history", response_model=PaginatedStudentHistoryForTeacher, summary="Get student full points history for teacher")
-async def get_student_history_for_teacher(
-    student_id: int,
-    page: int = Query(1, ge=1, description="Page number"),
-    size: int = Query(100, ge=1, le=100, description="Number of items per page"),
-    teacher: Teacher = Depends(get_current_teacher),
-):
-    """
-    Get a specific student's complete points history from all teachers and admins.
-    """
-    student = await Student.get_or_none(id=student_id)
-    if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
-
-    teacher_history = await PointHistory.filter(student_id=student_id) \
-        .prefetch_related("teacher", "rule") \
-        .all()
-
-    admin_history = await AdminPointHistory.filter(student_id=student_id) \
-        .prefetch_related("admin", "rule") \
-        .all()
-
-    combined: list[StudentHistoryEntryForTeacher] = []
-
-    for record in teacher_history:
-        teacher_name = "Учитель"
-        if record.teacher:
-            teacher_name = f"{record.teacher.first_name} {record.teacher.last_name or ''}".strip()
-        rule_desc = record.rule.description if record.rule else "—"
-
-        combined.append(
-            StudentHistoryEntryForTeacher(
-                id=record.id,
-                teacher_name=teacher_name,
-                role="teacher",
-                created_by_role="teacher",
-                rule_description=rule_desc,
-                points_changed=record.points_changed,
-                comment=record.comment or "",
-                created_at=record.created_at,
-                student_id=student.id,
-                student_name=f"{student.first_name} {student.last_name or ''}".strip(),
-            )
-        )
-
-    for record in admin_history:
-        admin_name = "Администратор"
-        if record.admin:
-            admin_name = f"{record.admin.first_name} {record.admin.last_name or ''}".strip()
-        rule_desc = record.rule.description if record.rule else "—"
-
-        combined.append(
-            StudentHistoryEntryForTeacher(
-                id=record.id,
-                teacher_name=admin_name,
-                role="admin",
-                created_by_role="admin",
-                rule_description=rule_desc,
-                points_changed=record.points_changed,
-                comment=record.comment or "",
-                created_at=record.created_at,
-                student_id=student.id,
-                student_name=f"{student.first_name} {student.last_name or ''}".strip(),
-            )
-        )
-
-    combined.sort(key=lambda x: x.created_at, reverse=True)
-
-    offset = (page - 1) * size
-    sliced = combined[offset : offset + size]
-    total_count = len(combined)
-
-    return PaginatedStudentHistoryForTeacher(
-        items=sliced,
-        total_count=total_count,
-        page=page,
-        size=size,
-        total_pages=(total_count + size - 1) // size if total_count > 0 else 1,
-    )
-
