@@ -20,9 +20,6 @@ import {
   Visibility, 
   Groups, 
   School, 
-  ArrowDropUp, 
-  ArrowDropDown, 
-  Remove, 
   EmojiEvents, 
   TrackChanges,
   Stars,
@@ -76,69 +73,6 @@ function getGradeGroup(ranking) {
   return '6-8';
 }
 
-function RankDeltaBadge({ delta }) {
-  if (typeof delta !== 'number' || delta === 0) {
-    return (
-      <Tooltip title="Позиция не изменилась" arrow>
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', color: '#6B7280', verticalAlign: 'middle', ml: 0.5 }}>
-          <Remove sx={{ fontSize: 14 }} />
-        </Box>
-      </Tooltip>
-    );
-  }
-
-  if (delta > 0) {
-    return (
-      <Tooltip title={`Поднялся на ${delta} ${delta === 1 ? 'позицию' : 'позиции'}`} arrow>
-        <Box 
-          component="span" 
-          sx={{ 
-            display: 'inline-flex', 
-            alignItems: 'center', 
-            color: '#10B981', 
-            fontWeight: 800, 
-            fontSize: '0.72rem',
-            verticalAlign: 'middle',
-            ml: 0.5,
-            backgroundColor: 'rgba(16, 185, 129, 0.12)',
-            px: 0.6,
-            py: 0.2,
-            borderRadius: 1,
-          }}
-        >
-          <ArrowDropUp sx={{ fontSize: 18, mr: -0.2, ml: -0.4 }} />
-          +{delta}
-        </Box>
-      </Tooltip>
-    );
-  }
-
-  const abs = Math.abs(delta);
-  return (
-    <Tooltip title={`Опустился на ${abs} ${abs === 1 ? 'позицию' : 'позиции'}`} arrow>
-      <Box 
-        component="span" 
-        sx={{ 
-          display: 'inline-flex', 
-          alignItems: 'center', 
-          color: '#EF4444', 
-          fontWeight: 800, 
-          fontSize: '0.72rem',
-          verticalAlign: 'middle',
-          ml: 0.5,
-          backgroundColor: 'rgba(239, 68, 68, 0.12)',
-          px: 0.6,
-          py: 0.2,
-          borderRadius: 1,
-        }}
-      >
-        <ArrowDropDown sx={{ fontSize: 18, mr: -0.2, ml: -0.4 }} />
-        -{abs}
-      </Box>
-    </Tooltip>
-  );
-}
-
 export default function CommonRankingTable({ rankings = [] }) {
   const [showFull, setShowFull] = useState(false);
   const [activeGroup, setActiveGroup] = useState('6-8');
@@ -174,9 +108,6 @@ export default function CommonRankingTable({ rankings = [] }) {
         ...existing,
         ...r,
         points: r.total_points ?? r.points ?? existing.points,
-        rank_delta: r.rank_delta ?? existing.rank_delta,
-        current_rank: r.current_rank ?? existing.current_rank,
-        previous_rank: r.previous_rank ?? existing.previous_rank,
       });
     } else if (id) {
       studentMap.set(id, { ...r });
@@ -237,7 +168,6 @@ export default function CommonRankingTable({ rankings = [] }) {
     return {
       rank: myRank,
       points: Number(myItem?.total_points ?? myItem?.points ?? 0),
-      delta: myItem?.rank_delta ?? 0,
       prevItem,
       pointsToOvertake,
       targetStudentName,
@@ -320,12 +250,9 @@ export default function CommonRankingTable({ rankings = [] }) {
                 #{myRankInfo.rank}
               </Box>
               <Box>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography variant="subtitle2" sx={{ color: '#F4F4FF', fontWeight: 700 }}>
-                    Ваша позиция в рейтинге
-                  </Typography>
-                  <RankDeltaBadge delta={myRankInfo.delta} />
-                </Stack>
+                <Typography variant="subtitle2" sx={{ color: '#F4F4FF', fontWeight: 700 }}>
+                  Ваша позиция в рейтинге
+                </Typography>
                 <Typography variant="caption" sx={{ color: '#C4A8FF', display: 'block' }}>
                   Баллы: <strong style={{ color: '#FFFFFF' }}>{myRankInfo.points}</strong>
                   {myRankInfo.isTop10 && ' · Вы в Топ-10 школы! 🔥'}
@@ -363,7 +290,7 @@ export default function CommonRankingTable({ rankings = [] }) {
           <TableHead>
             {isClassesTab ? (
               <TableRow>
-                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 70 }}>#</TableCell>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 48 }}>#</TableCell>
                 <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)' }}>Класс</TableCell>
                 <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 110, textAlign: 'right' }}>
                   Средний балл
@@ -371,7 +298,7 @@ export default function CommonRankingTable({ rankings = [] }) {
               </TableRow>
             ) : (
               <TableRow>
-                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 70 }}>#</TableCell>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 48 }}>#</TableCell>
                 <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)' }}>Ученик</TableCell>
                 <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 65 }}>Баллы</TableCell>
                 <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 56 }}>Класс</TableCell>
@@ -387,14 +314,10 @@ export default function CommonRankingTable({ rankings = [] }) {
               </TableRow>
             ) : isClassesTab ? (
               displayItems.map((item, index) => {
-                const delta = item.rank_delta ?? 0;
                 return (
                   <TableRow key={item.class_id || item.class_name || index}>
                     <TableCell sx={{ color: '#F4F4FF', fontWeight: 600, borderColor: 'rgba(255,255,255,0.06)' }}>
-                      <Box display="flex" alignItems="center">
-                        <span>{index + 1}</span>
-                        <RankDeltaBadge delta={delta} />
-                      </Box>
+                      {index + 1}
                     </TableCell>
                     <TableCell sx={{ color: '#F4F4FF', fontWeight: 600, borderColor: 'rgba(255,255,255,0.06)' }}>
                       {item.class_name || '-'}
@@ -410,7 +333,6 @@ export default function CommonRankingTable({ rankings = [] }) {
             ) : (
               displayItems.map((ranking, index) => {
                 const isMe = user?.id && String(ranking.id) === String(user.id);
-                const delta = ranking?.rank_delta ?? 0;
 
                 return (
                   <TableRow 
@@ -421,10 +343,7 @@ export default function CommonRankingTable({ rankings = [] }) {
                     } : {}}
                   >
                     <TableCell sx={{ color: isMe ? '#C4A8FF' : '#F4F4FF', fontWeight: 700, borderColor: 'rgba(255,255,255,0.06)' }}>
-                      <Box display="flex" alignItems="center">
-                        <span>{index + 1}</span>
-                        <RankDeltaBadge delta={delta} />
-                      </Box>
+                      {index + 1}
                     </TableCell>
                     <TableCell sx={{ color: isMe ? '#FFFFFF' : '#F4F4FF', fontWeight: isMe ? 700 : 400, borderColor: 'rgba(255,255,255,0.06)' }}>
                       {ranking?.first_name} {ranking?.last_name}

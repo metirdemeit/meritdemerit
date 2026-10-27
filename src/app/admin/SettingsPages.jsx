@@ -40,6 +40,7 @@ import {
   CalendarToday,
   Clear,
   FileDownload,
+  TableChart,
   Timer,
   NotificationsActive,
   Report,
@@ -257,64 +258,6 @@ export function SettingsPages() {
     });
   };
 
-  const handleDownloadHistoryHtml = async () => {
-    setExportingHistory(true);
-    try {
-      const blob = await downloadHistoryHtml(exportFilters);
-      if (!(blob instanceof Blob)) {
-        throw new Error('Invalid export response');
-      }
-
-      const filename = `students-points-history-${new Date().toISOString().slice(0, 10)}.html`;
-      const file = new File([blob], filename, { type: blob.type || 'text/html' });
-
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: 'Students Points History',
-        });
-        toast.success('Choose where to save or share HTML');
-        setExportDialogOpen(false);
-        return;
-      }
-
-      const url = URL.createObjectURL(blob);
-      const isDesktopWebView = /Electron|WebView|Telegram|TWA|desktop/i.test(navigator.userAgent || '') || !!window?.ReactNativeWebView;
-
-      if (isDesktopWebView) {
-        const newTab = window.open('', '_blank', 'noopener,noreferrer');
-        if (newTab) {
-          newTab.location.href = url;
-        } else {
-          window.location.href = url;
-        }
-      } else {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        link.rel = 'noopener';
-        link.style.display = 'none';
-        document.body.appendChild(link);
-
-        try {
-          link.click();
-        } catch {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        }
-
-        link.remove();
-      }
-
-      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
-      toast.success('HTML download started');
-      setExportDialogOpen(false);
-    } catch {
-      toast.error('Failed to download history');
-    } finally {
-      setExportingHistory(false);
-    }
-  };
-
   const getItemDateString = (dateVal) => {
     if (!dateVal) return '';
     const d = new Date(dateVal);
@@ -349,34 +292,433 @@ export function SettingsPages() {
         const itemDateStr = getItemDateString(item.created_at);
         if (itemDateStr && itemDateStr > criteria.endDate) return false;
       }
-      if (criteria.type === 'merit' && item.points_changed <= 0) return false;
-      if (criteria.type === 'demerit' && item.points_changed >= 0) return false;
+      if (criteria.type === 'merit' && (item.points_changed || 0) <= 0) return false;
+      if (criteria.type === 'demerit' && (item.points_changed || 0) >= 0) return false;
 
       return true;
     });
   };
 
+  const ensureFullHistory = async () => {
+    const store = useAdminStore.getState();
+    if (store.loadingHistoryFull || (store.totalHistoryCount > 0 && store.history.length < store.totalHistoryCount) || !store.history.length) {
+      toast.loading('Загрузка полной истории школы...', { id: 'history-fetch-toast' });
+      await fetchHistory();
+      toast.dismiss('history-fetch-toast');
+    }
+  };
+
+  const escapeHtml = (str) => {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
+  const generateHistoryHtmlReport = (items = [], criteria = {}) => {
+    const generatedAt = new Date().toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const totalCount = items.length;
+    let meritsCount = 0;
+    let meritsPoints = 0;
+    let demeritsCount = 0;
+    let demeritsPoints = 0;
+
+    items.forEach((item) => {
+      const pts = Number(item.points_changed || 0);
+      if (pts > 0) {
+        meritsCount += 1;
+        meritsPoints += pts;
+      } else if (pts < 0) {
+        demeritsCount += 1;
+        demeritsPoints += pts;
+      }
+    });
+
+    const netBalance = meritsPoints + demeritsPoints;
+
+    const activeFilters = [];
+    if (criteria.student?.trim()) activeFilters.push(`Ученик: ${escapeHtml(criteria.student.trim())}`);
+    if (criteria.schoolClass?.trim()) activeFilters.push(`Класс: ${escapeHtml(criteria.schoolClass.trim())}`);
+    if (criteria.teacher?.trim()) activeFilters.push(`Учитель/Админ: ${escapeHtml(criteria.teacher.trim())}`);
+    if (criteria.rule?.trim()) activeFilters.push(`Правило: ${escapeHtml(criteria.rule.trim())}`);
+    if (criteria.startDate) activeFilters.push(`От: ${escapeHtml(criteria.startDate)}`);
+    if (criteria.endDate) activeFilters.push(`До: ${escapeHtml(criteria.endDate)}`);
+    if (criteria.type && criteria.type !== 'all') {
+      activeFilters.push(`Тип: ${criteria.type === 'merit' ? 'Только Merit (+)' : 'Только Demerit (-)'}`);
+    }
+
+    const filtersHtml = activeFilters.length > 0
+      ? `<div class="filters-box"><strong>Примененные фильтры:</strong> ${activeFilters.map(f => `<span class="filter-tag">${f}</span>`).join(' ')}</div>`
+      : `<div class="filters-box"><strong>Фильтры:</strong> <span class="filter-tag">Вся история школы (без ограничений)</span></div>`;
+
+    const rowsHtml = items.map((item, idx) => {
+      const isMerit = (item.points_changed || 0) > 0;
+      const isDemerit = (item.points_changed || 0) < 0;
+      const typeLabel = isMerit ? 'Merit' : isDemerit ? 'Demerit' : 'Neutral';
+      const typeClass = isMerit ? 'badge-merit' : isDemerit ? 'badge-demerit' : 'badge-neutral';
+      const pointsFormatted = isMerit ? `+${item.points_changed}` : `${item.points_changed || 0}`;
+      const dateFormatted = item.created_at ? new Date(item.created_at).toLocaleString('ru-RU') : '-';
+
+      return `
+        <tr>
+          <td class="col-num">${idx + 1}</td>
+          <td class="col-date">${escapeHtml(dateFormatted)}</td>
+          <td class="col-student"><strong>${escapeHtml(item.student_name || '-')}</strong></td>
+          <td class="col-class">${escapeHtml(item.student_class || item.class_name || '-')}</td>
+          <td class="col-teacher">${escapeHtml(item.teacher_name || '-')}</td>
+          <td class="col-type"><span class="badge ${typeClass}">${typeLabel}</span></td>
+          <td class="col-points ${typeClass}-text">${pointsFormatted}</td>
+          <td class="col-rule">${escapeHtml(item.rule_description || '-')}</td>
+          <td class="col-comment">${escapeHtml(item.comment || '')}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeritDemerit — Отчет по истории баллов</title>
+  <style>
+    :root {
+      --bg: #0F0E26;
+      --card-bg: #1A1935;
+      --text: #F4F4FF;
+      --text-muted: #9E9DB5;
+      --border: rgba(146, 102, 255, 0.25);
+      --merit: #10B981;
+      --demerit: #EF4444;
+      --primary: #9266FF;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 32px 24px;
+      line-height: 1.5;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .header h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: -0.5px;
+    }
+    .header p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+    .meta-box {
+      text-align: right;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .meta-box strong { color: var(--text); }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .stat-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: #FFFFFF;
+    }
+    .stat-sub {
+      font-size: 12px;
+      margin-top: 4px;
+      color: var(--text-muted);
+    }
+    .filters-box {
+      background: rgba(146, 102, 255, 0.08);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      margin-bottom: 24px;
+      color: var(--text-muted);
+    }
+    .filter-tag {
+      display: inline-block;
+      background: rgba(146, 102, 255, 0.25);
+      color: #FFFFFF;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin: 2px 4px 2px 0;
+      border: 1px solid rgba(146, 102, 255, 0.4);
+    }
+    .table-container {
+      overflow-x: auto;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    th {
+      background: rgba(146, 102, 255, 0.15);
+      color: #D6D5E6;
+      font-weight: 700;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--text);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(146, 102, 255, 0.05); }
+    .col-num { width: 40px; color: var(--text-muted); text-align: center; }
+    .col-date { white-space: nowrap; font-size: 12px; color: var(--text-muted); }
+    .col-points { font-weight: 800; font-size: 14px; white-space: nowrap; }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge-merit { background: rgba(16, 185, 129, 0.18); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.35); }
+    .badge-demerit { background: rgba(239, 68, 68, 0.18); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.35); }
+    .badge-neutral { background: rgba(107, 114, 128, 0.18); color: #9CA3AF; border: 1px solid rgba(107, 114, 128, 0.35); }
+    .badge-merit-text { color: #10B981; }
+    .badge-demerit-text { color: #EF4444; }
+    .footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    @media print {
+      body { background: #FFFFFF; color: #111827; padding: 12px; }
+      .header { border-bottom: 2px solid #E5E7EB; }
+      .header h1 { color: #111827; }
+      .header p, .meta-box { color: #4B5563; }
+      .stat-card { background: #F9FAFB; border: 1px solid #E5E7EB; }
+      .stat-title { color: #6B7280; }
+      .stat-value { color: #111827; }
+      .filters-box { background: #F3F4F6; border: 1px solid #E5E7EB; color: #374151; }
+      .filter-tag { background: #E5E7EB; color: #111827; border: 1px solid #D1D5DB; }
+      .table-container { background: #FFFFFF; border: 1px solid #E5E7EB; }
+      th { background: #F3F4F6; color: #111827; border-bottom: 2px solid #E5E7EB; }
+      td { border-bottom: 1px solid #E5E7EB; color: #1F2937; }
+      .badge-merit { background: #D1FAE5; color: #065F46; border: none; }
+      .badge-demerit { background: #FEE2E2; color: #991B1B; border: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>MeritDemerit System</h1>
+      <p>Полный отчет по истории начисления и списания баллов</p>
+    </div>
+    <div class="meta-box">
+      <div>Сгенерировано: <strong>${generatedAt}</strong></div>
+      <div>Всего записей: <strong>${totalCount}</strong></div>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-title">Всего записей</div>
+      <div class="stat-value">${totalCount}</div>
+      <div class="stat-sub">в текущем отчете</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Поощрения (Merit)</div>
+      <div class="stat-value" style="color: #10B981;">+${meritsPoints} б.</div>
+      <div class="stat-sub">${meritsCount} начислений</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Замечания (Demerit)</div>
+      <div class="stat-value" style="color: #EF4444;">${demeritsPoints} б.</div>
+      <div class="stat-sub">${demeritsCount} взысканий</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Итоговый баланс</div>
+      <div class="stat-value" style="color: ${netBalance >= 0 ? '#10B981' : '#EF4444'};">
+        ${netBalance > 0 ? `+${netBalance}` : netBalance} б.
+      </div>
+      <div class="stat-sub">нетто за период</div>
+    </div>
+  </div>
+
+  ${filtersHtml}
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Дата и время</th>
+          <th>Ученик</th>
+          <th>Класс</th>
+          <th>Учитель / Администратор</th>
+          <th>Тип</th>
+          <th>Баллы</th>
+          <th>Правило / Причина</th>
+          <th>Комментарий</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml || '<tr><td colspan="9" style="text-align:center; padding: 32px; color: var(--text-muted);">Нет записей по заданным фильтрам</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    Сгенерировано системой MeritDemerit System · Единый реестр школы
+  </div>
+</body>
+</html>`;
+  };
+
+  const handleDownloadHistoryHtml = async () => {
+    setExportingHistory(true);
+    try {
+      await ensureFullHistory();
+      const currentFullHistory = useAdminStore.getState().history || [];
+      const itemsToExport = filterHistoryItems(currentFullHistory, exportFilters);
+
+      let blob = null;
+      try {
+        const remoteBlob = await downloadHistoryHtml(exportFilters);
+        if (remoteBlob instanceof Blob && remoteBlob.type && !remoteBlob.type.includes('json') && remoteBlob.size > 200) {
+          blob = remoteBlob;
+        }
+      } catch {
+        // Fallback to client-side generator
+      }
+
+      if (!blob) {
+        const htmlContent = generateHistoryHtmlReport(itemsToExport, exportFilters);
+        blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      }
+
+      const filename = `students-points-history-${new Date().toISOString().slice(0, 10)}.html`;
+      const file = new File([blob], filename, { type: 'text/html' });
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Students Points History',
+        });
+        toast.success(`HTML экспортирован (${itemsToExport.length} записей)`);
+        setExportDialogOpen(false);
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const isDesktopWebView = /Electron|WebView|Telegram|TWA|desktop/i.test(navigator.userAgent || '') || !!window?.ReactNativeWebView;
+
+      if (isDesktopWebView) {
+        const newTab = window.open('', '_blank', 'noopener,noreferrer');
+        if (newTab) {
+          newTab.location.href = url;
+        } else {
+          window.location.href = url;
+        }
+      } else {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.rel = 'noopener';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+
+        try {
+          link.click();
+        } catch {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
+
+        link.remove();
+      }
+
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      toast.success(`HTML скачан (${itemsToExport.length} записей)`);
+      setExportDialogOpen(false);
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('handleDownloadHistoryHtml error', err);
+      toast.error('Не удалось скачать историю');
+    } finally {
+      setExportingHistory(false);
+    }
+  };
+
   const handleDownloadHistoryCsv = async (customFilters = exportFilters) => {
     setExportingHistory(true);
     try {
+      await ensureFullHistory();
+      const currentFullHistory = useAdminStore.getState().history || [];
+      const itemsToExport = filterHistoryItems(currentFullHistory, customFilters);
+
       let blob = null;
       try {
-        blob = await downloadHistoryCsv(customFilters);
+        const remoteBlob = await downloadHistoryCsv(customFilters);
+        if (remoteBlob instanceof Blob && remoteBlob.type && !remoteBlob.type.includes('json') && remoteBlob.size > 100) {
+          blob = remoteBlob;
+        }
       } catch (e) {
         if (import.meta.env.DEV) console.warn('Backend CSV export endpoint fallback', e);
       }
 
       if (!(blob instanceof Blob)) {
         const headers = ['ID', 'Date', 'Student', 'Class', 'Teacher/Admin', 'Type', 'Points', 'Rule', 'Comment'];
-        const itemsToExport = filterHistoryItems(history || [], customFilters);
         const rows = (itemsToExport || []).map((item) => [
           item.id,
           item.created_at ? new Date(item.created_at).toLocaleString('ru-RU') : '',
           `"${(item.student_name || '').replace(/"/g, '""')}"`,
           `"${(item.student_class || item.class_name || '').replace(/"/g, '""')}"`,
           `"${(item.teacher_name || '').replace(/"/g, '""')}"`,
-          item.points_changed > 0 ? 'Merit' : item.points_changed < 0 ? 'Demerit' : 'Neutral',
-          item.points_changed,
+          (item.points_changed || 0) > 0 ? 'Merit' : (item.points_changed || 0) < 0 ? 'Demerit' : 'Neutral',
+          item.points_changed || 0,
           `"${(item.rule_description || '').replace(/"/g, '""')}"`,
           `"${(item.comment || '').replace(/"/g, '""')}"`,
         ]);
@@ -386,21 +728,45 @@ export function SettingsPages() {
       }
 
       const filename = `students-points-history-${new Date().toISOString().slice(0, 10)}.csv`;
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      link.rel = 'noopener';
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      const file = new File([blob], filename, { type: 'text/csv' });
 
-      toast.success('CSV file download started');
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Students Points History CSV',
+        });
+        toast.success(`CSV экспортирован (${itemsToExport.length} записей)`);
+        setExportDialogOpen(false);
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const isDesktopWebView = /Electron|WebView|Telegram|TWA|desktop/i.test(navigator.userAgent || '') || !!window?.ReactNativeWebView;
+
+      if (isDesktopWebView) {
+        const newTab = window.open('', '_blank', 'noopener,noreferrer');
+        if (newTab) {
+          newTab.location.href = url;
+        } else {
+          window.location.href = url;
+        }
+      } else {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.rel = 'noopener';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      toast.success(`CSV скачан (${itemsToExport.length} записей)`);
       setExportDialogOpen(false);
-    } catch {
-      toast.error('Failed to download CSV');
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('handleDownloadHistoryCsv error', err);
+      toast.error('Не удалось скачать CSV');
     } finally {
       setExportingHistory(false);
     }
@@ -544,7 +910,7 @@ export function SettingsPages() {
                     }}
                     variant="outlined"
                   >
-                    HTML
+                    Экспорт
                   </Button>
                   <Button
                     size="small"
@@ -1011,20 +1377,38 @@ export function SettingsPages() {
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2, pt: 0, gap: 1 }}>
+        <DialogActions sx={{ px: 3, pb: 2, pt: 0, gap: 1, flexWrap: 'wrap' }}>
           <Button
             onClick={resetExportFilters}
             disabled={exportingHistory}
             sx={{ color: '#EB2B4B', textTransform: 'none', mr: 'auto' }}
           >
-            Reset
+            Сбросить
           </Button>
           <Button
             onClick={() => setExportDialogOpen(false)}
             disabled={exportingHistory}
             sx={{ color: '#B8B7D9', textTransform: 'none' }}
           >
-            Cancel
+            Отмена
+          </Button>
+          <Button
+            onClick={() => handleDownloadHistoryCsv(exportFilters)}
+            disabled={exportingHistory}
+            startIcon={exportingHistory ? <CircularProgress size={16} color="inherit" /> : <TableChart />}
+            variant="outlined"
+            sx={{
+              borderColor: 'rgba(0, 211, 119, 0.4)',
+              color: '#00D377',
+              fontWeight: 600,
+              textTransform: 'none',
+              '&:hover': {
+                borderColor: '#00D377',
+                backgroundColor: 'rgba(0, 211, 119, 0.1)',
+              },
+            }}
+          >
+            Скачать CSV
           </Button>
           <Button
             onClick={handleDownloadHistoryHtml}
@@ -1041,7 +1425,7 @@ export function SettingsPages() {
               },
             }}
           >
-            Download HTML
+            Скачать HTML
           </Button>
         </DialogActions>
       </Dialog>

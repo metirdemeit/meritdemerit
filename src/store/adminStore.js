@@ -211,10 +211,14 @@ export const useAdminStore = create((set, get) => ({
     if (filters.type && filters.type !== 'all') params.set('point_type', filters.type);
 
     const query = params.toString();
-    return await api.get(
-      `/admin/history/export/html${query ? `?${query}` : ''}`,
-      { responseType: 'blob' }
-    );
+    try {
+      return await api.get(
+        `/admin/history/export/html${query ? `?${query}` : ''}`,
+        { responseType: 'blob', skipErrorToast: true }
+      );
+    } catch {
+      return null;
+    }
   },
 
   downloadHistoryCsv: async (filters = {}) => {
@@ -235,6 +239,18 @@ export const useAdminStore = create((set, get) => ({
       );
     } catch (err) {
       if (import.meta.env.DEV) console.error('downloadHistoryCsv failed', err);
+      return null;
+    }
+  },
+
+  downloadHistoryZip: async () => {
+    try {
+      return await api.get('/admin/history/export/zip', {
+        responseType: 'blob',
+        skipErrorToast: true,
+      });
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('downloadHistoryZip failed', err);
       return null;
     }
   },
