@@ -19,7 +19,7 @@ import {
 import { Person, ArrowBack, School, Dashboard, History as HistoryIcon, WarningAmber } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { useTeacherStore } from '../../store/teacherStore';
-import { useCommonStore } from '../../store/commonStore';
+import { useCommonStore, sortClassesFixed } from '../../store/commonStore';
 import UserCard from '../../components/UserCard';
 import ClassCard from '../../components/ClassCard';
 import SearchBar from '../../components/layouts/SearchBar';
@@ -264,6 +264,10 @@ export function StudentsPage() {
     setSearchResults([]);
   };
 
+  const sortedClasses = useMemo(() => {
+    return sortClassesFixed(classes || []);
+  }, [classes]);
+
   const studentsToShow = sortStudentsAlphabetically(isInSearchMode ? searchResults : students);
 
   const selectedStudentName = useMemo(() => {
@@ -396,7 +400,7 @@ export function StudentsPage() {
             {/* Виджет статистики закрепленного класса */}
             <HomeroomStatsWidget
               className={homeroomClass}
-              classes={classes}
+              classes={sortedClasses}
               students={students.filter((s) => isClassMatch(s, homeroomClass))}
               onSelectClass={handleHomeroomClassChange}
               showRiskOnly={showRiskOnly}
@@ -532,13 +536,13 @@ export function StudentsPage() {
                         Select a class to view students
                       </Typography>
                     </Box>
-                    {classes.length === 0 ? (
+                    {sortedClasses.length === 0 ? (
                       <Alert severity="info" sx={{ backgroundColor: 'rgba(146, 102, 255, 0.1)', border: '1px solid rgba(146, 102, 255, 0.3)', color: '#F4F4FF' }}>
                         No classes found.
                       </Alert>
                     ) : (
                       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1.5, mt: 1 }}>
-                        {classes.map(classItem => (
+                        {sortedClasses.map(classItem => (
                           <ClassCard key={classItem.id} classItem={classItem} onClick={() => handleClassSelect(classItem.id)} />
                         ))}
                       </Box>

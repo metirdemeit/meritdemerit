@@ -12,7 +12,7 @@ import {
 import { Person, ArrowBack, Add } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { useAdminStore } from '../../../store/adminStore';
-import { useCommonStore } from '../../../store/commonStore';
+import { useCommonStore, sortClassesFixed } from '../../../store/commonStore';
 import UserCard from '../../../components/UserCard';
 import ClassCard from '../../../components/ClassCard';
 import SearchBar from '../../../components/layouts/SearchBar';
@@ -290,7 +290,7 @@ export function StudentsBlog() {
                Classes
              </Typography>
              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1.5, mt: 1 }}>
-               {classes.map((c) => (
+               {sortClassesFixed(classes || []).map((c) => (
                  <ClassCard key={c.id} classItem={c} onClick={() => setSelectedClassId(c.id)} />
                ))}
              </Box>

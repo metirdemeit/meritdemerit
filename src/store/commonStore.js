@@ -8,6 +8,32 @@ const sortStudentsByName = (list = []) => {
   });
 };
 
+/**
+ * Фиксированная сортировка классов строго с 6 по 12 параллель (6A, 6B, ..., 12B).
+ * Порядок зафиксирован и никогда не меняется в зависимости от рейтинга или баллов.
+ */
+export const sortClassesFixed = (list = []) => {
+  return [...list].sort((a, b) => {
+    const nameA = String(a?.name || a?.class_name || a || '').trim();
+    const nameB = String(b?.name || b?.class_name || b || '').trim();
+
+    const matchA = nameA.match(/\d+/);
+    const matchB = nameB.match(/\d+/);
+
+    const gradeA = matchA ? parseInt(matchA[0], 10) : 0;
+    const gradeB = matchB ? parseInt(matchB[0], 10) : 0;
+
+    if (gradeA !== gradeB) {
+      return gradeA - gradeB;
+    }
+
+    const letterA = nameA.replace(/\d+/g, '').trim().toUpperCase();
+    const letterB = nameB.replace(/\d+/g, '').trim().toUpperCase();
+
+    return letterA.localeCompare(letterB);
+  });
+};
+
 export const useCommonStore = create((set, get) => ({
   // === STATE ===
   classes: [],
@@ -26,8 +52,9 @@ export const useCommonStore = create((set, get) => ({
 
     try {
       const data = await api.get('/classes');
-      set({ classes: data || [] });
-      return data;
+      const sorted = sortClassesFixed(data || []);
+      set({ classes: sorted });
+      return sorted;
     } catch (err) {
       if (import.meta.env.DEV) console.error('fetchClasses failed', err);
       return null;
