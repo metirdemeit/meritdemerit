@@ -173,26 +173,35 @@ export function StudentsPage() {
     setHistoryDialogOpen(true);
 
     try {
-      // fetchStudentFullHistory tries:
-      // 1. /admin/history/student/{id} — direct array (PointHistoryResponse[])
-      // 2. /admin/students/{id}/history — paginated
-      // 3. falls back to entire teacher localHistory
+      // 1. /teacher/students/{id}/history (dedicated teacher endpoint with full history)
+      // 2. Fallbacks for admin / local
       const fullHistory = await fetchStudentFullHistory(student.id);
       let historyItems = Array.isArray(fullHistory) ? fullHistory : (fullHistory?.items || []);
 
-      // If we got the fallback (full teacher history without student_id field),
-      // filter it here by student name to avoid showing unrelated records.
-      if (historyItems.length > 0 && historyItems.some(item => item.student_name !== undefined && item.student_id === undefined)) {
-        const normalize = (v) => `${v || ''}`.trim().toLowerCase().replace(/\s+/g, ' ');
-        const targetName = normalize(`${student.first_name || ''} ${student.last_name || ''}`);
-        const targetUsername = normalize(student.username);
-        historyItems = historyItems.filter((entry) => {
-          const entryName = normalize(entry.student_name || '');
-          return (
-            (targetName && (entryName.includes(targetName) || targetName.includes(entryName))) ||
-            (targetUsername && entryName.includes(targetUsername))
-          );
-        });
+      if (historyItems.length > 0) {
+        // If items contain student_id, ensure they strictly match this student
+        const hasId = historyItems.some((item) => item.student_id !== undefined && item.student_id !== null);
+        if (hasId) {
+          historyItems = historyItems.filter((item) => !item.student_id || String(item.student_id) === String(student.id));
+        } else {
+          // If fallback has only student_name without student_id (e.g. legacy /teacher/me/history),
+          // filter by student name supporting both first-last and last-first order as well as username
+          const normalize = (v) => `${v || ''}`.trim().toLowerCase().replace(/\s+/g, ' ');
+          const fn = normalize(student.first_name);
+          const ln = normalize(student.last_name);
+          const nameOrder1 = `${fn} ${ln}`.trim();
+          const nameOrder2 = `${ln} ${fn}`.trim();
+          const targetUsername = normalize(student.username);
+
+          historyItems = historyItems.filter((entry) => {
+            const entryName = normalize(entry.student_name || '');
+            return (
+              (nameOrder1 && (entryName.includes(nameOrder1) || nameOrder1.includes(entryName))) ||
+              (nameOrder2 && (entryName.includes(nameOrder2) || nameOrder2.includes(entryName))) ||
+              (targetUsername && entryName.includes(targetUsername))
+            );
+          });
+        }
       }
 
       setStudentFullHistory(historyItems);

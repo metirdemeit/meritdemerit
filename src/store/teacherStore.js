@@ -56,24 +56,36 @@ export const useTeacherStore = create((set, get) => ({
   fetchStudentFullHistory: async (studentId) => {
     if (!studentId) return null;
 
-    // Attempt 1: GET /admin/history/student/{student_id} — returns array directly (PointHistoryResponse[])
+    // Attempt 1: GET /teacher/students/{student_id}/history — dedicated endpoint for teachers & admins
+    try {
+      const data = await api.get(
+        `/teacher/students/${studentId}/history?page=1&size=100`,
+        { skipErrorToast: true }
+      );
+      if (Array.isArray(data)) {
+        return data;
+      }
+      if (data?.items && Array.isArray(data.items)) {
+        return data.items;
+      }
+    } catch {
+      // Endpoint not ready or network glitch, fall through
+    }
+
+    // Attempt 2: GET /admin/history/student/{student_id} — admin direct array fallback
     try {
       const adminHistoryArr = await api.get(
         `/admin/history/student/${studentId}`,
         { skipErrorToast: true }
       );
-      if (adminHistoryArr && Array.isArray(adminHistoryArr) && adminHistoryArr.length > 0) {
-        return adminHistoryArr;
-      }
-      // If backend returned an empty array it means no history — still return it
-      if (adminHistoryArr && Array.isArray(adminHistoryArr)) {
+      if (Array.isArray(adminHistoryArr)) {
         return adminHistoryArr;
       }
     } catch {
       // Not accessible (teacher role), fall through
     }
 
-    // Attempt 2: GET /admin/students/{student_id}/history — paginated (admin only)
+    // Attempt 3: GET /admin/students/{student_id}/history — paginated admin fallback
     try {
       const adminData = await api.get(
         `/admin/students/${studentId}/history?page=1&size=100`,
@@ -100,11 +112,10 @@ export const useTeacherStore = create((set, get) => ({
         return items;
       }
     } catch {
-      // Not accessible (teacher role), fall through
+      // Not accessible, fall through
     }
 
-    // Fallback 3: Filter teacher's own loaded history by student_name match.
-    // NOTE: TeacherHistoryResponse has no student_id field — match by student name only.
+    // Fallback 4: Teacher's own loaded history
     const localHistory = get().history || [];
     return localHistory;
   },
