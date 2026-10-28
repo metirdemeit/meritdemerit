@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from tortoise.transactions import in_transaction
 from datetime import datetime
 
-from backend.models import Teacher, Student, DisciplineRule, PointHistory, Class
+from backend.models import Teacher, Student, DisciplineRule, PointHistory, AdminPointHistory, Admin, Class
 from backend.utils.security import get_current_user, enforce_https
 from backend.utils.rules_helper import check_rule_limits_and_permissions, auto_trigger_interventions
 from backend.utils.ranking_helper import recalculate_ranks
@@ -18,6 +18,18 @@ class WorkflowAssignment(BaseModel):
     student_ids: List[int]
     rule_ids: List[int]
     comment: str
+
+
+class StudentPointHistoryItem(BaseModel):
+    id: int
+    student_id: Optional[int] = None
+    student_name: str
+    student_class: str
+    teacher_name: str
+    rule_description: str
+    points_changed: int
+    comment: str
+    created_at: datetime
 
 class TeacherProfile(BaseModel):
     id: int
@@ -252,3 +264,75 @@ async def delete_assignment(
         await history_record.delete()
     
     return None
+
+
+@router.get("/students/{student_id}/history", response_model=List[StudentPointHistoryItem], summary="Get full history of a student for teacher")
+async def get_student_history_for_teacher(
+    student_id: int,
+    page: int = Query(1, ge=1),
+    size: int = Query(100, ge=1, le=100),
+    current_user = Depends(get_current_user),
+):
+    """
+    Get full points history of a student (from teachers and admins).
+    Accessible to teachers and admins.
+    """
+    if not isinstance(current_user, (Teacher, Admin)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to view student history.",
+        )
+
+    student = await Student.get_or_none(id=student_id).prefetch_related("school_class")
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    student_class_name = student.school_class.name if student.school_class else "Без класса"
+    student_name = f"{student.first_name} {student.last_name or ''}".strip()
+
+    # 1. Teacher assignments
+    teacher_history = await PointHistory.filter(student_id=student_id).prefetch_related("teacher", "rule")
+    # 2. Admin assignments
+    admin_history = await AdminPointHistory.filter(student_id=student_id).prefetch_related("admin", "rule")
+
+    combined: list[tuple[datetime, StudentPointHistoryItem]] = []
+
+    for r in teacher_history:
+        t_name = f"{r.teacher.first_name} {r.teacher.last_name or ''}".strip() if r.teacher else "Учитель"
+        rule_desc = r.rule.description if r.rule else "—"
+        combined.append((
+            r.created_at,
+            StudentPointHistoryItem(
+                id=r.id,
+                student_id=student.id,
+                student_name=student_name,
+                student_class=student_class_name,
+                teacher_name=t_name,
+                rule_description=rule_desc,
+                points_changed=r.points_changed,
+                comment=r.comment or "",
+                created_at=r.created_at,
+            )
+        ))
+
+    for r in admin_history:
+        a_name = f"{r.admin.first_name} {r.admin.last_name or ''}".strip() if getattr(r, 'admin', None) else "Администратор"
+        rule_desc = r.rule.description if r.rule else "—"
+        combined.append((
+            r.created_at,
+            StudentPointHistoryItem(
+                id=r.id,
+                student_id=student.id,
+                student_name=student_name,
+                student_class=student_class_name,
+                teacher_name=a_name,
+                rule_description=rule_desc,
+                points_changed=r.points_changed,
+                comment=r.comment or "",
+                created_at=r.created_at,
+            )
+        ))
+
+    combined.sort(key=lambda x: x[0], reverse=True)
+    offset = (page - 1) * size
+    return [item[1] for item in combined[offset : offset + size]]
