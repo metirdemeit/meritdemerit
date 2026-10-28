@@ -116,19 +116,7 @@ export const useAdminStore = create((set, get) => ({
   },
 
   // === HISTORY ===
-  fetchHistory: async (filterId) => {
-    if (filterId) {
-      try {
-        const data = await api.get(`/admin/history/${filterId}`);
-        const items = Array.isArray(data) ? data : (data?.items || []);
-        set({ history: items, totalHistoryCount: items.length });
-        return data;
-      } catch (err) {
-        if (import.meta.env.DEV) console.error('fetchHistory by id failed', err);
-        return null;
-      }
-    }
-
+  fetchHistory: async () => {
     try {
       // 1. Первая страница с максимальным разрешённым бэкендом размером size=100
       const firstPageData = await api.get('/admin/history?page=1&size=100');
@@ -198,6 +186,17 @@ export const useAdminStore = create((set, get) => ({
   deleteHistoryRecord: async (id) => {
     if (!id) return;
     await api.del(`/admin/history/${id}`);
+  },
+
+  fetchHistoryRecord: async (id) => {
+    if (!id) return null;
+    try {
+      const data = await api.get(`/admin/history/${id}`);
+      return data;
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('fetchHistoryRecord failed', err);
+      return null;
+    }
   },
 
   downloadHistoryHtml: async (filters = {}) => {

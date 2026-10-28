@@ -173,9 +173,28 @@ export function StudentsPage() {
     setHistoryDialogOpen(true);
 
     try {
-      // Load full student history (all points assigned by teachers and admins)
+      // fetchStudentFullHistory tries:
+      // 1. /admin/history/student/{id} — direct array (PointHistoryResponse[])
+      // 2. /admin/students/{id}/history — paginated
+      // 3. falls back to entire teacher localHistory
       const fullHistory = await fetchStudentFullHistory(student.id);
-      const historyItems = Array.isArray(fullHistory) ? fullHistory : (fullHistory?.items || []);
+      let historyItems = Array.isArray(fullHistory) ? fullHistory : (fullHistory?.items || []);
+
+      // If we got the fallback (full teacher history without student_id field),
+      // filter it here by student name to avoid showing unrelated records.
+      if (historyItems.length > 0 && historyItems.some(item => item.student_name !== undefined && item.student_id === undefined)) {
+        const normalize = (v) => `${v || ''}`.trim().toLowerCase().replace(/\s+/g, ' ');
+        const targetName = normalize(`${student.first_name || ''} ${student.last_name || ''}`);
+        const targetUsername = normalize(student.username);
+        historyItems = historyItems.filter((entry) => {
+          const entryName = normalize(entry.student_name || '');
+          return (
+            (targetName && (entryName.includes(targetName) || targetName.includes(entryName))) ||
+            (targetUsername && entryName.includes(targetUsername))
+          );
+        });
+      }
+
       setStudentFullHistory(historyItems);
     } catch (err) {
       if (import.meta.env.DEV) console.error('Failed to fetch student full history:', err);
@@ -301,10 +320,9 @@ export function StudentsPage() {
   }, [students, homeroomClass]);
 
   const selectedStudentHistory = useMemo(() => {
-    if (!selectedStudentForHistory || !studentFullHistory.length) return [];
-    
-    return [...studentFullHistory]
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    if (!selectedStudentForHistory) return [];
+    // studentFullHistory is already filtered to this student in openStudentHistory
+    return [...studentFullHistory].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [selectedStudentForHistory, studentFullHistory]);
 
   const handleHomeroomClassChange = (newClass) => {

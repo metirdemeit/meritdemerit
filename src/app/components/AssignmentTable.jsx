@@ -28,6 +28,11 @@ export default function AssignmentTable({
     setPage(0);
   }, [assignments]);
 
+  const assignmentList = Array.isArray(assignments) ? assignments : (assignments?.items || []);
+
+  // Detect if we have student_name in data (teacher/admin view) or not (student's own view)
+  const hasStudentName = assignmentList.some(a => a.student_name !== undefined && a.student_name !== null);
+
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -53,21 +58,24 @@ export default function AssignmentTable({
     return '#666';
   };
 
-  const assignmentList = Array.isArray(assignments) ? assignments : (assignments?.items || []);
-
   const paginatedAssignments = assignmentList.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
+
+  // Total columns count for pagination colSpan
+  const colCount = (hasStudentName ? 1 : 0) + 5 + (onDelete ? 1 : 0);
 
   return (
     <TableContainer sx={{ background: 'transparent', boxShadow: 'none' }}>
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)' }}>
-              Student
-            </TableCell>
+            {hasStudentName && (
+              <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)' }}>
+                Student
+              </TableCell>
+            )}
             <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)' }}>
               Teacher
             </TableCell>
@@ -93,16 +101,18 @@ export default function AssignmentTable({
         <TableBody>
           {paginatedAssignments.map((assignment) => (
             <TableRow key={assignment.id}>
-              <TableCell >
-                {assignment.student_name}
+              {hasStudentName && (
+                <TableCell sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.1)' }}>
+                  {assignment.student_name}
+                </TableCell>
+              )}
+              <TableCell sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.1)' }}>
+                {assignment.teacher_name || assignment.role || '—'}
               </TableCell>
-              <TableCell >
-                {assignment.teacher_name}
-              </TableCell>
-              <TableCell >
+              <TableCell sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.1)' }}>
                 {assignment.rule_description}
               </TableCell>
-              <TableCell >
+              <TableCell sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.1)' }}>
                 {assignment.comment}
               </TableCell>
               <TableCell sx={{ borderColor: 'rgba(255,255,255,0.1)' }}>
@@ -112,7 +122,7 @@ export default function AssignmentTable({
                   sx={{
                     backgroundColor: getPointsColor(assignment.points_changed),
                     color: '#ffffff',
-                    fontWeight: 500
+                    fontWeight: 700
                   }}
                 />
               </TableCell>
@@ -137,7 +147,7 @@ export default function AssignmentTable({
           <TableRow>
             <TablePagination
               rowsPerPageOptions={[10, 25, 50, 100, 500]}
-              colSpan={onDelete ? 7 : 6}
+              colSpan={colCount}
               count={assignmentList.length}
               rowsPerPage={rowsPerPage}
               page={page}

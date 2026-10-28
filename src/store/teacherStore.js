@@ -55,36 +55,25 @@ export const useTeacherStore = create((set, get) => ({
 
   fetchStudentFullHistory: async (studentId) => {
     if (!studentId) return null;
+
+    // Attempt 1: GET /admin/history/student/{student_id} — returns array directly (PointHistoryResponse[])
     try {
-      const firstPage = await api.get(
-        `/teacher/students/${studentId}/history?page=1&size=100`,
+      const adminHistoryArr = await api.get(
+        `/admin/history/student/${studentId}`,
         { skipErrorToast: true }
       );
-      if (firstPage) {
-        const items = Array.isArray(firstPage) ? [...firstPage] : [...(firstPage?.items || [])];
-        const totalPages = Number(firstPage?.total_pages) || 1;
-        if (totalPages > 1) {
-          const pageRequests = [];
-          for (let p = 2; p <= totalPages; p++) {
-            pageRequests.push(
-              api.get(`/teacher/students/${studentId}/history?page=${p}&size=100`, { skipErrorToast: true }).catch(() => null)
-            );
-          }
-          const responses = await Promise.all(pageRequests);
-          responses.forEach((res) => {
-            if (res) {
-              const more = Array.isArray(res) ? res : (res?.items || []);
-              items.push(...more);
-            }
-          });
-        }
-        return items;
+      if (adminHistoryArr && Array.isArray(adminHistoryArr) && adminHistoryArr.length > 0) {
+        return adminHistoryArr;
+      }
+      // If backend returned an empty array it means no history — still return it
+      if (adminHistoryArr && Array.isArray(adminHistoryArr)) {
+        return adminHistoryArr;
       }
     } catch {
-      // Ignore
+      // Not accessible (teacher role), fall through
     }
 
-    // Fallback 1: Try admin student history endpoint if accessible
+    // Attempt 2: GET /admin/students/{student_id}/history — paginated (admin only)
     try {
       const adminData = await api.get(
         `/admin/students/${studentId}/history?page=1&size=100`,
@@ -111,15 +100,13 @@ export const useTeacherStore = create((set, get) => ({
         return items;
       }
     } catch {
-      // Ignore fallback 1 error
+      // Not accessible (teacher role), fall through
     }
 
-    // Fallback 2: Filter from teacher's loaded history
+    // Fallback 3: Filter teacher's own loaded history by student_name match.
+    // NOTE: TeacherHistoryResponse has no student_id field — match by student name only.
     const localHistory = get().history || [];
-    return localHistory.filter((item) => {
-      const entryId = item.student_id ?? item.user_id ?? item.studentId;
-      return String(entryId) === String(studentId);
-    });
+    return localHistory;
   },
 
   deleteHistoryRecord: async (historyId) => {
