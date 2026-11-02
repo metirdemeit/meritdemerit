@@ -135,11 +135,7 @@ export const routes = [
   },
   {
     path: "/student/history",
-    element: (
-      <ProtectedRoute requiredRole="student">
-        <StudentHistoryPages />
-      </ProtectedRoute>
-    ),
+    element: <Navigate to="/student/dashboard" replace />,
     requiredRole: "student",
   },
   

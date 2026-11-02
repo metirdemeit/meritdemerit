@@ -8,17 +8,17 @@ import {
   CircularProgress,
   Alert,
   Button,
-  Chip,
 } from '@mui/material';
-import { Person, History as HistoryIcon, ArrowForward } from '@mui/icons-material';
+import { Person, History as HistoryIcon } from '@mui/icons-material';
 import { useAuthStore } from '../../store/authStore';
 import { useStudentStore } from '../../store/studentStore';
 import ScoringCountdownWidget from '../components/ScoringCountdownWidget';
+import AssignmentTable from '../components/AssignmentTable';
 import { useNavigate } from 'react-router-dom';
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const { 
     profile,
     history,
@@ -27,7 +27,14 @@ export function DashboardPage() {
   } = useStudentStore();
 
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [errorProfile, setErrorProfile] = useState(null);
+  const [errorHistory, setErrorHistory] = useState(null);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -47,8 +54,23 @@ export function DashboardPage() {
       }
     };
 
+    const loadHistoryData = async () => {
+      setLoadingHistory(true);
+      setErrorHistory(null);
+      try {
+        const data = await fetchHistory();
+        if (!data) {
+          setErrorHistory('Failed to load history');
+        }
+      } catch (err) {
+        setErrorHistory('Failed to load history');
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+
     loadProfile();
-    fetchHistory();
+    loadHistoryData();
   }, [fetchProfile, fetchHistory, user]);
 
   if (loadingProfile && !profile) {
@@ -75,16 +97,16 @@ export function DashboardPage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', pb: 2 }}>
+    <Box sx={{ minHeight: '100vh', pb: 4 }}>
       {/* Header Section */}
       <Box
         sx={{
           background: 'linear-gradient(135deg, #4a1d63 0%, #343355 50%, #4a1d63 100%)',
           backdropFilter: 'blur(50px)',
           boxShadow: '0 20px 100px #4a1d63',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
           p: 2,
           pt: 'calc(var(--tg-safe-area-inset-top, 0px) + 80px)',
           pb: 2,
@@ -93,16 +115,35 @@ export function DashboardPage() {
         }}
       >
         <Container maxWidth="lg">
-          <Box display="flex" alignItems="center" mb={3}>
-            <Person sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
-            <Box>
-              <Typography variant="h5" sx={{ color: 'white', fontWeight: 400 }}>
-                Student Dashboard
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#5A5984' }}>
-                Welcome back, {profile?.first_name || user?.first_name} {profile?.last_name || user?.last_name}
-              </Typography>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Box display="flex" alignItems="center">
+              <Person sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
+              <Box>
+                <Typography variant="h5" sx={{ color: 'white', fontWeight: 600 }}>
+                  Student Dashboard
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                  Welcome back, {profile?.first_name || user?.first_name} {profile?.last_name || user?.last_name}
+                </Typography>
+              </Box>
             </Box>
+
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleLogout}
+              sx={{
+                color: '#F4F4FF',
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                textTransform: 'none',
+                '&:hover': {
+                  borderColor: '#F4F4FF',
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                },
+              }}
+            >
+              Log out
+            </Button>
           </Box>
         </Container>
       </Box>
@@ -119,7 +160,7 @@ export function DashboardPage() {
           mb: 3,
         }}>
           <CardContent>
-            <Typography variant="h6" sx={{ color: '#F4F4FF', mb: 2, fontWeight: 400 }}>
+            <Typography variant="h6" sx={{ color: '#F4F4FF', mb: 2, fontWeight: 500 }}>
               Your Profile
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
@@ -156,81 +197,46 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Recent History Section */}
-        {Array.isArray(history) && history.length > 0 && (
-          <Card sx={{ 
-            background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
-            borderRadius: 2,
-            border: '1px solid rgba(146, 102, 255, 0.2)',
-            mb: 3,
-          }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <HistoryIcon sx={{ color: '#9266FF', fontSize: 20 }} />
-                  <Typography variant="h6" sx={{ color: '#F4F4FF', fontWeight: 400 }}>
-                    Recent Activity
-                  </Typography>
-                </Box>
-                <Button
-                  size="small"
-                  endIcon={<ArrowForward />}
-                  onClick={() => navigate('/student/history')}
-                  sx={{
-                    color: '#9266FF',
-                    textTransform: 'none',
-                    fontSize: '0.8rem',
-                    '&:hover': { color: '#b38bff' },
-                  }}
-                >
-                  View All ({history.length})
-                </Button>
-              </Box>
+        {/* Full Points History Section */}
+        <Card sx={{ 
+          background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
+          borderRadius: 2,
+          border: '1px solid rgba(146, 102, 255, 0.2)',
+          mb: 4,
+        }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <HistoryIcon sx={{ color: '#9266FF', fontSize: 24, mr: 1 }} />
+              <Typography variant="h6" sx={{ color: '#F4F4FF', fontWeight: 500, flexGrow: 1 }}>
+                Points History {Array.isArray(history) && history.length > 0 ? `(${history.length})` : ''}
+              </Typography>
+            </Box>
 
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {history.slice(0, 5).map((item) => (
-                  <Box
-                    key={item.id}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.5,
-                      borderRadius: 1.5,
-                      background: item.points_changed > 0
-                        ? 'rgba(0,211,119,0.07)'
-                        : 'rgba(235,43,75,0.07)',
-                      border: item.points_changed > 0
-                        ? '1px solid rgba(0,211,119,0.15)'
-                        : '1px solid rgba(235,43,75,0.15)',
-                    }}
-                  >
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="body2" sx={{ color: '#F4F4FF', fontWeight: 500, mb: 0.25 }} noWrap>
-                        {item.rule_description || 'Point assignment'}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: '#5A5984' }}>
-                        {item.teacher_name || 'Teacher'} · {new Date(item.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                      </Typography>
-                    </Box>
-                    <Chip
-                      label={`${item.points_changed > 0 ? '+' : ''}${item.points_changed}`}
-                      size="small"
-                      sx={{
-                        ml: 1,
-                        backgroundColor: item.points_changed > 0 ? 'rgba(0,211,119,0.2)' : 'rgba(235,43,75,0.2)',
-                        color: item.points_changed > 0 ? '#00D377' : '#EB2B4B',
-                        fontWeight: 700,
-                        border: item.points_changed > 0 ? '1px solid rgba(0,211,119,0.4)' : '1px solid rgba(235,43,75,0.4)',
-                      }}
-                    />
-                  </Box>
-                ))}
+            {loadingHistory && (!Array.isArray(history) || history.length === 0) ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress sx={{ color: '#9266FF' }} />
               </Box>
-            </CardContent>
-          </Card>
-        )}
+            ) : errorHistory ? (
+              <Alert severity="error" sx={{ mb: 2 }}>{errorHistory}</Alert>
+            ) : (!Array.isArray(history) || history.length === 0) ? (
+              <Alert 
+                severity="info" 
+                sx={{ 
+                  backgroundColor: 'rgba(146, 102, 255, 0.1)',
+                  border: '1px solid rgba(146, 102, 255, 0.3)',
+                  color: '#F4F4FF'
+                }}
+              >
+                No point history found. Points will appear here when teachers assign them.
+              </Alert>
+            ) : (
+              <AssignmentTable assignments={history} isLoading={loadingHistory} />
+            )}
+          </CardContent>
+        </Card>
       </Container>
     </Box>
   );
 }
+
+export default DashboardPage;

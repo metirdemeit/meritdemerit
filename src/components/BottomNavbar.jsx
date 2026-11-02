@@ -36,8 +36,7 @@ const BottomNavbar = () => {
         { label: 'Rules', value: '/teacher/rules', icon: <Code /> }
       ],
       student: [
-        { label: 'Dashboard', value: '/student/dashboard', icon: <Home /> },
-        { label: 'History', value: '/student/history', icon: <SwapHoriz /> }
+        { label: 'Dashboard', value: '/student/dashboard', icon: <Home /> }
       ]
     };
 
@@ -45,6 +44,10 @@ const BottomNavbar = () => {
   };
 
   const navItems = getNavItems();
+
+  if (navItems.length <= 1) {
+    return null;
+  }
 
   const handleChange = (event, newValue) => {
     navigate(newValue);
