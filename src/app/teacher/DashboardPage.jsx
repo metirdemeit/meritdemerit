@@ -17,7 +17,6 @@ import { useAuthStore } from '../../store/authStore';
 import { useCommonStore } from '../../store/commonStore';
 import DeleteConfirmationDialog from '../components/dialogs/DeleteConfirmationDialog';
 import AssignmentTable from '../components/AssignmentTable';
-import CommonRankingTable from '../components/CommonRankingTable';
 import ScoringCountdownWidget from '../components/ScoringCountdownWidget';
 import { School, WarningAmber } from '@mui/icons-material';
 
@@ -30,7 +29,7 @@ export function DashboardPage() {
     deleteHistoryRecord,
     fetchProfile,
   } = useTeacherStore();
-  const { rankings, fetchRankings, students, fetchStudents, fetchClassRankings } = useCommonStore();
+  const { students, fetchStudents } = useCommonStore();
 
   const [selectedHomeroomClass, setSelectedHomeroomClass] = useState(() => {
     return typeof window !== 'undefined' ? localStorage.getItem('teacher_homeroom_class') : null;
@@ -39,7 +38,6 @@ export function DashboardPage() {
 
   // Loading для каждой секции
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [loadingRankings, setLoadingRankings] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
 
   const isClassMatch = (s, targetClass) => {
@@ -68,14 +66,11 @@ export function DashboardPage() {
     }
   };
  
-  const loadRankings = async () => {
-    setLoadingRankings(true);
+  const loadStudents = async () => {
     try {
-      await fetchRankings();
       await fetchStudents();
-      if (fetchClassRankings) await fetchClassRankings();
-    } finally {
-      setLoadingRankings(false);
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('Failed to load students:', err);
     }
   };
  
@@ -90,7 +85,7 @@ export function DashboardPage() {
 
   useEffect(() => {
     loadHistory();
-    loadRankings();
+    loadStudents();
     loadProfile();
   }, []);
 
@@ -230,31 +225,6 @@ export function DashboardPage() {
                 onDelete={handleDeleteAssignment}
                 isLoading={deletingId !== null}
               />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Rankings */}
-        <Card sx={{ 
-          background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
-          borderRadius: 2,
-          border: '1px solid rgba(146, 102, 255, 0.2)',
-        }}>
-          <CardContent>
-            <Typography variant="h6" sx={{ color: '#F4F4FF', mb: 2 }}>
-              Rankings
-            </Typography>
-
-            {loadingRankings ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress sx={{ color: '#9266FF' }} />
-              </Box>
-            ) : !Array.isArray(rankings) || rankings.length === 0 ? (
-              <Alert severity="info" sx={{ mb: 3 }}>
-                No rankings found.
-              </Alert>
-            ) : (
-              <CommonRankingTable rankings={rankings} />
             )}
           </CardContent>
         </Card>

@@ -204,9 +204,19 @@ export function DashboardPage() {
         </Box>
         {/* Ranking Section */}
         <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" sx={styles.analyticsTitle}>
-            Ranking
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" sx={styles.analyticsTitle}>
+              Ranking
+            </Typography>
+            <Button
+              variant="text"
+              size="small"
+              onClick={() => navigate('/admin/ranking')}
+              sx={{ color: '#9266FF', textTransform: 'none', fontWeight: 600 }}
+            >
+              Open Page →
+            </Button>
+          </Box>
           <Card sx={styles.analyticsCard}>
             <CardContent sx={{ p: 2 }}>
               {loadingRankings ? (

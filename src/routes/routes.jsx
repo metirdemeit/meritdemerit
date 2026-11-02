@@ -9,6 +9,7 @@ import { DashboardPage as AdminDashboardPage } from "../app/admin/DashboardPage"
 import { CodesPages as AdminCodesPages } from "../app/admin/CodesPages";
 import { SettingsPages as AdminSettingsPages } from "../app/admin/SettingsPages";
 import { UsersPage as AdminUsersPage } from "../app/admin/UsersPage";
+import { RankingPage as AdminRankingPage } from "../app/admin/RankingPage";
 // Student pages
 import { DashboardPage as StudentDashboardPage } from "../app/student/DashboardPage";
 import { HistoryPages as StudentHistoryPages } from "../app/student/HistoryPages";
@@ -26,8 +27,11 @@ export const ProtectedRoute = ({ children, requiredRole }) => {
     return <Navigate to="/login" replace />;
   }
   
-  if (requiredRole && user?.role !== requiredRole) {
-    return <Navigate to={`/${user?.role}`} replace />;
+  if (requiredRole) {
+    const isAllowed = user?.role === requiredRole || (requiredRole === "admin" && user?.role === "superadmin");
+    if (!isAllowed) {
+      return <Navigate to={`/${user?.role}`} replace />;
+    }
   }
   
   return children;
@@ -91,6 +95,24 @@ export const routes = [
     element: (
       <ProtectedRoute requiredRole="admin">
         <AdminSettingsPages />
+      </ProtectedRoute>
+    ),
+    requiredRole: "admin",
+  },
+  {
+    path: "/admin/ranking",
+    element: (
+      <ProtectedRoute requiredRole="admin">
+        <AdminRankingPage />
+      </ProtectedRoute>
+    ),
+    requiredRole: "admin",
+  },
+  {
+    path: "/ranking",
+    element: (
+      <ProtectedRoute requiredRole="admin">
+        <AdminRankingPage />
       </ProtectedRoute>
     ),
     requiredRole: "admin",

@@ -13,8 +13,6 @@ import {
 import { Person, History as HistoryIcon, ArrowForward } from '@mui/icons-material';
 import { useAuthStore } from '../../store/authStore';
 import { useStudentStore } from '../../store/studentStore';
-import { useCommonStore } from '../../store/commonStore';
-import CommonRankingTable from '../components/CommonRankingTable';
 import ScoringCountdownWidget from '../components/ScoringCountdownWidget';
 import { useNavigate } from 'react-router-dom';
 
@@ -27,15 +25,9 @@ export function DashboardPage() {
     fetchProfile,
     fetchHistory,
   } = useStudentStore();
-  const {
-    rankings,
-    fetchRankings,
-  } = useCommonStore();
 
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const [loadingRankings, setLoadingRankings] = useState(false);
   const [errorProfile, setErrorProfile] = useState(null);
-  const [errorRankings, setErrorRankings] = useState(null);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -55,26 +47,9 @@ export function DashboardPage() {
       }
     };
 
-    const loadRankings = async () => {
-      setLoadingRankings(true);
-      setErrorRankings(null);
-      try {
-        await Promise.all([
-          fetchRankings(),
-          useCommonStore.getState().fetchStudents(),
-          useCommonStore.getState().fetchClassRankings()
-        ]);
-      } catch (err) {
-        setErrorRankings('Failed to load rankings');
-      } finally {
-        setLoadingRankings(false);
-      }
-    };
-
     loadProfile();
-    loadRankings();
     fetchHistory();
-  }, [fetchProfile, fetchRankings, fetchHistory, user]);
+  }, [fetchProfile, fetchHistory, user]);
 
   if (loadingProfile && !profile) {
     return (
@@ -255,42 +230,6 @@ export function DashboardPage() {
             </CardContent>
           </Card>
         )}
-
-          {/* Ranking Section */}
-        <Card sx={{ 
-          background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
-          borderRadius: 2,
-          border: '1px solid rgba(146, 102, 255, 0.2)',
-          mt: 3,
-        }}>
-          <CardContent>
-            <Typography variant="h6" sx={{ color: '#F4F4FF', mb: 2, fontWeight: 400 }}>
-              Rankings
-            </Typography>
-              {loadingRankings ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                  <CircularProgress sx={{ color: '#9266FF' }} />
-                </Box>
-              ) : errorRankings ? (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {errorRankings}
-                </Alert>
-              ) : Array.isArray(rankings) && rankings.length > 0 ? (
-                <CommonRankingTable rankings={rankings} />
-              ) : (
-                <Alert 
-                  severity="info" 
-                  sx={{ 
-                    backgroundColor: 'rgba(146, 102, 255, 0.1)',
-                    border: '1px solid rgba(146, 102, 255, 0.3)',
-                    color: '#F4F4FF'
-                  }}
-                >
-                  No rankings found.
-                </Alert>
-              )}
-          </CardContent>
-        </Card>
       </Container>
     </Box>
   );
