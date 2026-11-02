@@ -32,10 +32,18 @@ dist-ssr
 
 *.pem
 
-# Local-only AI context and knowledge base
-PROJECT_HISTORY.md
-STREAKS_CONCEPT.md
-
-# Python
+# Python & Virtual environments
+.venv/
+venv/
+ENV/
 __pycache__/
 *.py[cod]
+*$py.class
+
+# Backend branch artifacts (when checking out branches)
+backend/
+migrations/
+
+# Local-only design notes
+STREAKS_CONCEPT.md
+
