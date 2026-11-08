@@ -4,11 +4,10 @@ from pydantic import BaseModel
 from tortoise.transactions import in_transaction
 from datetime import datetime
 
-from backend.models import Teacher, Student, DisciplineRule, PointHistory, AdminPointHistory, Admin, Class
+from backend.models import Teacher, Student, DisciplineRule, PointHistory, AdminPointHistory, Admin
 from backend.utils.security import get_current_user, enforce_https
 from backend.utils.rules_helper import check_rule_limits_and_permissions, auto_trigger_interventions
 from backend.utils.ranking_helper import recalculate_ranks
-from tortoise.contrib.pydantic import pydantic_model_creator
 
 router = APIRouter(dependencies=[Depends(enforce_https)])
 

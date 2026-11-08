@@ -117,7 +117,8 @@ async def lifespan(app: FastAPI):
             SET current_rank = r.rank,
                 previous_rank = r.rank
             FROM ranked_students r
-            WHERE s.id = r.id""",
+            WHERE s.id = r.id
+              AND (s.current_rank IS NULL OR s.current_rank <> r.rank)""",
             """WITH ranked_classes AS (
                 SELECT c.id, 
                        ROW_NUMBER() OVER (ORDER BY COALESCE(AVG(s.points), 0) DESC, c.id ASC) as rank

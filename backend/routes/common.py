@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 from tortoise.contrib.pydantic import pydantic_model_creator

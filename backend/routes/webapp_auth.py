@@ -2,10 +2,9 @@ import hashlib
 import hmac
 import json
 import logging
-import time
 import urllib.parse
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Union
 

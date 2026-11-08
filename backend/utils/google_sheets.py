@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timezone
-from typing import Iterable, List, Optional
+from typing import List, Optional
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build

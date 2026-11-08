@@ -5,7 +5,6 @@ from datetime import datetime
 
 from backend.models import Student, PointHistory, AdminPointHistory
 from backend.utils.security import get_current_user, enforce_https
-from tortoise.contrib.pydantic import pydantic_model_creator
 
 router = APIRouter(dependencies=[Depends(enforce_https)])
 

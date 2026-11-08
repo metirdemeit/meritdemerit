@@ -7,7 +7,7 @@ the frontend UI groupings and prevent inter-group rank skewing.
 """
 import re
 import asyncio
-from backend.models import Student, Class
+from backend.models import Student
 
 
 def get_grade_group_for_class_name(name: str | None) -> str:

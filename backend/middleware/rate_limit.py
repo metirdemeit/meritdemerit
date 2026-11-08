@@ -1,6 +1,6 @@
 import time
 from collections import defaultdict
-from fastapi import Request, HTTPException, status
+from fastapi import Request, status
 from fastapi.responses import JSONResponse
 
 _request_log: dict[str, list[float]] = defaultdict(list)

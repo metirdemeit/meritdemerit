@@ -1,16 +1,12 @@
-from typing import List, Optional, Literal
-import csv
-import io
-import zipfile
+from typing import List, Literal
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.responses import Response
 import anyio
 from pydantic import BaseModel
 from tortoise.contrib.pydantic import pydantic_model_creator
-from tortoise.exceptions import DoesNotExist, IntegrityError
-from tortoise.functions import Avg, Count
+from tortoise.exceptions import IntegrityError
 from tortoise.expressions import Q
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, date
 
 from backend.models import (
     DisciplineRule, Teacher, Student, PointHistory, Admin, Class,
@@ -22,7 +18,6 @@ from backend.utils.security import get_current_admin, enforce_https
 from backend.utils.google_sheets import get_sheets_service, ensure_sheet, write_values
 from backend.utils.quarter_export import build_quarter_export_zip_bytes, load_quarter_export_rows
 from tortoise.transactions import in_transaction
-from tortoise import Tortoise
 
 router = APIRouter(dependencies=[Depends(get_current_admin), Depends(enforce_https)])
 
