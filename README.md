@@ -1,4 +1,48 @@
-# School Discipline Bot
+# Merit & Demerit
+
+Система дисциплинарных баллов для школы: Telegram Mini App + бот + API.
+
+## Ветки и деплой
+
+| Ветка | Что внутри | Деплой |
+|---|---|---|
+| `frontend` | React + Vite (Telegram Mini App) | **Vercel** — каждый push сразу уходит в прод |
+| `backend` | FastAPI + Tortoise ORM + aiogram-бот | **Render** — каждый push сразу уходит в прод |
+| `main` | этот README, настройки Dependabot; код ниже — старый снимок backend (август 2026) | не деплоится |
+
+**Актуальный код — только в ветках `frontend` и `backend`.**
+
+## Как вносить изменения
+
+1. Создайте ветку от нужной: `git checkout -b fix/что-то frontend` (или `backend`).
+2. Откройте Pull Request в `frontend`/`backend` — запустится CI (GitHub Actions):
+   - frontend: ESLint (ошибки) + `npm run build`
+   - backend: ruff + `pytest`
+3. Мержите только при зелёном CI — после мержа изменения автоматически деплоятся.
+
+Dependabot раз в месяц открывает PR с минорными обновлениями и патчами безопасности
+в `frontend` и `backend`. Мажорные версии обновляются вручную.
+
+## Локальный запуск
+
+```bash
+# frontend
+git checkout frontend
+cp .env.example .env.local   # dev-логины, по желанию
+npm ci && npm run dev
+
+# backend (Python 3.11)
+git checkout backend
+cp .env.example .env         # заполнить JWT_SECRET_KEY, БД, BOT_TOKEN
+pip install -r requirements.txt
+pytest                       # тесты не требуют Postgres
+uvicorn backend.main:app --reload
+```
+
+---
+
+## Старое описание (снимок backend)
+
 
 Система управления дисциплинарными баллами для школы.
 

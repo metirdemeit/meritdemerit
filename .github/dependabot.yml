@@ -1,0 +1,41 @@
+# Dependabot reads this file from the default branch (main) and opens PRs
+# against the branches that are actually deployed.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    target-branch: frontend
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Major upgrades (React 19, MUI 9, Vite 8, react-router 7...) need manual testing.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: pip
+    directory: /
+    target-branch: backend
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: backend
+    schedule:
+      interval: monthly
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: frontend
+    schedule:
+      interval: monthly
