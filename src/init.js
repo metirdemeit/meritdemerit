@@ -21,14 +21,14 @@ export async function init(options) {
   // Set @telegram-apps/sdk-react debug mode and initialize it.
   try {
     setDebug(options.debug);
-  } catch {}
+  } catch { /* ignore */ }
 
   // В режиме разработки мокируем окружение Telegram для SDK
   try {
     if (import.meta.env && import.meta.env.DEV) {
       mockTelegramEnv();
     }
-  } catch {}
+  } catch { /* ignore */ }
 
   try {
     initSDK();
@@ -43,7 +43,7 @@ export async function init(options) {
         eruda.init();
         eruda.position({ x: window.innerWidth - 50, y: 0 });
       });
-    } catch {}
+    } catch { /* ignore */ }
   }
 
   // Telegram for macOS workaround
@@ -75,39 +75,39 @@ export async function init(options) {
           next();
         },
       });
-    } catch {}
+    } catch { /* ignore */ }
   }
 
   // Mount components safely
   try {
     if (mountBackButton.ifAvailable) mountBackButton.ifAvailable();
-  } catch {}
+  } catch { /* ignore */ }
 
   try {
     restoreInitData();
-  } catch {}
+  } catch { /* ignore */ }
 
   try {
     await Promise.all([
       mountMiniApp.isAvailable && mountMiniApp.isAvailable()
         ? mountMiniApp().then(() => {
-            try { bindThemeParamsCssVars(); } catch {}
+            try { bindThemeParamsCssVars(); } catch { /* ignore */ }
           }).catch(() => {})
         : Promise.resolve(),
       mountViewport.isAvailable && mountViewport.isAvailable()
         ? mountViewport().then(() => {
-            try { bindViewportCssVars(); } catch {}
+            try { bindViewportCssVars(); } catch { /* ignore */ }
           }).catch(() => {})
         : Promise.resolve(),
   ]);
-  } catch {}
+  } catch { /* ignore */ }
 
   // Определение платформы для безопасного вызова эвентов
   let platform = 'unknown';
   try {
     const lp = retrieveLaunchParams();
     platform = lp.tgWebAppPlatform || 'unknown';
-  } catch {}
+  } catch { /* ignore */ }
 
   // Вызовы только для мобильных устройств (iOS / Android),
   // чтобы избежать 'Webview crashed.' на ПК в Telegram Desktop
@@ -116,7 +116,7 @@ export async function init(options) {
   if (isMobile) {
     try {
       postEvent("web_app_setup_swipe_behavior", { allow_vertical_swipe: false });
-    } catch {}
+    } catch { /* ignore */ }
   }
 
   // Управление полноэкранным режимом
@@ -137,5 +137,5 @@ export async function init(options) {
         postEvent('web_app_request_fullscreen');
       }
     }
-  } catch {}
+  } catch { /* ignore */ }
 }

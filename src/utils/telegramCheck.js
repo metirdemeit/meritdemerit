@@ -147,7 +147,7 @@ export const getTelegramInitData = () => {
     if (launchParams?.initDataRaw && typeof launchParams.initDataRaw === 'string') {
       return launchParams.initDataRaw.trim();
     }
-  } catch {}
+  } catch { /* ignore */ }
 
   // 3. Search and Hash URL parameters
   try {

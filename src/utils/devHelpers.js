@@ -82,12 +82,12 @@ export const extractTelegramIdFromInitData = (initData) => {
         if (search.has('tgWebAppData')) {
           rawStr = search.get('tgWebAppData');
         }
-      } catch {}
+      } catch { /* ignore */ }
     }
     if (rawStr.includes('%3D') || rawStr.includes('%26') || rawStr.includes('%22')) {
       try {
         rawStr = decodeURIComponent(rawStr);
-      } catch {}
+      } catch { /* ignore */ }
     }
 
     const params = new URLSearchParams(rawStr);

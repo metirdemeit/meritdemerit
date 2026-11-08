@@ -7,7 +7,6 @@ import {
   CardContent,
   Button,
   List,
-  CircularProgress,
 } from '@mui/material';
 import { Person, ArrowBack, Add } from '@mui/icons-material';
 import toast from 'react-hot-toast';
@@ -313,12 +312,7 @@ export function StudentsBlog() {
                  Add Student
                </Button>
              </Box>
-            {false ? (
-               <Box textAlign="center" py={3}>
-                 <CircularProgress sx={{ color: '#9266FF' }} />
-               </Box>
-             ) : (
-               studentsToShow.length === 0 ? (
+            {studentsToShow.length === 0 ? (
                <Box textAlign="center" py={3}>
                  <Person sx={styles.noStudentsIcon} />
                  <Typography variant="body2" >
@@ -339,7 +333,7 @@ export function StudentsBlog() {
                    </li>
                  ))}
                </List>
-             ))}
+             )}
            </>
          )}
       </CardContent>

@@ -160,12 +160,6 @@ if (typeof window !== 'undefined' && !window.Telegram) {
       },
       offEvent: () => {},
       // Добавляем поддержку новых методов API
-      requestWriteAccess: (callback) => {
-        if (callback) callback(true);
-      },
-      requestContact: (callback) => {
-        if (callback) callback(false);
-      },
       requestLocation: (callback) => {
         if (callback) callback(false);
       },
@@ -192,6 +186,7 @@ if (typeof window !== 'undefined' && !window.Telegram) {
 }
 
 // Мокируем переменные окружения если они не установлены
+/* global process */
 if (typeof process !== 'undefined' && process.env) {
   // Базовые переменные окружения для разработки
   if (!process.env.VITE_API_URL) {
