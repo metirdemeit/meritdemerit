@@ -6,7 +6,8 @@ import path from "node:path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: "./",
+  // Absolute base: with BrowserRouter, relative "./" assets break on reload of nested routes like /student/history.
+  base: "/",
   plugins: [
     // Allows using React dev server along with building a React application with Vite.
     // https://npmjs.com/package/@vitejs/plugin-react-swc
