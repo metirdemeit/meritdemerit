@@ -1,7 +1,9 @@
+import hmac
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Union
 
+import bcrypt
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
@@ -19,8 +21,25 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 52560
 
 
 # --- Password Handling ---
-def verify_password(plain_password: str, stored_password: str) -> bool:
-    return plain_password == stored_password
+# Passwords are stored as bcrypt hashes. Older accounts may still hold a
+# plaintext password; those keep working and are re-hashed on next login.
+def hash_password(plain_password: str) -> str:
+    return bcrypt.hashpw(plain_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def is_password_hashed(stored_password: str | None) -> bool:
+    return bool(stored_password) and stored_password.startswith(("$2a$", "$2b$", "$2y$"))
+
+
+def verify_password(plain_password: str, stored_password: str | None) -> bool:
+    if not plain_password or not stored_password:
+        return False
+    if is_password_hashed(stored_password):
+        try:
+            return bcrypt.checkpw(plain_password.encode("utf-8"), stored_password.encode("utf-8"))
+        except ValueError:
+            return False
+    return hmac.compare_digest(plain_password.encode("utf-8"), stored_password.encode("utf-8"))
 
 
 # --- JWT Token Handling ---

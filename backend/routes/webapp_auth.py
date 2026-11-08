@@ -12,7 +12,14 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, Field, model_validator
 
 from backend.models import Student, Teacher, Admin
-from backend.utils.security import create_access_token, get_current_user, verify_password, enforce_https
+from backend.utils.security import (
+    create_access_token,
+    enforce_https,
+    get_current_user,
+    hash_password,
+    is_password_hashed,
+    verify_password,
+)
 from backend.config import BOT_TOKEN
 
 router = APIRouter(dependencies=[Depends(enforce_https)])
@@ -248,6 +255,9 @@ async def authenticate_user(username: str, password: str) -> Union[Student, Teac
         return None
     if not verify_password(password, user.password):
         return None
+    if not is_password_hashed(user.password):
+        user.password = hash_password(password)
+        await user.save(update_fields=["password"])
     return user
 
 

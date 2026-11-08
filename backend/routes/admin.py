@@ -14,12 +14,21 @@ from backend.models import (
 )
 from backend.utils.rules_helper import check_rule_limits_and_permissions, auto_trigger_interventions
 from backend.utils.ranking_helper import recalculate_ranks, revert_student_rank_snapshot
-from backend.utils.security import get_current_admin, enforce_https
+from backend.utils.security import get_current_admin, enforce_https, hash_password
 from backend.utils.google_sheets import get_sheets_service, ensure_sheet, write_values
 from backend.utils.quarter_export import build_quarter_export_zip_bytes, load_quarter_export_rows
 from tortoise.transactions import in_transaction
 
 router = APIRouter(dependencies=[Depends(get_current_admin), Depends(enforce_https)])
+
+
+def _prepare_password_update(update_data: dict) -> dict:
+    """Hash a new password; drop blank ones so editing a user never wipes their password."""
+    if "password" in update_data:
+        password = (update_data.pop("password") or "").strip()
+        if password:
+            update_data["password"] = hash_password(password)
+    return update_data
 
 # --- Pydantic Models ---
 
@@ -112,7 +121,7 @@ class InterventionOut(BaseModel):
 
 
 # Students
-Student_Pydantic = pydantic_model_creator(Student, name="StudentOut")
+Student_Pydantic = pydantic_model_creator(Student, name="StudentOut", exclude=("password",))
 StudentIn_Pydantic = pydantic_model_creator(
     Student, name="StudentIn", exclude=("id", "telegram_id",)
 )
@@ -359,7 +368,7 @@ async def create_student(student_data: StudentCreate):
             username=student_data.username,
             first_name=student_data.first_name,
             last_name=student_data.last_name,
-            password=student_data.password,
+            password=hash_password(student_data.password.strip()),
             school_class_id=school_class.id
         )
         return await Student_Pydantic.from_tortoise_orm(student)
@@ -389,7 +398,7 @@ async def update_student(student_id: int, student_data: StudentUpdate):
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     
-    update_data = student_data.dict(exclude_unset=True)
+    update_data = _prepare_password_update(student_data.model_dump(exclude_unset=True))
     
     # Handle class_name separately
     if "class_name" in update_data:
@@ -474,7 +483,7 @@ async def create_teacher(teacher_data: TeacherCreate):
             username=teacher_data.username,
             first_name=teacher_data.first_name,
             last_name=teacher_data.last_name,
-            password=teacher_data.password,
+            password=hash_password(teacher_data.password.strip()),
             homeroom_class_id=teacher_data.homeroom_class_id,
         )
         return await _build_teacher_out(teacher)
@@ -502,7 +511,7 @@ async def update_teacher(teacher_id: int, teacher_data: TeacherUpdate):
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
     
-    update_data = teacher_data.model_dump(exclude_unset=True)
+    update_data = _prepare_password_update(teacher_data.model_dump(exclude_unset=True))
     await teacher.update_from_dict(update_data)
     await teacher.save()
     return await _build_teacher_out(teacher)
