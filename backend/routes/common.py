@@ -1,11 +1,13 @@
-from typing import List
+from datetime import datetime
+from typing import List, Literal, Optional
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.expressions import Q
 
-from backend.models import Student, Class, DisciplineRule
-from backend.utils.security import enforce_https
+from backend.models import Admin, Student, Class, DisciplineRule
+from backend.utils.security import enforce_https, get_current_admin
+from backend.utils.scoring import get_scoring_status, parse_deadline, save_scoring_status
 
 router = APIRouter(dependencies=[Depends(enforce_https)])
 
@@ -199,3 +201,29 @@ async def get_classes_average_ranking():
 
     items.sort(key=lambda x: (-x.average_points, x.class_id))
     return items
+
+
+# --- School Scoring Status (Timer / Deadline) ---
+
+class ScoringStatusPayload(BaseModel):
+    isOpen: bool = True
+    deadline: Optional[datetime] = None
+    closedReason: Optional[Literal["manual", "timer_expired"]] = None
+    updatedAt: Optional[str] = None  # ignored, set by the server
+
+
+@router.get("/school/scoring-status", summary="Get school-wide scoring status and timer")
+async def read_scoring_status():
+    """Whether teachers can assign points right now, and the deadline if any."""
+    return await get_scoring_status()
+
+
+@router.post("/school/scoring-status", summary="Update school-wide scoring status and timer (admin)")
+async def update_scoring_status(
+    payload: ScoringStatusPayload,
+    current_admin: Admin = Depends(get_current_admin),
+):
+    deadline = parse_deadline(payload.deadline)
+    if payload.isOpen and deadline and deadline <= datetime.now(deadline.tzinfo):
+        raise HTTPException(status_code=400, detail="Дедлайн должен быть в будущем")
+    return await save_scoring_status(payload.isOpen, deadline, payload.closedReason)

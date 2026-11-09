@@ -6,6 +6,7 @@ from datetime import datetime
 
 from backend.models import Teacher, Student, DisciplineRule, PointHistory, AdminPointHistory, Admin
 from backend.utils.security import get_current_user, enforce_https
+from backend.utils.scoring import ensure_scoring_open
 from backend.utils.rules_helper import check_rule_limits_and_permissions, auto_trigger_interventions
 from backend.utils.ranking_helper import recalculate_ranks
 
@@ -105,6 +106,9 @@ async def assign_points(assignment: WorkflowAssignment, teacher: Teacher = Depen
     """
     if not assignment.student_ids or not assignment.rule_ids:
         raise HTTPException(status_code=400, detail="Student and rule IDs cannot be empty.")
+
+    # Admin can close scoring or set a deadline for the whole school
+    await ensure_scoring_open()
 
     if not assignment.comment or not assignment.comment.strip():
         raise HTTPException(status_code=400, detail="Комментарий обязателен при выставлении баллов.")
