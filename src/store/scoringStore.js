@@ -90,31 +90,29 @@ export const useScoringStore = create((set, get) => ({
     };
 
     try {
-      const res = await api.post('/school/scoring-status', payload);
-      if (res) {
-        saveLocalFallback(res);
-        set({
-          isOpen: Boolean(res.isOpen),
-          deadline: res.deadline || null,
-          closedReason: res.closedReason || null,
-          updatedAt: res.updatedAt || payload.updatedAt,
-          loading: false,
-        });
-        return res;
-      }
+      // Saved on the server so teachers and students see the same state.
+      // If saving fails, the admin gets an error instead of a fake local success.
+      const res = await api.post('/school/scoring-status', payload, { skipErrorToast: true });
+      const next = res || payload;
+      saveLocalFallback(next);
+      set({
+        isOpen: Boolean(next.isOpen),
+        deadline: next.deadline || null,
+        closedReason: next.closedReason || null,
+        updatedAt: next.updatedAt || payload.updatedAt,
+        loading: false,
+      });
+      return next;
     } catch (err) {
-      console.warn('Backend update failed, using local fallback:', err);
+      set({ loading: false, error: err });
+      throw err;
     }
+  },
 
-    saveLocalFallback(payload);
-    set({
-      isOpen: payload.isOpen,
-      deadline: payload.deadline,
-      closedReason: payload.closedReason,
-      updatedAt: payload.updatedAt,
-      loading: false,
-    });
-    return payload;
+  // Deadline reached on this device: show it as closed right away.
+  // The server closes scoring by itself, so nothing is sent from here.
+  markExpired: () => {
+    set({ isOpen: false, deadline: null, closedReason: 'timer_expired' });
   },
 
   // Close scoring immediately

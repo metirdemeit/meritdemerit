@@ -20,7 +20,7 @@ import { useScoringStore } from '../../store/scoringStore';
 export default function ScoringCountdownWidget({ variant = 'default', sx = {} }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { isOpen, deadline, closedReason, fetchStatus, updateStatus } = useScoringStore();
+  const { isOpen, deadline, closedReason, fetchStatus, markExpired } = useScoringStore();
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -47,12 +47,13 @@ export default function ScoringCountdownWidget({ variant = 'default', sx = {} })
     return diff > 0 ? diff : 0;
   }, [deadline, isOpen, now]);
 
-  // If deadline reached while open, trigger auto-close locally
+  // Deadline reached: show "closed" now, then sync with the server
   useEffect(() => {
     if (isOpen && deadline && timeDiff === 0) {
-      updateStatus({ isOpen: false, deadline: null, closedReason: 'timer_expired' });
+      markExpired();
+      fetchStatus();
     }
-  }, [isOpen, deadline, timeDiff, updateStatus]);
+  }, [isOpen, deadline, timeDiff, markExpired, fetchStatus]);
 
   const formattedTime = useMemo(() => {
     if (timeDiff === null) return null;

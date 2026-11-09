@@ -128,7 +128,9 @@ export const useTeacherStore = create((set, get) => ({
 
   // === WORKFLOW ===
   assignPoints: async (assignmentData) => {
-    // Check if scoring is currently allowed by school timer / admin
+    // Check if scoring is currently allowed by school timer / admin.
+    // Refresh first: teacher pages may not have loaded the status yet.
+    await useScoringStore.getState().fetchStatus();
     const scoringState = useScoringStore.getState();
     if (!scoringState.isOpen) {
       const msg = scoringState.closedReason === 'timer_expired'
