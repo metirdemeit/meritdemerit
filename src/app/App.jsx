@@ -6,6 +6,7 @@ import { useAuthStore } from "../store/authStore";
 import { routes, defaultRoutes } from "../routes/routes.jsx";
 import BottomNavbar from "../components/BottomNavbar";
 import AuthWrapper from "../components/AuthWrapper";
+import GuideTour from "../components/guide/GuideTour";
 
 /**
  * App shell. Works both inside the Telegram Mini App and in a regular browser:
@@ -42,6 +43,7 @@ export function App() {
               </Suspense>
             </Box>
             {user && <BottomNavbar />}
+            {user && <GuideTour />}
           </AuthWrapper>
         </Box>
       </Router>

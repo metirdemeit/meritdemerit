@@ -818,7 +818,7 @@ export function SettingsPages() {
 
       <Container maxWidth="lg" sx={{ px: 2 }}>
         {/* Модульные вкладки навигации (вертикальный стек) */}
-        <Grid container spacing={1.5} direction="column" sx={{ mb: 2 }}>
+        <Grid data-tour="settings-sections" container spacing={1.5} direction="column" sx={{ mb: 2 }}>
           {navTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (

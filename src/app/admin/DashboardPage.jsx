@@ -16,6 +16,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import {} from '@mui/icons-material';
 import { useAuthStore } from '../../store/authStore';
+import GuideButton from '../../components/guide/GuideButton';
 import { useAdminStore } from '../../store/adminStore';
 import { useCommonStore } from '../../store/commonStore';
 import CommonRankingTable from '../components/CommonRankingTable';
@@ -104,22 +105,26 @@ export function DashboardPage() {
             </Box>
 
             {isAdmin && (
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={handleLogout}
-                sx={{
-                  color: '#F4F4FF',
-                  borderColor: 'rgba(255, 255, 255, 0.2)',
-                  textTransform: 'none',
-                  '&:hover': {
-                    borderColor: '#F4F4FF',
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                  },
-                }}
-              >
-                Log out
-              </Button>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto', flexShrink: 0 }}>
+                <GuideButton />
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleLogout}
+                  data-tour="logout"
+                  sx={{
+                    color: '#F4F4FF',
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                    textTransform: 'none',
+                    '&:hover': {
+                      borderColor: '#F4F4FF',
+                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    },
+                  }}
+                >
+                  Log out
+                </Button>
+              </Box>
             )}
           </Box>
         </Container>
@@ -131,7 +136,7 @@ export function DashboardPage() {
 
         {/* Statistics Cards */}
         <Box display="flex" gap={2} mb={3}>
-          <Card sx={styles.totalStudentsCard}>
+          <Card data-tour="admin-stats" sx={styles.totalStudentsCard}>
             <CardContent sx={{ textAlign: 'center', p: 2, '&:last-child': { pb: 2 } }}>
               <Typography variant="body2">
                 Total Students
@@ -164,7 +169,7 @@ export function DashboardPage() {
           <Typography variant="h6" sx={styles.analyticsTitle}>
             Analytics
           </Typography>
-          <Card sx={styles.analyticsCard}>
+          <Card data-tour="admin-analytics" sx={styles.analyticsCard}>
             <CardContent sx={{ p: 2 }}>
               <Grid container spacing={3}>
               <Grid item xs={4}>
@@ -217,7 +222,7 @@ export function DashboardPage() {
               Open Page →
             </Button>
           </Box>
-          <Card sx={styles.analyticsCard}>
+          <Card data-tour="admin-ranking" sx={styles.analyticsCard}>
             <CardContent sx={{ p: 2 }}>
               {loadingRankings ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>

@@ -68,10 +68,10 @@ const AssignStudentsDrawer = ({
             </Typography>
             <Box sx={{}}> 
               <Typography variant="body1" sx={{ 
-                color: rule?.type === 'Merit' ? '#00D377' : rule?.type === 'Demerit' ? '#EB2B4B' : '#9266FF',
+                color: rule?.points > 0 ? '#00D377' : rule?.points < 0 ? '#EB2B4B' : '#9266FF',
                 fontWeight: 600,
               }}>
-                {rule?.type === 'Merit' ? '+' : rule?.type === 'Demerit' ? '-' : ''}{rule?.points}
+                {rule?.points > 0 ? '+' : ''}{rule?.points}
               </Typography>
             </Box>
           </Box>

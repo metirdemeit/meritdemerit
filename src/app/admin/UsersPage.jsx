@@ -35,7 +35,7 @@ export function UsersPage() {
           </Box>
 
           <Box display="flex" gap={2}>
-            <ButtonGroup fullWidth variant="contained" aria-label="users mode toggle">
+            <ButtonGroup data-tour="users-toggle" fullWidth variant="contained" aria-label="users mode toggle">
               <Button
                 variant={mode === 'students' ? 'contained' : 'outlined'}
                 onClick={() => setMode('students')}

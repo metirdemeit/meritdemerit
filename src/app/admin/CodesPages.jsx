@@ -282,6 +282,7 @@ export function CodesPages() {
       <Container maxWidth="lg" sx={{ px: 2 }}>
         {/* Add Rule Button */}
         <Button
+          data-tour="codes-add"
           fullWidth
           variant="contained"
           startIcon={<Add />}
@@ -302,6 +303,7 @@ export function CodesPages() {
 
         {/* Rules List */}
         <Card
+          data-tour="codes-list"
           sx={{
             background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
           backdropFilter: 'blur(10px)',

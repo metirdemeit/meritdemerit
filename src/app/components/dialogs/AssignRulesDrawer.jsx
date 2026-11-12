@@ -81,8 +81,8 @@ export function AssignRulesDrawer({
                     <Typography variant="body2" sx={{ color: '#F4F4FF' }}>
                       {rule.description}
                     </Typography>
-                     <Typography variant="caption" sx={{ color: rule.type === 'Merit' ? '#00D377' : rule.type === 'Demerit' ? '#EB2B4B' : '#9266FF' }}>
-                       {rule.points} points
+                     <Typography variant="caption" sx={{ color: rule.points > 0 ? '#00D377' : rule.points < 0 ? '#EB2B4B' : '#9266FF' }}>
+                       {rule.points > 0 ? '+' : ''}{rule.points} points
                      </Typography>
                   </Box>
                 }

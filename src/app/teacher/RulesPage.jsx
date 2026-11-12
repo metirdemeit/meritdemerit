@@ -145,7 +145,7 @@ export function RulesPage() {
         </Box>
 
         {/* Rules List */}
-        <Card sx={{
+        <Card data-tour="rules-list" sx={{
           background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
           borderRadius: 2,
           border: '1px solid rgba(146, 102, 255, 0.2)',

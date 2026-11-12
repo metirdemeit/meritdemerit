@@ -93,6 +93,7 @@ const BottomNavbar = () => {
         {navItems.map((item) => (
           <BottomNavigationAction
             key={item.value}
+            data-tour={`nav-${item.value.split('/').pop()}`}
             label={item.label}
             value={item.value}
             icon={item.icon}

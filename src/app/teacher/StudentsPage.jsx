@@ -379,7 +379,7 @@ export function StudentsPage() {
           </Box>
 
           {/* Toggle buttons: All Classes / My Homeroom Class */}
-          <ButtonGroup fullWidth size="small" variant="contained" sx={{ mt: 1 }}>
+          <ButtonGroup data-tour="teacher-modes" fullWidth size="small" variant="contained" sx={{ mt: 1 }}>
             <Button
               startIcon={<Dashboard />}
               variant={viewMode === 'all' ? 'contained' : 'outlined'}
@@ -502,12 +502,12 @@ export function StudentsPage() {
           /* РЕЖИМ 2: ВСЕ КЛАССЫ И ПОИСК */
           <>
             {!selectedClassId && (
-              <Box sx={{ mb: 3 }}>
+              <Box data-tour="teacher-search" sx={{ mb: 3 }}>
                 <SearchBar placeholder="Search students..." value={searchQuery} onChange={setSearchQuery} />
               </Box>
             )}
 
-            <Card sx={{
+            <Card data-tour="teacher-classes" sx={{
               background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
               borderRadius: 2,
               border: '1px solid rgba(146, 102, 255, 0.2)',

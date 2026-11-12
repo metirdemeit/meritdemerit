@@ -16,6 +16,7 @@ import toast from 'react-hot-toast';
 import { useTeacherStore } from '../../store/teacherStore';
 import { isClassMatch } from '../../utils/classNames';
 import { useAuthStore } from '../../store/authStore';
+import GuideButton from '../../components/guide/GuideButton';
 import { useCommonStore } from '../../store/commonStore';
 import DeleteConfirmationDialog from '../components/dialogs/DeleteConfirmationDialog';
 import AssignmentTable from '../components/AssignmentTable';
@@ -149,21 +150,24 @@ export function DashboardPage() {
                 Welcome back, {user?.first_name} {user?.last_name}
               </Typography>
             </Box>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleLogout}
-              sx={{
-                ml: 'auto',
-                flexShrink: 0,
-                color: '#F4F4FF',
-                borderColor: 'rgba(255, 255, 255, 0.2)',
-                boxShadow: 'none',
-                '&:hover': { borderColor: '#F4F4FF', backgroundColor: 'rgba(255, 255, 255, 0.08)' },
-              }}
-            >
-              Log out
-            </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto', flexShrink: 0 }}>
+              <GuideButton />
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleLogout}
+                data-tour="logout"
+                sx={{
+                  flexShrink: 0,
+                  color: '#F4F4FF',
+                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                  boxShadow: 'none',
+                  '&:hover': { borderColor: '#F4F4FF', backgroundColor: 'rgba(255, 255, 255, 0.08)' },
+                }}
+              >
+                Log out
+              </Button>
+            </Box>
           </Box>
         </Container>
       </Box>
@@ -198,7 +202,7 @@ export function DashboardPage() {
         )}
 
         {/* Points History */}
-        <Card sx={{ 
+        <Card data-tour="teacher-history" sx={{ 
           background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
           borderRadius: 2,
           border: '1px solid rgba(146, 102, 255, 0.2)',

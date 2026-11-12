@@ -14,8 +14,9 @@ export default function CodeCard({
   onSelect,
   showActions = true,
 }) {
-  const isMerit = rule.type?.toLowerCase() === 'merit' || rule.points > 0;
-  const isDemerit = rule.type?.toLowerCase() === 'demerit' || rule.points < 0;
+  // The sign of the points decides; `type` can be stale on older rules.
+  const isMerit = Number(rule.points) > 0;
+  const isDemerit = Number(rule.points) < 0;
   return (
     <Card
       onClick={onSelect}
@@ -76,7 +77,7 @@ export default function CodeCard({
             </Typography>
             <Box sx={{ display: 'flex', gap: 0.8, alignItems: 'center', mt: 0.5, flexWrap: 'wrap' }}>
               <Typography variant="caption" sx={{ color: '#777' }}>
-                {rule.type}
+                {isDemerit ? 'demerit' : 'merit'}
               </Typography>
               {rule.access_level && rule.access_level !== 'all' && (
                 <Typography

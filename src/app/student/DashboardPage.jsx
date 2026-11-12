@@ -11,6 +11,8 @@ import {
 } from '@mui/material';
 import { Person, History as HistoryIcon } from '@mui/icons-material';
 import { useAuthStore } from '../../store/authStore';
+import GuideButton from '../../components/guide/GuideButton';
+import { getStudentLevel } from '../../utils/studentLevels';
 import { useStudentStore } from '../../store/studentStore';
 import ScoringCountdownWidget from '../components/ScoringCountdownWidget';
 import AssignmentTable from '../components/AssignmentTable';
@@ -96,6 +98,9 @@ export function DashboardPage() {
     );
   }
 
+  const studentPoints = typeof profile?.points === 'number' ? profile.points : (profile?.total_points || 0);
+  const pointsLevel = getStudentLevel(studentPoints);
+
   return (
     <Box sx={{ minHeight: '100vh', pb: 4 }}>
       {/* Header Section */}
@@ -128,22 +133,26 @@ export function DashboardPage() {
               </Box>
             </Box>
 
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleLogout}
-              sx={{
-                color: '#F4F4FF',
-                borderColor: 'rgba(255, 255, 255, 0.2)',
-                textTransform: 'none',
-                '&:hover': {
-                  borderColor: '#F4F4FF',
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                },
-              }}
-            >
-              Log out
-            </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto', flexShrink: 0 }}>
+              <GuideButton />
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleLogout}
+                data-tour="logout"
+                sx={{
+                  color: '#F4F4FF',
+                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                  textTransform: 'none',
+                  '&:hover': {
+                    borderColor: '#F4F4FF',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  },
+                }}
+              >
+                Log out
+              </Button>
+            </Box>
           </Box>
         </Container>
       </Box>
@@ -153,7 +162,7 @@ export function DashboardPage() {
         <ScoringCountdownWidget />
 
         {/* Карточка профиля студента */}
-        <Card sx={{ 
+        <Card data-tour="student-profile" sx={{ 
           background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
           borderRadius: 2,
           border: '1px solid rgba(146, 102, 255, 0.2)',
@@ -185,9 +194,14 @@ export function DashboardPage() {
                 border: '1px solid rgba(0,211,119,0.25)'
               }}>
                 <Typography variant="caption" sx={{ color: '#5A5984' }}>Points</Typography>
-                <Typography variant="h5" sx={{ color: '#00D377', fontWeight: 700 }}>
-                  {typeof profile?.points === 'number' ? profile.points : (profile?.total_points || 0)}
+                <Typography variant="h5" sx={{ color: pointsLevel?.color || '#00D377', fontWeight: 700 }}>
+                  {studentPoints}
                 </Typography>
+                {pointsLevel && (
+                  <Typography variant="caption" sx={{ display: 'inline-block', mt: 0.5, px: 1, py: 0.25, borderRadius: 1, fontWeight: 600, color: pointsLevel.color, background: pointsLevel.bg, border: `1px solid ${pointsLevel.border}` }}>
+                    {pointsLevel.name}
+                  </Typography>
+                )}
                 <Typography variant="caption" sx={{ color: '#5A5984' }}>Class</Typography>
                 <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
                   {profile?.school_class?.name || profile?.class_name || 'N/A'}
@@ -198,7 +212,7 @@ export function DashboardPage() {
         </Card>
 
         {/* Full Points History Section */}
-        <Card sx={{ 
+        <Card data-tour="student-history" sx={{ 
           background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
           borderRadius: 2,
           border: '1px solid rgba(146, 102, 255, 0.2)',
