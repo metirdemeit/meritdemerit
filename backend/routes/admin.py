@@ -13,6 +13,7 @@ from backend.models import (
     AdminPointHistory, DetentionHistory, ExamWeek, LimitMD, Intervention
 )
 from backend.utils.rules_helper import check_rule_limits_and_permissions, auto_trigger_interventions
+from backend.utils.notify import notify_assignment
 from backend.utils.ranking_helper import recalculate_ranks, revert_student_rank_snapshot
 from backend.utils.security import get_current_admin, enforce_https, hash_password
 from backend.utils.google_sheets import get_sheets_service, ensure_sheet, write_values
@@ -704,6 +705,10 @@ async def admin_assign_points(assignment: AdminAssignment, current_admin: Admin 
     # Recalculate and persist global student ranks
     await recalculate_ranks()
 
+    # 4. Telegram notifications (background; never blocks the response)
+    fresh = await Student.filter(id__in=[s.id for s in students_to_update])
+    await notify_assignment(fresh, rules, f"{current_admin.first_name} {current_admin.last_name or ''}".strip(), assignment.comment or "", total_points_map)
+
     return {
         "message": f"Points assigned successfully to {len(students_to_update)} students using {len(rules)} rules.",
         "students_affected": len(students_to_update),
@@ -1120,6 +1125,10 @@ async def admin_workflow_assign_points(assignment: AdminAssignment, current_admi
 
     # 3. Recalculate and persist global student ranks
     await recalculate_ranks()
+
+    # 4. Telegram notifications (background; never blocks the response)
+    fresh = await Student.filter(id__in=[s.id for s in students_to_update])
+    await notify_assignment(fresh, rules, f"{current_admin.first_name} {current_admin.last_name or ''}".strip(), assignment.comment or "", total_points_map)
 
     return {
         "message": f"Points assigned successfully to {len(students_to_update)} students using {len(rules)} rules.",

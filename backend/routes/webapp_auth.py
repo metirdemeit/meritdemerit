@@ -4,15 +4,13 @@ import json
 import logging
 import os
 import urllib.parse
-from collections import defaultdict
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Union
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, Field, model_validator
 
-from backend.models import Student, Teacher, Admin
+from backend.models import Admin, LoginAttempt, Student, Teacher
 from backend.utils.security import (
     create_access_token,
     enforce_https,
@@ -29,27 +27,15 @@ logger = logging.getLogger(__name__)
 
 # --- Brute Force Protection ---
 
-@dataclass
-class _AttemptRecord:
-    count: int = 0
-    ban_until: datetime | None = None
-    ban_count: int = 0
-
-
 class _LoginRateLimiter:
     """
-    In-memory brute force protection.
-    After MAX_ATTEMPTS failed logins the *key* is banned
-    (Telegram ID if есть, иначе IP) на прогрессивно
-    увеличивающийся период.
-    Ban durations (minutes): 5, 15, 45, 120, 240 — each subsequent ban is longer.
-    On successful login the counter is fully reset.
+    Brute-force protection backed by the login_attempt table, so lockouts
+    survive restarts. After MAX_ATTEMPTS failed logins the key (Telegram ID
+    if known, otherwise IP) is locked for a progressively longer period.
+    Ban durations (minutes): 5, 15, 45, 120, 240. A successful login resets it.
     """
     MAX_ATTEMPTS = 3
     BAN_DURATIONS = [5, 15, 45, 120, 240]  # minutes
-
-    def __init__(self):
-        self._records: dict[str, _AttemptRecord] = defaultdict(_AttemptRecord)
 
     def _now(self) -> datetime:
         return datetime.now(timezone.utc)
@@ -58,41 +44,45 @@ class _LoginRateLimiter:
         idx = min(ban_count, len(self.BAN_DURATIONS) - 1)
         return self.BAN_DURATIONS[idx]
 
-    def check(self, key: str) -> None:
-        """Raise 429 if the key (telegram_id или IP) is currently banned."""
-        rec = self._records[key]
-        now = self._now()
-        if rec.ban_until is None:
+    @staticmethod
+    def _aware(dt: datetime | None) -> datetime | None:
+        if dt is not None and dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
+
+    async def check(self, key: str) -> None:
+        """Raise 429 if the key is currently locked."""
+        rec = await LoginAttempt.get_or_none(key=key)
+        ban_until = self._aware(rec.ban_until) if rec else None
+        if not rec or ban_until is None:
             return
-        if now < rec.ban_until:
-            remaining = int((rec.ban_until - now).total_seconds())
+        now = self._now()
+        if now < ban_until:
+            remaining = int((ban_until - now).total_seconds())
             mins, secs = divmod(remaining, 60)
-            detail = (
-                f"Too many failed sign-in attempts. "
-                f"Try again in {mins} min {secs} s."
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Too many failed sign-in attempts. Try again in {mins} min {secs} s.",
             )
-            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=detail)
-        # Ban expired — reset attempt counter but keep ban_count for next offence
+        # Lock expired: reset the attempt counter, keep ban_count for the next offence
         rec.count = 0
         rec.ban_until = None
+        await rec.save(update_fields=["count", "ban_until", "updated_at"])
 
-    def failure(self, key: str) -> None:
-        """Record a failed login attempt and apply a ban when the threshold is reached."""
-        rec = self._records[key]
+    async def failure(self, key: str) -> None:
+        """Record a failed attempt and lock the key when the threshold is reached."""
+        rec, _ = await LoginAttempt.get_or_create(key=key)
         rec.count += 1
         if rec.count >= self.MAX_ATTEMPTS:
             duration = self._ban_minutes(rec.ban_count)
             rec.ban_until = self._now() + timedelta(minutes=duration)
             rec.ban_count += 1
             rec.count = 0
-            logger.warning(
-                "[brute-force] key=%s banned for %d min (ban #%d)", key, duration, rec.ban_count
-            )
+            logger.warning("[brute-force] key=%s locked for %d min (lock #%d)", key, duration, rec.ban_count)
+        await rec.save()
 
-    def success(self, key: str) -> None:
-        """Reset all counters on a successful login."""
-        if key in self._records:
-            del self._records[key]
+    async def success(self, key: str) -> None:
+        await LoginAttempt.filter(key=key).delete()
 
 
 _limiter = _LoginRateLimiter()
@@ -361,7 +351,7 @@ async def login_json(data: JsonLoginCredentials, request: Request):
     Login with plain JSON username/password (without Telegram linking).
     """
     key = _bruteforce_key_from_request(request, telegram_id=None)
-    _limiter.check(key)
+    await _limiter.check(key)
 
     if not data.username.strip() or not data.password.strip():
         raise HTTPException(
@@ -371,13 +361,13 @@ async def login_json(data: JsonLoginCredentials, request: Request):
 
     user = await authenticate_user(data.username, data.password)
     if not user:
-        _limiter.failure(key)
+        await _limiter.failure(key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
         )
 
-    _limiter.success(key)
+    await _limiter.success(key)
     role = get_user_role(user)
     return create_login_response(user, role)
 
@@ -391,7 +381,7 @@ async def first_time_login(data: TelegramLoginWithCredentials, request: Request)
     telegram_id = verified_telegram_id(_request_init_data(data.init_data, request))
 
     key = _bruteforce_key_from_request(request, telegram_id=telegram_id)
-    _limiter.check(key)
+    await _limiter.check(key)
     logger.info("[/login] telegram_id=%s, username=%s", telegram_id, data.username)
 
     if not data.username.strip() or not data.password.strip():
@@ -402,7 +392,7 @@ async def first_time_login(data: TelegramLoginWithCredentials, request: Request)
 
     user = await authenticate_user(data.username, data.password)
     if not user:
-        _limiter.failure(key)
+        await _limiter.failure(key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -422,7 +412,7 @@ async def first_time_login(data: TelegramLoginWithCredentials, request: Request)
             await user.save(update_fields=["telegram_id"])
             logger.info("[/login] Linked telegram_id=%s to %s (id=%s)", telegram_id, user.__class__.__name__, user.id)
 
-    _limiter.success(key)
+    await _limiter.success(key)
     role = get_user_role(user)
     return create_login_response(user, role)
 

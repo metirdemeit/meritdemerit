@@ -9,6 +9,7 @@ from backend.models import Teacher, Student, DisciplineRule, PointHistory, Admin
 from backend.utils.security import get_current_user, enforce_https
 from backend.utils.scoring import ensure_scoring_open
 from backend.utils.rules_helper import check_rule_limits_and_permissions, auto_trigger_interventions
+from backend.utils.notify import notify_assignment
 from backend.utils.ranking_helper import recalculate_ranks, revert_student_rank_snapshot
 
 router = APIRouter(dependencies=[Depends(enforce_https)])
@@ -162,6 +163,10 @@ async def assign_points(assignment: WorkflowAssignment, teacher: Teacher = Depen
 
     # 3. Recalculate and persist global student ranks
     await recalculate_ranks()
+
+    # 4. Telegram notifications (background; never blocks the response)
+    fresh = await Student.filter(id__in=[s.id for s in students_to_update])
+    await notify_assignment(fresh, rules, f"{teacher.first_name} {teacher.last_name or ''}".strip(), assignment.comment, total_points_map)
 
     return {
         "message": f"Points assigned successfully to {len(students_to_update)} students using {len(rules)} rules.",

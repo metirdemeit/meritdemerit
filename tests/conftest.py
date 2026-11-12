@@ -3,6 +3,7 @@ import os
 # Required before backend modules are imported.
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret")
 os.environ.setdefault("RUN_BOT", "false")
+os.environ.setdefault("NOTIFICATIONS_ENABLED", "false")
 
 import pytest
 from tortoise import Tortoise

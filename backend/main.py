@@ -94,6 +94,14 @@ async def lifespan(app: FastAPI):
             'ALTER TABLE "student" ADD COLUMN IF NOT EXISTS "previous_rank" INT',
             'ALTER TABLE "class" ADD COLUMN IF NOT EXISTS "current_rank" INT',
             'ALTER TABLE "class" ADD COLUMN IF NOT EXISTS "previous_rank" INT',
+            # Brute-force lockouts persisted in the database
+            """CREATE TABLE IF NOT EXISTS "login_attempt" (
+                "key"        VARCHAR(100) NOT NULL PRIMARY KEY,
+                "count"      INT NOT NULL DEFAULT 0,
+                "ban_count"  INT NOT NULL DEFAULT 0,
+                "ban_until"  TIMESTAMPTZ,
+                "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )""",
             # Rule type follows the sign of its points (old rules defaulted to 'merit')
             '''UPDATE "disciplinerule" SET "type" = CASE WHEN "points" < 0 THEN 'demerit' ELSE 'merit' END
                WHERE "type" IS DISTINCT FROM CASE WHEN "points" < 0 THEN 'demerit' ELSE 'merit' END''',

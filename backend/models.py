@@ -194,3 +194,18 @@ class SystemSetting(models.Model):
 
     class Meta:
         table = "system_setting"
+
+
+class LoginAttempt(models.Model):
+    """
+    Failed sign-in counter per key ("tg:<id>" or "ip:<addr>"). Stored in the
+    database so lockouts survive restarts and are shared by all instances.
+    """
+    key = fields.CharField(max_length=100, pk=True)
+    count = fields.IntField(default=0)
+    ban_count = fields.IntField(default=0)
+    ban_until = fields.DatetimeField(null=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "login_attempt"
