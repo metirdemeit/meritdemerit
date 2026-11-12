@@ -530,12 +530,12 @@ async def delete_teacher(teacher_id: int):
 
 # --- Rules CRUD ---
 
-@router.post("/rules", response_model=RuleResponse, status_code=status.HTTP_201_CREATED, summary="Create rule")
 def _type_for_points(points: int) -> str:
     """The sign of the points is what actually changes a student's score."""
     return "demerit" if points < 0 else "merit"
 
 
+@router.post("/rules", response_model=RuleResponse, status_code=status.HTTP_201_CREATED, summary="Create rule")
 async def create_rule(rule_data: RuleCreate):
     limit_data = rule_data.limit
     rule_dict = rule_data.model_dump(exclude={"limit"})

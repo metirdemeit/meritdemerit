@@ -58,3 +58,12 @@ async def test_rule_type_follows_points_sign(db):
     assert rule.type == "demerit"
     rule = await update_rule(rule.id, RuleUpdate(points=4))
     assert rule.type == "merit"
+
+
+def test_rule_routes_are_bound_to_the_right_handlers():
+    """Guards against a decorator ending up on a helper (POST /admin/rules once did)."""
+    from backend.routes.admin import router
+
+    handlers = {(r.path, tuple(sorted(r.methods))): r.endpoint.__name__ for r in router.routes}
+    assert handlers[("/rules", ("POST",))] == "create_rule"
+    assert handlers[("/rules/{rule_id}", ("PUT",))] == "update_rule"
