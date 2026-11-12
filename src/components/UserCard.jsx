@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { Edit, Delete } from '@mui/icons-material';
 import { getStudentLevel } from '../utils/studentLevels';
+import { clickableProps } from '../utils/a11y';
 
 export default function UserCard({ user, onEdit, onDelete, onClick, showActions = true }) {
   const initials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`;
@@ -19,13 +20,14 @@ export default function UserCard({ user, onEdit, onDelete, onClick, showActions 
 
   return (
     <Card
-      onClick={onClick}
+      {...clickableProps(onClick, `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username)}
       sx={{
         mb: 1.5,
         background: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
         border: level ? `1px solid ${level.border}` : '1px solid rgba(146, 102, 255, 0.18)',
         borderRadius: 2,
-        cursor: 'pointer'
+        cursor: onClick ? 'pointer' : 'default',
+        '&:focus-visible': { outline: '2px solid #9266FF', outlineOffset: 2 },
       }}
     >
       <CardContent sx={{ p: 2 }}>
@@ -67,7 +69,7 @@ export default function UserCard({ user, onEdit, onDelete, onClick, showActions 
           <Box flexGrow={1} overflow="hidden">
             <Box display="flex" alignItems="center" gap={1}>
               <Typography variant="body1" sx={{ color: 'white', fontWeight: 600 }} noWrap>
-                {user.first_name} {user.last_name}
+                {user.first_name} {user.last_name || ''}
               </Typography>
               {level && (
                 <Chip

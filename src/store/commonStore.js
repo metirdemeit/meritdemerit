@@ -75,7 +75,7 @@ export const useCommonStore = create((set, get) => ({
 
   // === STUDENTS ===
   fetchAllStudents: async (force = false) => {
-    if (get().allStudents?.length > 50 && !force) return get().allStudents;
+    if (get().allStudents?.length && !force) return get().allStudents;
 
     try {
       const data = await api.get('/students');

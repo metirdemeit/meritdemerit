@@ -108,7 +108,7 @@ export function DashboardPage() {
           top: 0,
           zIndex: 100,
           p: 2,
-          pt: 'calc(var(--tg-safe-area-inset-top, 0px) + 80px)',
+          pt: 'var(--app-safe-top)',
           pb: 2,
           mt: 0,
           mb: 2,

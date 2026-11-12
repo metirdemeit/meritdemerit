@@ -11,8 +11,10 @@ import {
   Button,
 } from '@mui/material';
 import { History as HistoryIcon } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTeacherStore } from '../../store/teacherStore';
+import { isClassMatch } from '../../utils/classNames';
 import { useAuthStore } from '../../store/authStore';
 import { useCommonStore } from '../../store/commonStore';
 import DeleteConfirmationDialog from '../components/dialogs/DeleteConfirmationDialog';
@@ -21,7 +23,12 @@ import ScoringCountdownWidget from '../components/ScoringCountdownWidget';
 import { School, WarningAmber } from '@mui/icons-material';
 
 export function DashboardPage() {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
   const { 
     profile,
     history,
@@ -31,21 +38,15 @@ export function DashboardPage() {
   } = useTeacherStore();
   const { students, fetchStudents } = useCommonStore();
 
-  const [selectedHomeroomClass, setSelectedHomeroomClass] = useState(() => {
-    return typeof window !== 'undefined' ? localStorage.getItem('teacher_homeroom_class') : null;
+  const [selectedHomeroomClass] = useState(() => {
+    try { return localStorage.getItem(`teacher_homeroom_class_${user?.id ?? 'anon'}`); } catch { return null; }
   });
-  const homeroomClass = selectedHomeroomClass || profile?.homeroom_class_name || user?.homeroom_class_name || '10-A';
+  const homeroomClass = selectedHomeroomClass || profile?.homeroom_class_name || user?.homeroom_class_name || '';
 
   // Loading для каждой секции
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
 
-  const isClassMatch = (s, targetClass) => {
-    const rawName = s.class_name || s.school_class?.name || s.class || '';
-    const name = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const target = (targetClass || '').toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^class/, '');
-    return name === target || name.replace(/^class/, '') === target;
-  };
 
   // Студенты закрепленного класса
   const homeroomStudents = (students || []).filter((s) => isClassMatch(s, homeroomClass));
@@ -131,7 +132,7 @@ export function DashboardPage() {
         top: 0,
         zIndex: 100,
           p: 2,
-          pt: 'calc(var(--tg-safe-area-inset-top, 0px) + 80px)',
+          pt: 'var(--app-safe-top)',
           pb: 2,
           mt: 0,
           mb: 2,
@@ -148,6 +149,21 @@ export function DashboardPage() {
                 Welcome back, {user?.first_name} {user?.last_name}
               </Typography>
             </Box>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleLogout}
+              sx={{
+                ml: 'auto',
+                flexShrink: 0,
+                color: '#F4F4FF',
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                boxShadow: 'none',
+                '&:hover': { borderColor: '#F4F4FF', backgroundColor: 'rgba(255, 255, 255, 0.08)' },
+              }}
+            >
+              Log out
+            </Button>
           </Box>
         </Container>
       </Box>

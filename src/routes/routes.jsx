@@ -1,23 +1,23 @@
-import React from "react";
+import { lazy } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 
-// Import pages
-import { LoginPage } from "../app/LoginPage";
-// Admin pages
-import { DashboardPage as AdminDashboardPage } from "../app/admin/DashboardPage";
-import { CodesPages as AdminCodesPages } from "../app/admin/CodesPages";
-import { SettingsPages as AdminSettingsPages } from "../app/admin/SettingsPages";
-import { UsersPage as AdminUsersPage } from "../app/admin/UsersPage";
-import { RankingPage as AdminRankingPage } from "../app/admin/RankingPage";
-// Student pages
-import { DashboardPage as StudentDashboardPage } from "../app/student/DashboardPage";
-import { HistoryPages as StudentHistoryPages } from "../app/student/HistoryPages";
+// Pages are loaded on demand: a student never downloads the admin screens.
+const page = (loader, name) => lazy(() => loader().then((m) => ({ default: m[name] })));
 
+const LoginPage = page(() => import("../app/LoginPage"), "LoginPage");
+// Admin pages
+const AdminDashboardPage = page(() => import("../app/admin/DashboardPage"), "DashboardPage");
+const AdminCodesPages = page(() => import("../app/admin/CodesPages"), "CodesPages");
+const AdminSettingsPages = page(() => import("../app/admin/SettingsPages"), "SettingsPages");
+const AdminUsersPage = page(() => import("../app/admin/UsersPage"), "UsersPage");
+const AdminRankingPage = page(() => import("../app/admin/RankingPage"), "RankingPage");
+// Student pages
+const StudentDashboardPage = page(() => import("../app/student/DashboardPage"), "DashboardPage");
 // Teacher pages
-import { DashboardPage as TeacherDashboardPage } from "../app/teacher/DashboardPage";
-import { StudentsPage as TeacherStudentsPage } from "../app/teacher/StudentsPage";
-import { RulesPage as TeacherRulesPage } from "../app/teacher/RulesPage";
+const TeacherDashboardPage = page(() => import("../app/teacher/DashboardPage"), "DashboardPage");
+const TeacherStudentsPage = page(() => import("../app/teacher/StudentsPage"), "StudentsPage");
+const TeacherRulesPage = page(() => import("../app/teacher/RulesPage"), "RulesPage");
 
 // Protected Route Component
 export const ProtectedRoute = ({ children, requiredRole }) => {

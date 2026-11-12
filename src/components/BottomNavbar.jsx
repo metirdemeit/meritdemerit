@@ -18,7 +18,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 const BottomNavbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
 
   const getNavItems = () => {
     if (!user) return [];
@@ -40,7 +40,7 @@ const BottomNavbar = () => {
       ]
     };
 
-    return items[user.role] || [];
+    return items[user.role === 'superadmin' ? 'admin' : user.role] || [];
   };
 
   const navItems = getNavItems();
@@ -53,6 +53,9 @@ const BottomNavbar = () => {
     navigate(newValue);
   };
 
+  // Highlight the tab for nested routes too (e.g. /admin/users/123).
+  const current = navItems.find((item) => location.pathname.startsWith(item.value))?.value ?? false;
+
   return (
     <Paper
       sx={{
@@ -62,18 +65,19 @@ const BottomNavbar = () => {
         right: 0,
         zIndex: 1000,
         backgroundImage: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
-        backgroundColor: 'linear-gradient(135deg, #0C0B21 0%, #1A1932 50%, #0E0D2A 100%)',
+        backgroundColor: '#0C0B21',
+        pb: 'var(--app-safe-bottom)',
         borderTop: '1px solid rgba(146, 102, 255, 0.2)',
         borderRadius: 0,
       }}
       elevation={8}
     >
       <BottomNavigation
-        value={location.pathname}
+        value={current}
         onChange={handleChange}
         sx={{
           backgroundColor: 'transparent',
-          height: '90px',
+          height: 'var(--app-nav-height)',
           '& .MuiBottomNavigationAction-root': {
             color: '#5A5984',
             '&.Mui-selected': {

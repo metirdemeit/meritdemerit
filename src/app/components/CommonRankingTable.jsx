@@ -79,14 +79,14 @@ export default function CommonRankingTable({ rankings = [] }) {
   const { user } = useAuthStore();
   const { allStudents, fetchAllStudents, students, classRankings, fetchClassRankings } = useCommonStore();
 
+  // Load the full roster and class ranking once per mount. Depending on the
+  // fetched arrays here caused an endless request loop (small schools have
+  // < 50 students, and an empty class ranking never becomes non-empty).
   useEffect(() => {
-    if (!allStudents || allStudents.length < 50) {
-      fetchAllStudents();
-    }
-    if (!classRankings || classRankings.length === 0) {
-      fetchClassRankings();
-    }
-  }, [fetchAllStudents, fetchClassRankings, allStudents, classRankings]);
+    // Fresh points on every visit (one request each), never in a loop.
+    fetchAllStudents(true);
+    fetchClassRankings();
+  }, [fetchAllStudents, fetchClassRankings]);
 
   const rankingsList = Array.isArray(rankings) ? rankings : [];
 
@@ -332,7 +332,7 @@ export default function CommonRankingTable({ rankings = [] }) {
               })
             ) : (
               displayItems.map((ranking, index) => {
-                const isMe = user?.id && String(ranking.id) === String(user.id);
+                const isMe = user?.role === 'student' && user?.id && String(ranking.id) === String(user.id);
 
                 return (
                   <TableRow 

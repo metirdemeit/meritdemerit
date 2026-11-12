@@ -13,7 +13,7 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
-import { SimpleLoadingScreen } from '../components/screens/SimpleLoadingScreen';
+import CircularProgress from '@mui/material/CircularProgress';
 
 export function LoginPage() {
   const { login } = useAuthStore();
@@ -66,10 +66,6 @@ export function LoginPage() {
     }
   };
 
-  if (loading) {
-    return <SimpleLoadingScreen message="Signing in..." />;
-  }
-
   return (
     <Container maxWidth="sm" sx={styles.container}>
       <Box sx={{ width: '100%', maxWidth: 400 }}>
@@ -95,6 +91,13 @@ export function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               sx={textFieldStyles}
+              autoFocus
+              inputProps={{
+                autoComplete: 'username',
+                autoCapitalize: 'none',
+                autoCorrect: 'off',
+                spellCheck: false,
+              }}
             />
             <TextField
               label="Password"
@@ -104,6 +107,7 @@ export function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               sx={textFieldStyles}
+              inputProps={{ autoComplete: 'current-password' }}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -128,7 +132,7 @@ export function LoginPage() {
               disabled={!username || !password || loading}
               sx={buttonStyles}
             >
-              Login
+              {loading ? <CircularProgress size={24} sx={{ color: '#F4F4FF' }} /> : 'Login'}
             </Button>
           </Box>
         </form>
@@ -208,11 +212,12 @@ const buttonStyles = {
 
 const styles = {
   container: {
-    minHeight: '100vh',
+    minHeight: '100dvh',
     display: 'flex',
     alignItems: 'center',
+    pt: 'var(--app-safe-top)',
+    pb: 'calc(var(--app-safe-bottom) + 32px)',
     justifyContent: 'center',
-    py: 4,
   },
   title: {
     color: '#ffffff',

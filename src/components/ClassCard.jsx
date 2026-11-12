@@ -1,9 +1,10 @@
 import { Card, Typography, Box } from '@mui/material';
+import { clickableProps } from '../utils/a11y';
 
 const ClassCard = ({ classItem, onClick }) => {
   return (
     <Card
-      onClick={onClick}
+      {...clickableProps(onClick, classItem?.name ? `Класс ${classItem.name}` : undefined)}
       sx={{
         aspectRatio: '1 / 1',
         borderRadius: '14px',
@@ -20,6 +21,7 @@ const ClassCard = ({ classItem, onClick }) => {
           border: '1px solid rgba(146, 102, 255, 0.6)',
           background: 'rgba(146, 102, 255, 0.08)',
         },
+        '&:focus-visible': { outline: '2px solid #9266FF', outlineOffset: 2 },
         '&:active': {
           transform: 'scale(0.96)',
         },

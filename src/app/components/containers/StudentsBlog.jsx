@@ -71,11 +71,13 @@ export function StudentsBlog() {
   }, [fetchClasses]);
 
   // Загружаем правила один раз при открытии диалога
+  // Fetch rules when the drawer opens (not on every `rules` change: an empty
+  // rule list would otherwise re-trigger the request forever).
   useEffect(() => {
-    if (rulesOpen && (!rules || rules.length === 0)) {
+    if (rulesOpen && !useCommonStore.getState().rules?.length) {
       fetchRules();
     }
-  }, [rulesOpen, fetchRules, rules]);
+  }, [rulesOpen, fetchRules]);
 
   useEffect(() => {
     if (selectedClassId) {

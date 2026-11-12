@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { api } from '../services/api';
 
+
+const HISTORY_PAGE_SIZE = 2000;
 export const useAdminStore = create((set, get) => ({
   // Справочники (кэшируем)
   teachers: [],
@@ -118,8 +120,8 @@ export const useAdminStore = create((set, get) => ({
   // === HISTORY ===
   fetchHistory: async () => {
     try {
-      // 1. Первая страница с максимальным разрешённым бэкендом размером size=100
-      const firstPageData = await api.get('/admin/history?page=1&size=100');
+      // 1. Первая страница (крупные страницы = меньше запросов к серверу)
+      const firstPageData = await api.get(`/admin/history?page=1&size=${HISTORY_PAGE_SIZE}`);
       if (!firstPageData) return null;
 
       const firstItems = Array.isArray(firstPageData) ? firstPageData : (firstPageData?.items || []);
@@ -146,7 +148,7 @@ export const useAdminStore = create((set, get) => ({
         const batch = remainingPages.slice(i, i + batchSize);
         const responses = await Promise.all(
           batch.map((p) =>
-            api.get(`/admin/history?page=${p}&size=100`, { skipErrorToast: true }).catch(() => null)
+            api.get(`/admin/history?page=${p}&size=${HISTORY_PAGE_SIZE}`, { skipErrorToast: true }).catch(() => null)
           )
         );
         responses.forEach((res) => {
@@ -183,9 +185,17 @@ export const useAdminStore = create((set, get) => ({
     }
   },
 
-  deleteHistoryRecord: async (id) => {
+  // Teacher and admin records can share an id, so the source must be sent too.
+  deleteHistoryRecord: async (id, source) => {
     if (!id) return;
-    await api.del(`/admin/history/${id}`);
+    const query = source ? `?source=${source}` : '';
+    await api.del(`/admin/history/${id}${query}`);
+    set((state) => ({
+      history: (state.history || []).filter(
+        (item) => !(item.id === id && (!source || (item.source || 'teacher') === source))
+      ),
+      totalHistoryCount: Math.max(0, (state.totalHistoryCount || 1) - 1),
+    }));
   },
 
   fetchHistoryRecord: async (id) => {

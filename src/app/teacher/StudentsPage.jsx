@@ -19,6 +19,8 @@ import {
 import { Person, ArrowBack, School, Dashboard, History as HistoryIcon, WarningAmber } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { useTeacherStore } from '../../store/teacherStore';
+import { isClassMatch } from '../../utils/classNames';
+import { useAuthStore } from '../../store/authStore';
 import { useCommonStore, sortClassesFixed } from '../../store/commonStore';
 import UserCard from '../../components/UserCard';
 import ClassCard from '../../components/ClassCard';
@@ -27,6 +29,7 @@ import { AssignRulesDrawer } from '../components/dialogs/AssignRulesDrawer';
 import { HomeroomStatsWidget } from './components/HomeroomStatsWidget';
 
 export function StudentsPage() {
+  const user = useAuthStore((state) => state.user);
   const {
     assignPoints,
     profile,
@@ -50,10 +53,16 @@ export function StudentsPage() {
   const [viewMode, setViewMode] = useState('all');
 
   // Закрепленный класс учителя (из localStorage, профиля бэкенда или переключенный временно)
+  // Per-user key: several teachers may share one browser.
+  const homeroomKey = `teacher_homeroom_class_${user?.id ?? 'anon'}`;
   const [selectedHomeroomClass, setSelectedHomeroomClass] = useState(() => {
-    return typeof window !== 'undefined' ? localStorage.getItem('teacher_homeroom_class') : null;
+    try { return localStorage.getItem(homeroomKey); } catch { return null; }
   });
-  const homeroomClass = selectedHomeroomClass || profile?.homeroom_class_name || '10-A';
+  const homeroomClass = selectedHomeroomClass || profile?.homeroom_class_name || user?.homeroom_class_name || '';
+
+  useEffect(() => {
+    fetchProfile?.();
+  }, [fetchProfile]);
 
   const [showRiskOnly, setShowRiskOnly] = useState(false);
 
@@ -136,11 +145,13 @@ export function StudentsPage() {
   }, [selectedClassId, fetchStudentsByClass]);
 
   // Load rules for drawer
+  // Fetch rules when the drawer opens (not on every `rules` change: an empty
+  // rule list would otherwise re-trigger the request forever).
   useEffect(() => {
-    if (rulesOpen && (!rules || rules.length === 0)) {
+    if (rulesOpen && !useCommonStore.getState().rules?.length) {
       fetchRules();
     }
-  }, [rulesOpen, fetchRules, rules]);
+  }, [rulesOpen, fetchRules]);
 
   // Search students with debounce
   useEffect(() => {
@@ -309,12 +320,6 @@ export function StudentsPage() {
     return '';
   }, [selectedStudentIds, students]);
 
-  const isClassMatch = (s, targetClass) => {
-    const rawName = s.class_name || s.school_class?.name || s.class || '';
-    const name = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const target = (targetClass || '').toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^class/, '');
-    return name === target || name.replace(/^class/, '') === target;
-  };
 
   const homeroomStudents = useMemo(() => {
     let list = sortStudentsAlphabetically(students.filter((s) => isClassMatch(s, homeroomClass)));
@@ -336,9 +341,7 @@ export function StudentsPage() {
 
   const handleHomeroomClassChange = (newClass) => {
     setSelectedHomeroomClass(newClass);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('teacher_homeroom_class', newClass);
-    }
+    try { localStorage.setItem(homeroomKey, newClass); } catch { /* private mode */ }
     toast.success(`Homeroom class set to ${newClass}`);
   };
 
@@ -353,7 +356,7 @@ export function StudentsPage() {
         top: 0,
         zIndex: 100,
         p: 2,
-        pt: 'calc(var(--tg-safe-area-inset-top, 0px) + 80px)',
+        pt: 'var(--app-safe-top)',
         pb: 2,
         mt: 0,
         mb: 2,
@@ -407,7 +410,7 @@ export function StudentsPage() {
                 borderColor: 'rgba(146, 102, 255, 0.3)',
               }}
             >
-              My Class ({homeroomClass})
+              {homeroomClass ? `My Class (${homeroomClass})` : 'My Class'}
             </Button>
           </ButtonGroup>
         </Container>

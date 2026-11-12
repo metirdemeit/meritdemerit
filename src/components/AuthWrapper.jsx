@@ -3,37 +3,40 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { SimpleLoadingScreen } from './screens/SimpleLoadingScreen';
 
-export default function AuthWrapper({ children }) {
-  const initialize = useAuthStore(state => state.initialize);
-  const logout = useAuthStore(state => state.logout);
-  const loading = useAuthStore(state => state.loading);
+// One session check per page load, even under StrictMode's double effects.
+let initPromise = null;
 
+export default function AuthWrapper({ children }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const init = async () => {
-      await initialize();
-      setReady(true);
-    };
+    let active = true;
+    initPromise ||= useAuthStore.getState().initialize();
+    initPromise.finally(() => {
+      if (active) setReady(true);
+    });
 
-    init();
-
+    let handling = false;
     const onUnauthorized = async () => {
-      const relogged = await useAuthStore.getState().tryAutoRelogin();
-      if (!relogged) {
-        logout();
+      if (handling) return; // several requests can fail with 401 at once
+      handling = true;
+      try {
+        const relogged = await useAuthStore.getState().tryAutoRelogin();
+        if (!relogged) useAuthStore.getState().logout();
+      } finally {
+        handling = false;
       }
     };
     window.addEventListener('unauthorized', onUnauthorized);
 
     return () => {
+      active = false;
       window.removeEventListener('unauthorized', onUnauthorized);
     };
-  }, [initialize, logout]);
+  }, []);
 
-
-  if (!ready || loading) {
-    return <SimpleLoadingScreen message="Loading..." />;
+  if (!ready) {
+    return <SimpleLoadingScreen message="Загрузка..." />;
   }
 
   return <>{children}</>;

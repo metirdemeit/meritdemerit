@@ -100,7 +100,7 @@ export default function AssignmentTable({
         </TableHead>
         <TableBody>
           {paginatedAssignments.map((assignment) => (
-            <TableRow key={assignment.id}>
+            <TableRow key={`${assignment.source || 'teacher'}-${assignment.id}`}>
               {hasStudentName && (
                 <TableCell sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.1)' }}>
                   {assignment.student_name}

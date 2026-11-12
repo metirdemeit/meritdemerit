@@ -5,7 +5,6 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { retrieveLaunchParams } from "@telegram-apps/sdk-react";
 import { App } from "@/app/App.jsx";
 import { init } from "@/init.js";
-import { Helmet } from "react-helmet";
 
 // ВНЕ Telegram мок окружения нужен только в DEV.
 // В проде не трогаем окружение, чтобы не ломать Mini App.
@@ -164,39 +163,30 @@ const root = ReactDOM.createRoot(document.getElementById("root"));
  * Senior pattern:
  * - App рендерится ВСЕГДА, даже если Telegram SDK упал
  * - Telegram SDK — это enhancement, а не gate
- * - При reload в Telegram initData пропадает → fallback режим
  */
 async function bootstrap() {
-  let telegramReady = false;
-
-  // Пытаемся инициализировать Telegram SDK
+  // Telegram SDK — это enhancement, а не gate: в обычном браузере просто пропускаем.
   try {
     let platform = "weba";
     let debug = import.meta.env.DEV;
+    let inTelegram = Boolean(window.Telegram?.WebApp?.initData);
     try {
       const launchParams = retrieveLaunchParams();
       platform = launchParams.tgWebAppPlatform || platform;
       debug = (launchParams.tgWebAppStartParam || "").includes("platformer_debug") || debug;
+      inTelegram = true;
     } catch {
-      // retrieveLaunchParams failed on page reload — safe fallback
+      // Не в Telegram — работаем как обычный сайт
     }
 
-    try {
-      await init({
-        debug,
-        eruda: false,
-        mockForMacOS: platform === "macos",
-      });
-      telegramReady = true;
-    } catch (initErr) {
-      if (window.Telegram?.WebApp || localStorage.getItem('tg_init_data')) {
-        telegramReady = true;
-      }
+    if (inTelegram || import.meta.env.DEV) {
+      // Никогда не держим пользователя на пустом экране дольше 3 секунд.
+      await Promise.race([
+        init({ debug, eruda: false, mockForMacOS: platform === "macos" }),
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+      ]);
     }
   } catch (e) {
-    if (window.Telegram?.WebApp || localStorage.getItem('tg_init_data')) {
-      telegramReady = true;
-    }
     if (import.meta.env.DEV) {
       console.warn("Telegram init fallback mode:", e);
     }
@@ -207,13 +197,7 @@ async function bootstrap() {
     <StrictMode>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Helmet>
-          <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0, viewport-fit=cover, minimum-scale=1.0, maximum-scale=1.0"
-          />
-        </Helmet>
-        <App telegramReady={telegramReady} />
+        <App />
       </ThemeProvider>
     </StrictMode>
   );

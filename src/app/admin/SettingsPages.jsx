@@ -226,12 +226,8 @@ export function SettingsPages() {
   const confirmDelete = async () => {
     if (selectedRecord) {
       try {
-        await deleteHistoryRecord(selectedRecord.id);
+        await deleteHistoryRecord(selectedRecord.id, selectedRecord.source);
         toast.success('Record deleted');
-        const data = await fetchHistory();
-        if (!data) {
-          setErrorHistory('Failed to reload history');
-        }
       } catch {
         toast.error('Failed to delete record');
       } finally {
@@ -799,7 +795,7 @@ export function SettingsPages() {
           top: 0,
           zIndex: 100,
           p: 2,
-          pt: 'calc(var(--tg-safe-area-inset-top, 0px) + 80px)',
+          pt: 'var(--app-safe-top)',
           pb: 2,
           mt: 0,
           mb: 2,

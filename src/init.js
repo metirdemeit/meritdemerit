@@ -18,6 +18,21 @@ import {
  * Initializes the application and configures its dependencies safely for Desktop & Mobile.
  */
 export async function init(options) {
+  // Native Telegram WebApp object: tell Telegram we're ready and match its chrome
+  // to the app's dark palette. All of this is a no-op in a regular browser.
+  try {
+    const tg = window.Telegram?.WebApp;
+    if (tg?.initData) {
+      tg.ready?.();
+      tg.expand?.();
+      if (tg.isVersionAtLeast?.('6.1')) {
+        tg.setHeaderColor?.('#0C0B21');
+        tg.setBackgroundColor?.('#0C0B21');
+      }
+      if (tg.isVersionAtLeast?.('7.10')) tg.setBottomBarColor?.('#0C0B21');
+    }
+  } catch { /* ignore */ }
+
   // Set @telegram-apps/sdk-react debug mode and initialize it.
   try {
     setDebug(options.debug);
