@@ -92,9 +92,9 @@ export function CodesPages() {
     if (rule) {
       setEditingRule(rule);
       setFormData({
-        type: rule.type || 'merit',
+        type: rule.points < 0 ? 'demerit' : 'merit',
         description: rule.description || '',
-        points: rule.points || '',
+        points: rule.points ? Math.abs(rule.points) : '',
         access_level: rule.access_level || 'all',
         hasLimit: !!rule.limit,
         max_uses: rule.limit?.max_uses || 1,
@@ -137,10 +137,13 @@ export function CodesPages() {
 
   const handleSubmit = async () => {
     try {
+      // The Type picker sets the sign: admins type "3" and choose Demerit for -3.
+      const type = formData.type || 'merit';
+      const amount = Math.abs(parseInt(formData.points, 10) || 0);
       const payload = {
         description: formData.description,
-        points: parseInt(formData.points, 10),
-        type: formData.type || 'merit',
+        points: type === 'demerit' ? -amount : amount,
+        type,
         access_level: formData.access_level || 'all',
         limit: formData.hasLimit
           ? {

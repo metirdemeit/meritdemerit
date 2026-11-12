@@ -5,6 +5,7 @@ import { Close } from '@mui/icons-material';
 import { useAuthStore } from '../../store/authStore';
 import { useGuideStore, isGuideDone } from '../../store/guideStore';
 import { GUIDE_STEPS, roleKey } from './guideSteps';
+import { openGuide } from '../../utils/openGuide';
 
 const PAD = 8;          // spotlight padding around the target
 const GAP = 14;         // distance between spotlight and card
@@ -219,9 +220,13 @@ export default function GuideTour() {
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {!isLast && (
+          {!isLast ? (
             <Button onClick={finish} size="small" sx={{ color: '#8E8DAA', boxShadow: 'none', px: 1, minWidth: 0, '&:hover': { boxShadow: 'none' } }}>
               Skip
+            </Button>
+          ) : (
+            <Button onClick={openGuide} size="small" sx={{ color: '#B9A4FF', boxShadow: 'none', px: 1, minWidth: 0, '&:hover': { boxShadow: 'none' } }}>
+              Full guide
             </Button>
           )}
           <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>

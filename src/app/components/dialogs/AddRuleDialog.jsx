@@ -88,6 +88,8 @@ const AddRuleDialog = ({
             <TextField
               fullWidth
               label="Points"
+              helperText={formData.type === 'demerit' ? 'Will be subtracted' : 'Will be added'}
+              inputProps={{ min: 1 }}
               type="number"
               value={formData.points ?? ''}
               onChange={(e) => setFormData({ ...formData, points: e.target.value })}

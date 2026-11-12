@@ -14,6 +14,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import CircularProgress from '@mui/material/CircularProgress';
+import { openGuide } from '../utils/openGuide';
 
 export function LoginPage() {
   const { login } = useAuthStore();
@@ -133,6 +134,17 @@ export function LoginPage() {
             </Button>
           </Box>
         </form>
+
+        <Box sx={{ textAlign: 'center', mt: 3 }}>
+          <Button
+            variant="text"
+            size="small"
+            onClick={openGuide}
+            sx={{ color: '#8E8DAA', boxShadow: 'none', '&:hover': { boxShadow: 'none', color: '#B9A4FF', background: 'transparent' } }}
+          >
+            How to use the app
+          </Button>
+        </Box>
 
         {import.meta.env.DEV && (
           <Box sx={{ mt: 3 }}>

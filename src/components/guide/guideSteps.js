@@ -31,7 +31,7 @@ export const GUIDE_STEPS = {
     {
       route: '/student/dashboard',
       title: 'All set',
-      body: 'Think a point was given by mistake? Talk to the teacher who gave it — their name is in your history. You can replay this guide with the “?” button at the top.',
+      body: 'Think a point was given by mistake? Talk to the teacher who gave it — their name is in your history. You can replay this tour with the “?” button at the top, or open the full illustrated guide below.',
     },
   ],
 
@@ -80,7 +80,7 @@ export const GUIDE_STEPS = {
     {
       route: '/teacher/dashboard',
       title: 'All set',
-      body: 'If the administration closes point assignment or the deadline passes, you will see it at the top of the page. You can replay this guide with the “?” button at the top.',
+      body: 'If the administration closes point assignment or the deadline passes, you will see it at the top of the page. You can replay this tour with the “?” button at the top, or open the full illustrated guide below.',
     },
   ],
 
@@ -135,7 +135,7 @@ export const GUIDE_STEPS = {
     {
       route: '/admin/dashboard',
       title: 'All set',
-      body: 'When a student drops to 50 points or below, an intervention is created automatically — find it in Settings → Interventions & Alerts. You can replay this guide with the “?” button at the top.',
+      body: 'When a student drops to 50 points or below, an intervention is created automatically — find it in Settings → Interventions & Alerts. You can replay this tour with the “?” button at the top, or open the full illustrated guide below.',
     },
   ],
 };

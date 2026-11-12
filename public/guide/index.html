@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E0D22">
+<link rel="icon" href="/favicon.ico">
+<title>Merits &amp; Demerits Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: narrow reading column; role sections pair numbered steps with a phone-framed screenshot. */
+:root {
+  --bg: #F6F5FB;
+  --surface: #FFFFFF;
+  --ink: #17152E;
+  --muted: #5E5B7A;
+  --line: #E2DFF0;
+  --accent: #6A3EF0;
+  --accent-soft: #EEE8FF;
+  --merit: #0E9E5E;
+  --standard: #B98400;
+  --demerit: #D93A44;
+  --critical: #A0182A;
+  --phone: #0C0B21;
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E0D22; --surface: #17152F; --ink: #F1EFFF; --muted: #A4A1C6; --line: #2C2950;
+    --accent: #A98BFF; --accent-soft: #241F48; --merit: #2FD18A; --standard: #F2C14E;
+    --demerit: #FF6B73; --critical: #FF4258; --phone: #05040F; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E0D22; --surface: #17152F; --ink: #F1EFFF; --muted: #A4A1C6; --line: #2C2950;
+  --accent: #A98BFF; --accent-soft: #241F48; --merit: #2FD18A; --standard: #F2C14E;
+  --demerit: #FF6B73; --critical: #FF4258; --phone: #05040F; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 16px/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 40px 72px; display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(2rem, 5vw, 3.2rem); letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.5rem, 3.4vw, 2.1rem); letter-spacing: -0.01em; }
+h3 { font-size: 1.15rem; }
+p { margin: 0; }
+.eyebrow { font-size: .78rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.lead { font-size: 1.12rem; color: var(--muted); max-width: 62ch; }
+
+header { display: grid; gap: 18px; }
+.roles { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.roles a {
+  text-decoration: none; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-weight: 500;
+}
+.roles a:hover, .roles a:focus-visible { border-color: var(--accent); outline: none; color: var(--accent); }
+
+.ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; align-items: start; }
+.way { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px; display: grid; gap: 10px; align-content: start; }
+.way h3 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.way ul { margin: 0; padding-left: 1.1em; color: var(--muted); display: grid; gap: 4px; }
+.tag { font-family: var(--font-body); font-size: .75rem; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
+
+.scale-block { display: grid; gap: 18px; }
+.scale { display: grid; grid-template-columns: 10fr 40fr 25fr 24fr 31fr 31fr 38fr; border-radius: 10px; overflow: hidden; height: 18px; }
+.scale span:nth-child(1) { background: var(--critical); }
+.scale span:nth-child(2) { background: var(--demerit); }
+.scale span:nth-child(3) { background: var(--demerit); opacity: .72; }
+.scale span:nth-child(4) { background: var(--demerit); opacity: .45; }
+.scale span:nth-child(5) { background: var(--standard); }
+.scale span:nth-child(6) { background: var(--merit); opacity: .65; }
+.scale span:nth-child(7) { background: var(--merit); }
+.scale-axis { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: -10px; }
+.levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0 24px; margin: 0; padding: 0; list-style: none; }
+.levels li { display: grid; grid-template-columns: 12px 1fr auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.levels .dot { width: 12px; height: 12px; border-radius: 50%; }
+.levels .pts { font-variant-numeric: tabular-nums; color: var(--muted); font-size: .9rem; }
+.plain { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.plain li { padding: 9px 0; border-bottom: 1px solid var(--line); }
+.note { background: var(--accent-soft); border-radius: 12px; padding: 14px 18px; color: var(--ink); font-size: .95rem; }
+
+.role { display: grid; gap: 28px; scroll-margin-top: 24px; }
+.role-head { display: grid; gap: 8px; }
+.task { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 32px; align-items: start; padding-top: 28px; border-top: 1px solid var(--line); }
+.task.flip { grid-template-columns: 240px minmax(0, 1fr); }
+.task-text { display: grid; gap: 14px; min-width: 0; }
+.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 12px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start; }
+.steps li::before {
+  content: counter(s); font-family: var(--font-display); font-weight: 700; font-size: .9rem;
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent);
+}
+.ui { font-weight: 600; }
+figure { margin: 0; justify-self: center; width: 100%; max-width: 240px; }
+.phone { background: var(--phone); border-radius: 30px; padding: 8px; box-shadow: 0 18px 40px -22px rgba(20, 10, 60, .5); }
+.phone img { display: block; width: 100%; height: auto; border-radius: 23px; }
+figcaption { font-size: .82rem; color: var(--muted); text-align: center; margin-top: 10px; }
+
+.faq { display: grid; gap: 10px; scroll-margin-top: 24px; }
+.faq h2 { margin-bottom: 6px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+summary { cursor: pointer; font-weight: 600; }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+details p { margin-top: 10px; color: var(--muted); }
+footer { color: var(--muted); font-size: .85rem; }
+
+@media (max-width: 720px) {
+  .task, .task.flip { grid-template-columns: 1fr; gap: 20px; }
+  .task.flip figure { order: 2; }
+  figure { max-width: 220px; }
+  .wrap { gap: 44px; padding-block: 28px 56px; }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+
+/* Standalone page: own safe-area padding and a link back to the app. */
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+.back { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 600; text-decoration: none; width: fit-content; }
+.back:hover, .back:focus-visible { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="/">← Back to the app</a>
+    <span class="eyebrow">School user guide</span>
+    <h1>Merits &amp; Demerits: how to use it</h1>
+    <p class="lead">The school points system. Teachers give merits for good work and demerits for breaking rules, students see their points and history, and the administration keeps an eye on rankings and students at risk. Pick your role.</p>
+    <nav class="roles" aria-label="Roles">
+      <a href="#student">I'm a student</a>
+      <a href="#teacher">I'm a teacher</a>
+      <a href="#admin">I'm an admin</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+  </header>
+
+  <section class="ways" aria-label="How to open the app">
+    <div class="way">
+      <h3>In Telegram <span class="tag">easiest</span></h3>
+      <ul>
+        <li>Open the school bot and tap <span class="ui">Open Merit &amp; Demerit</span>.</li>
+        <li>The first time, sign in with the username and password the school gave you.</li>
+        <li>After that you are signed in automatically, no password needed.</li>
+      </ul>
+    </div>
+    <div class="way">
+      <h3>In a browser</h3>
+      <ul>
+        <li>Open the app link on your phone or computer.</li>
+        <li>Sign in with your username and password.</li>
+        <li>On a shared device, tap <span class="ui">Log out</span> when you are done.</li>
+      </ul>
+    </div>
+    <figure>
+      <div class="phone"><img src="img/login.jpg" alt="Sign-in screen with Username and Password fields and a Login button" width="540" height="1169"></div>
+      <figcaption>Sign-in screen</figcaption>
+    </figure>
+  </section>
+
+  <section class="scale-block" aria-labelledby="levels-h">
+    <div class="role-head">
+      <span class="eyebrow">What the points mean</span>
+      <h2 id="levels-h">Student levels</h2>
+      <p class="lead">A student's level depends on their total points and shows as a coloured badge next to their name. Merits move a student right on the scale, demerits move them left.</p>
+    </div>
+    <div class="scale" role="img" aria-label="Level scale from Critical (10 and below) to Merit Level 2 (162 and above)">
+      <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="scale-axis" aria-hidden="true"><span>0</span><span>100</span><span>200</span></div>
+    <ul class="levels">
+      <li><span class="dot" style="background:var(--merit)"></span>Merit Level 2<span class="pts">162+</span></li>
+      <li><span class="dot" style="background:var(--merit);opacity:.65"></span>Merit Level 1<span class="pts">131–161</span></li>
+      <li><span class="dot" style="background:var(--standard)"></span>Standard Level<span class="pts">100–130</span></li>
+      <li><span class="dot" style="background:var(--demerit);opacity:.45"></span>Demerit Level 1<span class="pts">76–99</span></li>
+      <li><span class="dot" style="background:var(--demerit);opacity:.72"></span>Demerit Level 2<span class="pts">51–75</span></li>
+      <li><span class="dot" style="background:var(--demerit)"></span>Demerit Level 3<span class="pts">11–50</span></li>
+      <li><span class="dot" style="background:var(--critical)"></span>Demerit Level 4 (critical)<span class="pts">≤ 10</span></li>
+    </ul>
+    <p class="note">At 50 points or below the system creates an intervention automatically: 41–50 is a warning, 31–40 a talk with the homeroom teacher, 30 and below the school counsellor. Admins see them under <span class="ui">Interventions &amp; Alerts</span>.</p>
+  </section>
+
+  <section class="role" aria-labelledby="tour-h">
+    <div class="task">
+      <div class="task-text">
+        <span class="eyebrow">Built into the app</span>
+        <h3 id="tour-h">Step-by-step tour</h3>
+        <p>The first time you sign in, a short tour for your role starts on its own. It highlights each part of the screen, moves between pages for you, and explains what everything does.</p>
+        <ul class="plain">
+          <li>Use <span class="ui">Next</span> and <span class="ui">Back</span> to move through it, or <span class="ui">Skip</span> to close it.</li>
+          <li>To see it again, tap the <span class="ui">?</span> button at the top of your dashboard.</li>
+          <li>On a computer the arrow keys and Esc work too.</li>
+        </ul>
+      </div>
+      <figure>
+        <div class="phone"><img src="img/in-app-guide.jpg" alt="In-app tour card, Admin step 2 of 9, highlighting the Total Students card" width="540" height="1169" loading="lazy"></div>
+        <figcaption>The in-app tour, admin step 2 of 9</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="role" id="student" aria-labelledby="student-h">
+    <div class="role-head">
+      <span class="eyebrow">Students</span>
+      <h2 id="student-h">Check your points</h2>
+    </div>
+    <div class="task">
+      <div class="task-text">
+        <h3>Profile and history</h3>
+        <ol class="steps">
+          <li><p>Open the app. Your name, class, points and level are at the top.</p></li>
+          <li><p>Below, <span class="ui">Points History</span> shows every entry as a card: the rule, the teacher's comment, who gave it and when. A green edge is a plus, red is a minus.</p></li>
+          <li><p>In the ranking your row is marked <span class="ui">You</span>. Grades 6–8 and 9–12 are ranked separately.</p></li>
+        </ol>
+        <p class="note">If you think a point was given by mistake, talk to the teacher who gave it. Their name is in your history. They or the administration can remove it.</p>
+      </div>
+      <figure>
+        <div class="phone"><img src="img/student-dashboard.jpg" alt="Student dashboard: Olivia Reed, 98 points, Demerit Level 1, class 7A, with two history cards" width="540" height="1169" loading="lazy"></div>
+        <figcaption>Student dashboard</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="role" id="teacher" aria-labelledby="teacher-h">
+    <div class="role-head">
+      <span class="eyebrow">Teachers</span>
+      <h2 id="teacher-h">Give merits and demerits</h2>
+      <p class="lead">There are three tabs at the bottom: <span class="ui">Dashboard</span> with your history, <span class="ui">Students</span> for assigning points, and <span class="ui">Rules</span> with the list of rules.</p>
+    </div>
+
+    <div class="task">
+      <div class="task-text">
+        <h3>Find the student</h3>
+        <ol class="steps">
+          <li><p>Open <span class="ui">Students</span> and pick a class, or search by name.</p></li>
+          <li><p>Each student shows their points and level, so you can see at a glance who is at risk.</p></li>
+          <li><p>Tap the student you want.</p></li>
+        </ol>
+      </div>
+      <figure>
+        <div class="phone"><img src="img/teacher-class.jpg" alt="Class 7A: Ava Turner, Liam Carter, Noah Bennett and Olivia Reed with points and levels" width="540" height="1169" loading="lazy"></div>
+        <figcaption>Students in class 7A</figcaption>
+      </figure>
+    </div>
+
+    <div class="task flip">
+      <figure>
+        <div class="phone"><img src="img/teacher-assign.jpg" alt="Assign Merits/Demerits panel with Active in class ticked and a comment filled in" width="540" height="1169" loading="lazy"></div>
+        <figcaption>The assign panel</figcaption>
+      </figure>
+      <div class="task-text">
+        <h3>Assign points</h3>
+        <ol class="steps">
+          <li><p>In <span class="ui">Assign Merits/Demerits</span>, tick one or more rules. Green ones add points, red ones take them away.</p></li>
+          <li><p>Write a comment. It is required, and the student will see it.</p></li>
+          <li><p>Tap <span class="ui">Assign</span>. You'll see <span class="ui">Points assigned</span>, and the student's points update right away.</p></li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="task-text">
+        <h3>My Class</h3>
+        <ol class="steps">
+          <li><p><span class="ui">My Class</span> shows only the class where you are the homeroom teacher.</p></li>
+          <li><p>There, tapping a student opens their full history from every teacher. You can assign points from there too.</p></li>
+          <li><p>If anyone in your class drops below 100 points, a warning with their names appears on your dashboard.</p></li>
+        </ol>
+      </div>
+      <figure>
+        <div class="phone"><img src="img/teacher-assigned.jpg" alt="Points assigned confirmation; Noah Bennett now has 68 points" width="540" height="1169" loading="lazy"></div>
+        <figcaption>Done: Noah went from 65 to 68</figcaption>
+      </figure>
+    </div>
+
+    <div class="task flip">
+      <figure>
+        <div class="phone"><img src="img/teacher-dashboard.jpg" alt="Teacher dashboard with a homeroom warning and the points assignment history" width="540" height="1169" loading="lazy"></div>
+        <figcaption>Teacher dashboard</figcaption>
+      </figure>
+      <div class="task-text">
+        <h3>Fix a mistake</h3>
+        <ol class="steps">
+          <li><p>Open <span class="ui">Dashboard</span>. <span class="ui">Points Assignment History</span> lists everything you have assigned.</p></li>
+          <li><p>Tap the red bin on the wrong entry. The student's points and ranking go back to what they were.</p></li>
+        </ol>
+        <p class="note">If the administration has closed point assignment or the deadline has passed, you can't assign points. The app tells you why at the top of the page.</p>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="task-text">
+        <h3>Rules</h3>
+        <ol class="steps">
+          <li><p><span class="ui">Rules</span> lists every school rule with its points.</p></li>
+          <li><p>Tap a rule to pick students for it straight away.</p></li>
+        </ol>
+      </div>
+      <figure>
+        <div class="phone"><img src="img/teacher-rules.jpg" alt="Rules: Helped a classmate +5, Active in class +3, Late to class −2, No homework −3, Phone in class −5" width="540" height="1169" loading="lazy"></div>
+        <figcaption>Rules as teachers see them</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="role" id="admin" aria-labelledby="admin-h">
+    <div class="role-head">
+      <span class="eyebrow">Administrators</span>
+      <h2 id="admin-h">Run the school</h2>
+      <p class="lead">Tabs: <span class="ui">Dashboard</span>, <span class="ui">Users</span> for students and teachers, <span class="ui">Codes</span> for rules, and <span class="ui">Settings</span> for moderation, the scoring timer and reports.</p>
+    </div>
+
+    <div class="task">
+      <div class="task-text">
+        <h3>The big picture</h3>
+        <ol class="steps">
+          <li><p><span class="ui">Dashboard</span> shows how many students and teachers there are, how many are active (have linked Telegram), and totals of merits and demerits.</p></li>
+          <li><p>Switch the table with <span class="ui">Grades 6–8</span>, <span class="ui">Grades 9–12</span> and <span class="ui">Class ranking</span>.</p></li>
+        </ol>
+      </div>
+      <figure>
+        <div class="phone"><img src="img/admin-dashboard.jpg" alt="Admin dashboard: 10 students, 2 teachers, analytics and the grades 6–8 ranking" width="540" height="1169" loading="lazy"></div>
+        <figcaption>Admin dashboard</figcaption>
+      </figure>
+    </div>
+
+    <div class="task flip">
+      <figure>
+        <div class="phone"><img src="img/admin-settings.jpg" alt="Settings and Analytics: scoring timer, moderation, statistics, detentions, interventions, risk registry" width="540" height="1169" loading="lazy"></div>
+        <figcaption>Settings &amp; Analytics</figcaption>
+      </figure>
+      <div class="task-text">
+        <h3>What's in Settings</h3>
+        <ul class="plain">
+          <li><span class="ui">Scoring Timer &amp; Deadline</span>: open or close point assignment for the whole school, or set a deadline.</li>
+          <li><span class="ui">Moderation</span>: every entry with filters, removing wrong entries, and <span class="ui">Export</span> to HTML or CSV.</li>
+          <li><span class="ui">Statistics</span>: teacher activity.</li>
+          <li><span class="ui">Detention</span>, <span class="ui">Interventions</span>, <span class="ui">Risk Registry</span>: detentions, interventions and students at risk.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="task-text">
+        <h3>Users</h3>
+        <ol class="steps">
+          <li><p>Open <span class="ui">Users</span> and switch between <span class="ui">Students</span> and <span class="ui">Teachers</span>.</p></li>
+          <li><p>Pick a class or search by name to find someone. Add new people, set usernames and passwords, and assign homeroom teachers.</p></li>
+          <li><p>Leave the password empty when editing to keep the current one.</p></li>
+          <li><p>A green dot on someone's avatar means they have linked Telegram.</p></li>
+        </ol>
+      </div>
+      <figure>
+        <div class="phone"><img src="img/admin-users.jpg" alt="Users Management with Students and Teachers tabs, search and classes 7A, 8B, 10A, 11B" width="540" height="1169" loading="lazy"></div>
+        <figcaption>Users</figcaption>
+      </figure>
+    </div>
+
+    <div class="task flip">
+      <figure>
+        <div class="phone"><img src="img/admin-codes.jpg" alt="Rules Management: Add New Rule button and the list of rules with edit and delete buttons" width="540" height="1169" loading="lazy"></div>
+        <figcaption>Rules (Codes)</figcaption>
+      </figure>
+      <div class="task-text">
+        <h3>Rules</h3>
+        <ol class="steps">
+          <li><p>Open <span class="ui">Codes</span>. Every rule has edit and delete buttons; teachers see changes right away.</p></li>
+          <li><p>Tap <span class="ui">Add New Rule</span>.</p></li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="task-text">
+        <h3>Create a rule</h3>
+        <ol class="steps">
+          <li><p>Choose the <span class="ui">Type</span>: <span class="ui">Merit (+)</span> or <span class="ui">Demerit (-)</span>.</p></li>
+          <li><p>Enter the number of points as a positive number. The type decides the sign: Demerit with 2 points takes 2 away.</p></li>
+          <li><p>Pick who can use it in <span class="ui">Access level</span>: everyone, teachers and admins, or admins only.</p></li>
+          <li><p>Optionally tick <span class="ui">Set a usage limit</span>, for example at most once a week per student, then tap <span class="ui">Create</span>.</p></li>
+        </ol>
+      </div>
+      <figure>
+        <div class="phone"><img src="img/admin-rule-dialog.jpg" alt="Add New Rule: Type Demerit, Points 2 (will be subtracted), Access level Everyone, Description Uniform violation" width="540" height="1169" loading="lazy"></div>
+        <figcaption>A new demerit: −2 for uniform violation</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="faq" id="faq" aria-labelledby="faq-h">
+    <h2 id="faq-h">FAQ</h2>
+    <details>
+      <summary>I forgot my password</summary>
+      <p>Ask a school administrator. They can set a new password in Users.</p>
+    </details>
+    <details>
+      <summary>It won't let me in after three wrong passwords</summary>
+      <p>That's protection against password guessing. Wait 5 minutes and try again. The wait gets longer after repeated mistakes.</p>
+    </details>
+    <details>
+      <summary>I changed my phone or Telegram account</summary>
+      <p>Open the app in your new Telegram and sign in with your username and password. The link moves to the new account.</p>
+    </details>
+    <details>
+      <summary>Telegram shows an old version of the app</summary>
+      <p>Close the app completely and open it again. In a browser, just refresh the page.</p>
+    </details>
+    <details>
+      <summary>I can't assign points</summary>
+      <p>Check that you wrote a comment. If the app says point assignment is closed, contact the administration. A rule can also have a usage limit for the week or another period.</p>
+    </details>
+  </section>
+
+  <footer>Screenshots use demo data, not real students.</footer>
+</div>
+</body>
+</html>
