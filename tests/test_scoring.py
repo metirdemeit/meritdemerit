@@ -77,3 +77,26 @@ async def test_past_deadline_rejected(db):
     with pytest.raises(HTTPException) as exc:
         await update_scoring_status(ScoringStatusPayload(isOpen=True, deadline=past), current_admin=None)
     assert exc.value.status_code == 400
+
+
+async def test_admin_history_delete_respects_source(db):
+    from backend.models import Admin, AdminPointHistory, Class, DisciplineRule, PointHistory, Student, Teacher
+    from backend.routes.admin import delete_history_record, get_all_history
+
+    cls = await Class.create(name="7А")
+    st = await Student.create(username="s", password="p", first_name="S", school_class=cls, points=100)
+    t = await Teacher.create(username="t", password="p", first_name="T")
+    a = await Admin.create(username="a", password="p", first_name="A")
+    rule = await DisciplineRule.create(description="r", points=5)
+    ph = await PointHistory.create(student=st, teacher=t, rule=rule, points_changed=5, comment="c")
+    aph = await AdminPointHistory.create(student=st, admin=a, rule=rule, points_changed=-3, comment="c")
+    assert ph.id == aph.id  # the collision this guards against
+
+    page = await get_all_history(page=1, size=50)
+    assert {i.source for i in page.items} == {"teacher", "admin"}
+
+    await delete_history_record(aph.id, source="admin")
+    assert await PointHistory.filter(id=ph.id).exists()
+    assert not await AdminPointHistory.filter(id=aph.id).exists()
+    await st.refresh_from_db()
+    assert st.points == 103

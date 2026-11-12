@@ -6,10 +6,11 @@ from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.expressions import Q
 
 from backend.models import Admin, Student, Class, DisciplineRule
-from backend.utils.security import enforce_https, get_current_admin
+from backend.utils.security import enforce_https, get_current_admin, get_current_user
 from backend.utils.scoring import get_scoring_status, parse_deadline, save_scoring_status
 
-router = APIRouter(dependencies=[Depends(enforce_https)])
+# Student names and points are not public: every endpoint here needs a logged-in user.
+router = APIRouter(dependencies=[Depends(enforce_https), Depends(get_current_user)])
 
 # --- Pydantic Models ---
 

@@ -5,7 +5,7 @@ import anyio
 from pydantic import BaseModel
 from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.exceptions import IntegrityError
-from tortoise.expressions import Q
+from tortoise.expressions import F, Q
 from datetime import datetime, timedelta, date
 
 from backend.models import (
@@ -164,6 +164,9 @@ class DashboardStats(BaseModel):
 
 class PointHistoryResponse(BaseModel):
     id: int
+    # Teacher and admin records live in separate tables and their ids overlap;
+    # (source, id) is the real key.
+    source: Literal["teacher", "admin"] = "teacher"
     student_name: str
     student_class: str
     teacher_name: str
@@ -684,8 +687,9 @@ async def admin_assign_points(assignment: AdminAssignment, current_admin: Admin 
 
         # Update student points
         for student in students_to_update:
-            student.points += total_points_map[student.id]
-            await student.save(update_fields=["points"])
+            delta = total_points_map[student.id]
+            await Student.filter(id=student.id).update(points=F("points") + delta)
+            student.points += delta
 
         # Bulk create history records
         await AdminPointHistory.bulk_create(history_records)
@@ -702,6 +706,30 @@ async def admin_assign_points(assignment: AdminAssignment, current_admin: Admin 
 
 # --- History helpers ---
 
+def _full_name(person) -> str:
+    if not person:
+        return ""
+    return f"{person.first_name} {person.last_name or ''}".strip()
+
+
+def _history_item(r, source: str) -> PointHistoryResponse:
+    if source == "teacher":
+        actor = _full_name(r.teacher) or "Удалённый учитель"
+    else:
+        actor = _full_name(getattr(r, "admin", None)) or "Admin"
+    return PointHistoryResponse(
+        id=r.id,
+        source=source,
+        student_name=_full_name(r.student),
+        student_class=_get_student_class_name(r),
+        teacher_name=actor,
+        rule_description=r.rule.description if r.rule else "—",
+        points_changed=r.points_changed,
+        comment=r.comment or "",
+        created_at=r.created_at,
+    )
+
+
 def _get_student_class_name(record) -> str:
     if hasattr(record.student, "school_class") and record.student.school_class:
         return record.student.school_class.name
@@ -714,28 +742,9 @@ def _build_combined_history(
     combined: list[tuple[datetime, PointHistoryResponse]] = []
 
     for r in teacher_records:
-        combined.append((r.created_at, PointHistoryResponse(
-            id=r.id,
-            student_name=f"{r.student.first_name} {r.student.last_name}",
-            student_class=_get_student_class_name(r),
-            teacher_name=f"{r.teacher.first_name} {r.teacher.last_name}" if r.teacher else "Admin",
-            rule_description=r.rule.description,
-            points_changed=r.points_changed,
-            comment=r.comment,
-            created_at=r.created_at,
-        )))
-
+        combined.append((r.created_at, _history_item(r, "teacher")))
     for r in admin_records:
-        combined.append((r.created_at, PointHistoryResponse(
-            id=r.id,
-            student_name=f"{r.student.first_name} {r.student.last_name}",
-            student_class=_get_student_class_name(r),
-            teacher_name="Admin",
-            rule_description=r.rule.description,
-            points_changed=r.points_changed,
-            comment=r.comment,
-            created_at=r.created_at,
-        )))
+        combined.append((r.created_at, _history_item(r, "admin")))
 
     combined.sort(key=lambda x: x[0], reverse=True)
     return [item[1] for item in combined]
@@ -750,7 +759,7 @@ def _slice(items: list[PointHistoryResponse], page: int, size: int) -> list[Poin
 @router.get("/history", response_model=HistoryPaginationResponse, summary="Get all point history")
 async def get_all_history(
     page: int = Query(1, ge=1),
-    size: int = Query(50, ge=1, le=100), # По умолчанию 50
+    size: int = Query(50, ge=1, le=5000),
 ):
     # 1. Считаем общее количество записей
     count_ph = await PointHistory.all().count()
@@ -777,37 +786,25 @@ async def get_all_history(
         total_pages=(total_count + size - 1) // size
     )
 
+async def _find_history(history_id: int, source: str | None):
+    """Return (record, source). Without `source`, teacher records win (legacy behaviour)."""
+    if source in (None, "teacher"):
+        rec = await PointHistory.get_or_none(id=history_id)
+        if rec:
+            return rec, "teacher"
+    if source in (None, "admin"):
+        rec = await AdminPointHistory.get_or_none(id=history_id)
+        if rec:
+            return rec, "admin"
+    raise HTTPException(status_code=404, detail="History record not found")
+
+
 @router.get("/history/{history_id}", response_model=PointHistoryResponse, summary="Get specific history record")
-async def get_history_record(history_id: int):
-    """
-    Get specific point history record.
-    """
-    record = await PointHistory.get_or_none(id=history_id) \
-        .prefetch_related("student", "teacher", "rule")
-    
-    if not record:
-        admin_rec = await AdminPointHistory.get_or_none(id=history_id).prefetch_related("student", "rule", "admin")
-        if not admin_rec:
-            raise HTTPException(status_code=404, detail="History record not found")
-        return PointHistoryResponse(
-            id=admin_rec.id,
-            student_name=f"{admin_rec.student.first_name} {admin_rec.student.last_name}",
-            teacher_name="Admin",
-            rule_description=admin_rec.rule.description,
-            points_changed=admin_rec.points_changed,
-            comment=admin_rec.comment,
-            created_at=admin_rec.created_at
-        )
-    
-    return PointHistoryResponse(
-        id=record.id,
-        student_name=f"{record.student.first_name} {record.student.last_name}",
-        teacher_name=f"{record.teacher.first_name} {record.teacher.last_name}" if record.teacher else "Admin",
-        rule_description=record.rule.description,
-        points_changed=record.points_changed,
-        comment=record.comment,
-        created_at=record.created_at
-    )
+async def get_history_record(history_id: int, source: Literal["teacher", "admin"] | None = None):
+    record, src = await _find_history(history_id, source)
+    related = ["student", "student__school_class", "rule", "teacher" if src == "teacher" else "admin"]
+    await record.fetch_related(*related)
+    return _history_item(record, src)
 
 @router.get("/history/student/{student_id}", response_model=List[PointHistoryResponse], summary="Get student's history")
 async def get_student_history(
@@ -854,35 +851,17 @@ async def get_rule_history(
     return _slice(all_items, page, size)
 
 @router.delete("/history/{history_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete history record")
-async def delete_history_record(history_id: int):
+async def delete_history_record(history_id: int, source: Literal["teacher", "admin"] | None = None):
     """
-    Delete a history record and revert the points.
+    Delete a history record and revert the points. Pass `source` (from the list
+    response) — teacher and admin records can share the same id.
     """
-    # Try teacher history first
-    history_record = await PointHistory.get_or_none(id=history_id)
-    if history_record:
-        student_id = history_record.student_id
-        snapshot = history_record.previous_rank_snapshot
-        async with in_transaction():
-            student = await Student.get(id=student_id)
-            student.points -= history_record.points_changed
-            await student.save(update_fields=["points"])
-            await history_record.delete()
-        await revert_student_rank_snapshot(student_id, snapshot)
-        return None
-
-    # Then try admin history
-    admin_history = await AdminPointHistory.get_or_none(id=history_id)
-    if not admin_history:
-        raise HTTPException(status_code=404, detail="History record not found")
-
-    student_id = admin_history.student_id
-    snapshot = admin_history.previous_rank_snapshot
+    record, _ = await _find_history(history_id, source)
+    student_id = record.student_id
+    snapshot = record.previous_rank_snapshot
     async with in_transaction():
-        student = await Student.get(id=student_id)
-        student.points -= admin_history.points_changed
-        await student.save(update_fields=["points"])
-        await admin_history.delete()
+        await Student.filter(id=student_id).update(points=F("points") - record.points_changed)
+        await record.delete()
     await revert_student_rank_snapshot(student_id, snapshot)
     return None
 
@@ -1122,8 +1101,9 @@ async def admin_workflow_assign_points(assignment: AdminAssignment, current_admi
 
         # Update student points
         for student in students_to_update:
-            student.points += total_points_map[student.id]
-            await student.save(update_fields=["points"])
+            delta = total_points_map[student.id]
+            await Student.filter(id=student.id).update(points=F("points") + delta)
+            student.points += delta
 
         # Bulk create history records
         await AdminPointHistory.bulk_create(history_records)

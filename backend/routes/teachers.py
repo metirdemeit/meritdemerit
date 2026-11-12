@@ -1,6 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
+from tortoise.expressions import F
 from tortoise.transactions import in_transaction
 from datetime import datetime
 
@@ -8,7 +9,7 @@ from backend.models import Teacher, Student, DisciplineRule, PointHistory, Admin
 from backend.utils.security import get_current_user, enforce_https
 from backend.utils.scoring import ensure_scoring_open
 from backend.utils.rules_helper import check_rule_limits_and_permissions, auto_trigger_interventions
-from backend.utils.ranking_helper import recalculate_ranks
+from backend.utils.ranking_helper import recalculate_ranks, revert_student_rank_snapshot
 
 router = APIRouter(dependencies=[Depends(enforce_https)])
 
@@ -42,7 +43,9 @@ class TeacherProfile(BaseModel):
 
 class TeacherHistoryResponse(BaseModel):
     id: int
+    student_id: Optional[int] = None
     student_name: str
+    teacher_name: str = ""
     student_class: str
     rule_description: str
     points_changed: int
@@ -147,8 +150,9 @@ async def assign_points(assignment: WorkflowAssignment, teacher: Teacher = Depen
 
         # Update student points
         for student in students_to_update:
-            student.points += total_points_map[student.id]
-            await student.save(update_fields=["points"])
+            delta = total_points_map[student.id]
+            await Student.filter(id=student.id).update(points=F("points") + delta)
+            student.points += delta
 
         # Bulk create history records
         await PointHistory.bulk_create(history_records)
@@ -190,14 +194,17 @@ async def get_teacher_history(
         .offset(offset) \
         .limit(size)
     
+    teacher_name = f"{teacher.first_name} {teacher.last_name or ''}".strip()
     items = [
         TeacherHistoryResponse(
             id=record.id,
-            student_name=f"{record.student.first_name} {record.student.last_name}",
+            student_id=record.student_id,
+            teacher_name=teacher_name,
+            student_name=f"{record.student.first_name} {record.student.last_name or ''}".strip(),
             student_class=record.student.school_class.name if record.student.school_class else "Без класса",
-            rule_description=record.rule.description,
+            rule_description=record.rule.description if record.rule else "—",
             points_changed=record.points_changed,
-            comment=record.comment,
+            comment=record.comment or "",
             created_at=record.created_at
         )
         for record in history
@@ -232,11 +239,11 @@ async def get_assignment_detail(
     
     return TeacherHistoryDetail(
         id=record.id,
-        student_name=f"{record.student.first_name} {record.student.last_name}",
+        student_name=f"{record.student.first_name} {record.student.last_name or ''}".strip(),
         student_class=record.student.school_class.name if record.student.school_class else "Без класса",
-        rule_description=record.rule.description,
+        rule_description=record.rule.description if record.rule else "—",
         points_changed=record.points_changed,
-        comment=record.comment,
+        comment=record.comment or "",
         created_at=record.created_at,
         can_delete=True
     )
@@ -257,15 +264,13 @@ async def delete_assignment(
     if history_record.teacher_id != teacher.id:
         raise HTTPException(status_code=403, detail="You can only delete your own assignments")
     
+    student_id = history_record.student_id
+    snapshot = history_record.previous_rank_snapshot
     async with in_transaction():
-        # Revert the points for the student
-        student = await Student.get(id=history_record.student_id)
-        student.points -= history_record.points_changed
-        await student.save(update_fields=["points"])
-        
-        # Delete the history record
+        await Student.filter(id=student_id).update(points=F("points") - history_record.points_changed)
         await history_record.delete()
-    
+
+    await revert_student_rank_snapshot(student_id, snapshot)
     return None
 
 

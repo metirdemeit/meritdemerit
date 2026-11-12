@@ -65,9 +65,10 @@ async def get_student_profile(student: Student = Depends(get_current_student)):
             "name": student.school_class.name
         }
     
-    # Calculate global rank
-    students_with_more_points = await Student.filter(points__gt=student.points).count()
-    global_rank = students_with_more_points + 1
+    # Same group-partitioned rank (6-8 / 9-12) that the ranking tables show
+    global_rank = student.current_rank
+    if global_rank is None:
+        global_rank = await Student.filter(points__gt=student.points).count() + 1
     
     return StudentProfile(
         id=student.id,
@@ -110,7 +111,7 @@ async def get_student_history(
             "role": "teacher",
             "rule_description": rule_desc,
             "points_changed": record.points_changed,
-            "comment": record.comment,
+            "comment": record.comment or "",
             "created_at": record.created_at,
         })
 
@@ -126,7 +127,7 @@ async def get_student_history(
             "role": "admin",
             "rule_description": rule_desc,
             "points_changed": record.points_changed,
-            "comment": record.comment,
+            "comment": record.comment or "",
             "created_at": record.created_at,
         })
 
@@ -164,7 +165,7 @@ async def get_assignment_detail(
             role="teacher",
             rule_description=record.rule.description if record.rule else "—",
             points_changed=record.points_changed,
-            comment=record.comment,
+            comment=record.comment or "",
             created_at=record.created_at
         )
     
@@ -188,7 +189,7 @@ async def get_assignment_detail(
             role="admin",
             rule_description=admin_record.rule.description if admin_record.rule else "—",
             points_changed=admin_record.points_changed,
-            comment=admin_record.comment,
+            comment=admin_record.comment or "",
             created_at=admin_record.created_at
         )
     

@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import logging
+import os
 import urllib.parse
 from collections import defaultdict
 from dataclasses import dataclass
@@ -114,7 +115,8 @@ def _bruteforce_key_from_request(request: Request, telegram_id: int | None = Non
         return f"tg:{telegram_id}"
     return f"ip:{_client_ip(request)}"
 
-INIT_DATA_MAX_AGE_SECONDS = 86400
+# Telegram re-signs initData on every Mini App launch; 7 days covers reloads of a long-open app.
+INIT_DATA_MAX_AGE_SECONDS = int(os.getenv("INIT_DATA_MAX_AGE_SECONDS", str(7 * 86400)))
 
 
 def validate_telegram_hash(init_data: str, bot_token: str) -> bool:
@@ -175,6 +177,44 @@ def parse_init_data(init_data: str) -> dict:
     except Exception as e:
         logger.error("[initData] Parse error: %s", e)
         raise ValueError(f"Failed to parse initData: {e}")
+
+
+def verified_telegram_id(init_data: str | None) -> int | None:
+    """
+    Telegram user id from initData ONLY if its HMAC signature is valid and it is
+    not older than INIT_DATA_MAX_AGE_SECONDS. Anything that grants access or
+    links an account must use this, never the unverified extract_telegram_id().
+    """
+    if not init_data or not BOT_TOKEN:
+        if init_data and not BOT_TOKEN:
+            logger.error("[initData] BOT_TOKEN is not set; cannot verify Telegram login")
+        return None
+    raw = str(init_data).strip()
+    if not validate_telegram_hash(raw, BOT_TOKEN):
+        logger.warning("[initData] rejected: bad signature")
+        return None
+    vals = dict(urllib.parse.parse_qsl(raw, keep_blank_values=True))
+    try:
+        auth_date = int(vals.get("auth_date", "0"))
+    except ValueError:
+        auth_date = 0
+    age = datetime.now(timezone.utc).timestamp() - auth_date
+    if auth_date <= 0 or age > INIT_DATA_MAX_AGE_SECONDS:
+        logger.info("[initData] rejected: expired (age=%ss)", int(age))
+        return None
+    try:
+        user = json.loads(vals.get("user") or "{}")
+        return int(user["id"]) if user.get("id") else None
+    except (ValueError, TypeError, KeyError):
+        return None
+
+
+def _request_init_data(body_init_data: str | None, request: Request) -> str | None:
+    return (
+        body_init_data
+        or request.headers.get("x-telegram-init-data")
+        or request.headers.get("initdata")
+    )
 
 
 async def find_user_by_telegram_id(telegram_id: int | None) -> Union[Student, Teacher, Admin, None]:
@@ -347,11 +387,8 @@ async def first_time_login(data: TelegramLoginWithCredentials, request: Request)
     """
     First-time login: username/password + link Telegram account via initData.
     """
-    telegram_id = data.telegram_id or extract_telegram_id(data.init_data)
-    if not telegram_id:
-        hdr_init = request.headers.get("x-telegram-init-data") or request.headers.get("initdata")
-        if hdr_init:
-            telegram_id = extract_telegram_id(hdr_init)
+    # Only a signed initData may link an account; a raw telegram_id from the body is ignored.
+    telegram_id = verified_telegram_id(_request_init_data(data.init_data, request))
 
     key = _bruteforce_key_from_request(request, telegram_id=telegram_id)
     _limiter.check(key)
@@ -395,11 +432,12 @@ async def quick_login(data: TelegramInitDataLogin, request: Request):
     """
     Quick login for users already linked with telegram_id.
     """
-    telegram_id = extract_telegram_id(data.init_data)
+    telegram_id = verified_telegram_id(_request_init_data(data.init_data, request))
     if not telegram_id:
-        hdr_init = request.headers.get("x-telegram-init-data") or request.headers.get("initdata")
-        if hdr_init:
-            telegram_id = extract_telegram_id(hdr_init)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired Telegram data. Please log in with username and password.",
+        )
 
     logger.info("[/quick] telegram_id=%s", telegram_id)
 
@@ -417,22 +455,11 @@ async def quick_login(data: TelegramInitDataLogin, request: Request):
 
 
 @router.post("/telegram-login")
-async def telegram_login(data: TelegramInitDataLogin):
+async def telegram_login(data: TelegramInitDataLogin, request: Request):
     """
     Login with Telegram initData (alias for /quick).
     """
-    telegram_id = extract_telegram_id(data.init_data)
-    logger.info("[/telegram-login] telegram_id=%s", telegram_id)
-
-    user = await find_user_by_telegram_id(telegram_id)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Telegram account not linked. Please login with username and password first.",
-        )
-
-    role = get_user_role(user)
-    return create_login_response(user, role)
+    return await quick_login(data, request)
 
 
 class UserProfile(BaseModel):

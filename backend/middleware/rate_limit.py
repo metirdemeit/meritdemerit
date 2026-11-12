@@ -1,3 +1,4 @@
+import os
 import time
 from collections import defaultdict
 from fastapi import Request, status
@@ -5,30 +6,45 @@ from fastapi.responses import JSONResponse
 
 _request_log: dict[str, list[float]] = defaultdict(list)
 
-RATE_LIMIT = 60
+# A whole school usually shares one public IP (school Wi-Fi / NAT), so the
+# per-IP budget has to cover many people at once.
+RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MINUTE", "600"))
 RATE_WINDOW = 60
+_last_sweep = 0.0
+
+
+def _client_ip(request: Request) -> str:
+    cf_ip = request.headers.get("cf-connecting-ip")
+    if cf_ip:
+        return cf_ip.strip()
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 
 
 async def rate_limit_middleware(request: Request, call_next):
-    forwarded = request.headers.get("x-forwarded-for")
-    cf_ip = request.headers.get("cf-connecting-ip")
-    if cf_ip:
-        client_ip = cf_ip.strip()
-    elif forwarded:
-        client_ip = forwarded.split(",")[0].strip()
-    else:
-        client_ip = request.client.host if request.client else "unknown"
+    global _last_sweep
+    if request.method == "OPTIONS":
+        return await call_next(request)
 
     now = time.time()
+    # Drop idle IPs so the table does not grow forever.
+    if now - _last_sweep > RATE_WINDOW:
+        for ip in [ip for ip, ts in _request_log.items() if not ts or now - ts[-1] >= RATE_WINDOW]:
+            del _request_log[ip]
+        _last_sweep = now
 
-    timestamps = _request_log[client_ip]
-    _request_log[client_ip] = [t for t in timestamps if now - t < RATE_WINDOW]
+    client_ip = _client_ip(request)
+    timestamps = [t for t in _request_log[client_ip] if now - t < RATE_WINDOW]
 
-    if len(_request_log[client_ip]) >= RATE_LIMIT:
+    if len(timestamps) >= RATE_LIMIT:
+        _request_log[client_ip] = timestamps
         return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            content={"detail": "Too many requests. Please try again later."},
+            content={"detail": "Слишком много запросов. Попробуйте через минуту."},
         )
 
-    _request_log[client_ip].append(now)
+    timestamps.append(now)
+    _request_log[client_ip] = timestamps
     return await call_next(request)
