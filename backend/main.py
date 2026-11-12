@@ -94,6 +94,9 @@ async def lifespan(app: FastAPI):
             'ALTER TABLE "student" ADD COLUMN IF NOT EXISTS "previous_rank" INT',
             'ALTER TABLE "class" ADD COLUMN IF NOT EXISTS "current_rank" INT',
             'ALTER TABLE "class" ADD COLUMN IF NOT EXISTS "previous_rank" INT',
+            # Rule type follows the sign of its points (old rules defaulted to 'merit')
+            '''UPDATE "disciplinerule" SET "type" = CASE WHEN "points" < 0 THEN 'demerit' ELSE 'merit' END
+               WHERE "type" IS DISTINCT FROM CASE WHEN "points" < 0 THEN 'demerit' ELSE 'merit' END''',
             # Seed initial ranks partitioned by grade group ('6-8' and '9-12')
             r"""WITH class_groups AS (
                 SELECT s.id as student_id,

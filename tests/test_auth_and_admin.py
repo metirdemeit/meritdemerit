@@ -49,3 +49,12 @@ async def test_teacher_create_and_blank_update(db):
 
     await update_teacher(out.id, TeacherUpdate(first_name="T2", password="  "))
     assert await authenticate_user("t1", "tp") is not None
+
+
+async def test_rule_type_follows_points_sign(db):
+    from backend.routes.admin import RuleCreate, RuleUpdate, create_rule, update_rule
+
+    rule = await create_rule(RuleCreate(description="Опоздание", points=-2))  # type left at default
+    assert rule.type == "demerit"
+    rule = await update_rule(rule.id, RuleUpdate(points=4))
+    assert rule.type == "merit"
