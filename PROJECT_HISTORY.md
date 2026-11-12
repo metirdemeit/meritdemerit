@@ -1,87 +1,147 @@
 # 🚀 MeritDemerit System — Context & Knowledge Base (AI Context File)
 
-> **Назначение этого файла:** Единый источник правды (Single Source of Truth) для разработчиков и ИИ-агентов (Claude, ChatGPT, Gemini, Copilot, DeepSeek).  
+> **Назначение этого файла:** Единый источник правды (Single Source of Truth) для разработчиков и ИИ-агентов (Claude, ChatGPT, Gemini, Copilot, DeepSeek).
 > **Цель:** Исключить затраты токенов на исследование кодовой базы с нуля, предотвратить регрессии и предоставить исчерпывающий контекст архитектуры, окружения, API и истории изменений.
+> **Последнее обновление:** 2026-11-12 (фронт `30d5203`, бэк `abb05c5`).
+
+---
+
+## ⚡ 0. Быстрый старт для нового разработчика / ИИ-агента
+
+1. **Один GitHub-репозиторий, две ветки** (`https://github.com/metirdemeit/meritdemerit`):
+   - `frontend` — React-приложение (этот файл лежит здесь). Деплой: **Vercel** (автоматически при push).
+   - `backend` — FastAPI + Tortoise ORM + aiogram-бот. Деплой: **Render** (`https://meritdemerit.onrender.com`, автоматически при push).
+   - Ветки деплоятся **независимо**: если изменение затрагивает API, сначала пушь `backend`, потом `frontend`.
+2. **Приложение обязано работать и как Telegram Mini App, и в обычном браузере.** Блокировать браузер нельзя (`canRunApp()` всегда `true`).
+3. **Язык интерфейса и сообщений API — английский.** Новые тексты в UI и в ответах бэкенда пиши по-английски.
+4. **Перед пушем проверь:**
+   - фронт: `npm run lint` (0 предупреждений, `--max-warnings 0`), `npm test`, `npm run build`;
+   - бэк: `ruff check --isolated --select F,E9 backend bot migrations tests` и `pytest -q`.
+5. **После любой фичи/фикса** добавь строку в Changelog (раздел 8) этого файла.
 
 ---
 
 ## 📌 1. Обзор проекта (Project Overview)
 
 - **Название:** MeritDemerit System (Telegram Mini App & Web Dashboard)
-- **Цель системы:** Учет академических поощрений (**Merit**, +1...+50) и дисциплинарных замечаний (**Demerit**, -1...-50) для школы/лицея.
+- **Цель системы:** Учет академических поощрений (**Merit**, положительные баллы) и дисциплинарных замечаний (**Demerit**, отрицательные баллы) для школы/лицея. Классы 6–12, рейтинги раздельно по параллелям 6–8 и 9–12.
 - **Базовый баланс ученика:** `100` баллов.
-- **Шкала риска и статусов:**
-  - 🌟 **Merit Zone:** `131+` баллов (отличники, поощрения).
-  - 🔵 **Standard Zone:** `100 - 130` баллов (норма).
-  - ⚠️ **Warning Zone:** `41 - 50` баллов (официальное предупреждение).
-  - 🏠 **Homeroom Zone:** `31 - 40` баллов (работа классного руководителя).
-  - 🚨 **Counselor Zone:** `≤ 30` баллов (вызов к психологу / директору с родителями).
+- **Уровни** (единый источник: `src/utils/studentLevels.js`, дублируется в бэкенде `backend/utils/notify.py` — меняй оба места):
+
+| Уровень | Баллы |
+| :--- | :---: |
+| Merit Level 2 | `162+` |
+| Merit Level 1 | `131–161` |
+| Standard Level | `100–130` |
+| Demerit Level 1 | `76–99` |
+| Demerit Level 2 | `51–75` |
+| Demerit Level 3 | `11–50` |
+| Demerit Level 4 (Critical) | `≤ 10` |
+
+- **Зоны мер реагирования (interventions):** `≤ 50` — warning, `≤ 40` — классный руководитель, `≤ 30` — психолог/администрация.
+- **Тип правила определяется знаком баллов:** отрицательные баллы → `demerit`, положительные → `merit` (и на фронте, и на бэке; при старте бэкенд чинит старые записи).
 
 ---
 
 ## 🛠 2. Стек технологий и окружение (Tech Stack & Environment)
 
-### Фронтенд:
-- **Фреймворк & Сборщик:** React 18 (`react` 18.2.0, `react-dom` 18.2.0), Vite (`vite` 6.3.5), `@vitejs/plugin-react-swc`.
-- **UI & Стили:** Material-UI v5 (`@mui/material`, `@mui/icons-material`, `@emotion/react`, `@emotion/styled`), Framer Motion (`framer-motion` 12.23.23), Vanilla CSS (`src/index.css`).
-- **State Management:** Zustand (`zustand` 5.0.6).
-- **Формы и Валидация:** Formik (`formik` 2.4.5), Yup (`yup` 1.4.0).
-- **HTTP Клиент & Уведомления:** Axios (`axios` 1.9.0), React Hot Toast (`react-hot-toast` 2.6.0).
-- **Telegram Интеграция:** `@telegram-apps/sdk-react` 3.1.7, скрипт `telegram-web-app.js` в `index.html`.
-- **Роутинг:** React Router DOM v6 (`react-router-dom` 6.30.1).
-- **Отладка:** Eruda (`eruda` 3.4.1) для мобильного дебага в WebView.
+### Фронтенд (ветка `frontend`):
+- **Фреймворк & Сборщик:** React 18, Vite 6, `@vitejs/plugin-react-swc`. `base: "/"` (абсолютный — нужен для BrowserRouter на вложенных роутах).
+- **UI:** Material-UI v5 (`@mui/material`, `@mui/icons-material`, Emotion), Vanilla CSS (`src/index.css`).
+- **State Management:** Zustand 5.
+- **HTTP & Уведомления:** Axios, React Hot Toast.
+- **Telegram:** `@telegram-apps/sdk-react` + скрипт `telegram-web-app.js` в `index.html`.
+- **Роутинг:** React Router DOM v6, страницы лениво грузятся по ролям (`React.lazy`).
+- **Тесты:** Vitest (unit, `src/utils/__tests__/`), Playwright (e2e, `e2e/`).
+- Удалены и **не возвращать**: `eruda`, `formik`, `yup`, `react-helmet`, `framer-motion`, `@telegram-apps/mate`, gh-pages.
 
-### Бэкенд & Инфраструктура:
-- **Базовый URL API:** `https://meritdemerit.onrender.com` (сконфигурирован в [src/utils/url.js](file:///home/mq/meritdemerit/src/utils/url.js)).
-- **Хостинг бэкенда:** Render (Python / FastAPI бэкенд с авто-слипом на free tier).
-- **Хостинг фронтенда:** GitHub Pages (`npm run deploy`) / Vercel (`vercel.json`).
+### Бэкенд (ветка `backend`):
+- **FastAPI** + **Tortoise ORM** (PostgreSQL), миграции через `aerich` (`migrations/models/`) **плюс** идемпотентные `ALTER/CREATE ... IF NOT EXISTS` при старте в `backend/main.py` — новые колонки/таблицы добавляй туда же.
+- **aiogram**-бот в `bot/` (запускается вместе с API при `RUN_BOT=true`).
+- Пароли — bcrypt (старые plaintext-пароли апгрейдятся при входе).
+- Render free tier засыпает: первый запрос может идти 30–50 с.
 
-### Переменные окружения (`.env.local` — не коммитить!):
+### Переменные окружения фронта (`.env.local`, шаблон `.env.example`):
 ```env
-# Быстрый логин для тестирования (Dev Quick Login)
-VITE_DEV_ADMIN_USER=...
+VITE_API_URL=            # URL бэкенда; по умолчанию прод https://meritdemerit.onrender.com
+VITE_DEV_ADMIN_USER=...  # кнопки быстрого входа, работают только в `npm run dev`
 VITE_DEV_ADMIN_PASS=...
-VITE_DEV_TEACHER_USER=...
-VITE_DEV_TEACHER_PASS=...
-VITE_DEV_STUDENT_USER=...
-VITE_DEV_STUDENT_PASS=...
+VITE_DEV_TEACHER_USER=... / VITE_DEV_TEACHER_PASS=...
+VITE_DEV_STUDENT_USER=... / VITE_DEV_STUDENT_PASS=...
 ```
+
+### Переменные окружения бэка (`.env`, шаблон `.env.example`):
+| Переменная | Назначение |
+| :--- | :--- |
+| `DATABASE_URL` или `POSTGRES_*` | Подключение к PostgreSQL |
+| `JWT_SECRET_KEY`, `JWT_ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES` | JWT |
+| `BOT_TOKEN` | Токен бота; им же проверяется HMAC-подпись Telegram initData |
+| `MINI_APP_URL` | URL фронта для кнопки в боте |
+| `RUN_BOT` | `false` — не запускать бота (тесты, CI) |
+| `NOTIFICATIONS_ENABLED` | `false` — выключить уведомления в Telegram |
+| `INIT_DATA_MAX_AGE_SECONDS` | Максимальный возраст `auth_date` в initData |
+| `RATE_LIMIT_PER_MINUTE` | Лимит запросов на IP (по умолчанию 600 — вся школа часто за одним IP) |
+| `ALLOW_HTTP_LOCAL`, `DOCS_SECRET`, `SCHOOL_ID`, `SCHOOL_SECRET_KEY`, `CENTRAL_BACKEND_URL`, `GOOGLE_SERVICE_ACCOUNT_FILE` | Прочее |
 
 ---
 
 ## 🗂 3. Архитектура и структура каталогов (Project Structure)
 
+### Фронтенд (`frontend`):
 ```text
 /
-├── index.html                   # Точка входа HTML (подключен Telegram WebApp SDK)
-├── vite.config.js               # Конфигурация Vite
-├── package.json                 # Зависимости и скрипты
-├── USER_GUIDE.md                # Пользовательское руководство для ролей
-├── PROJECT_HISTORY.md           # Этот файл (AI Context & Changelog)
-├── src/
-│   ├── app/
-│   │   ├── App.jsx              # Главный контейнер (проверка Telegram окружения)
-│   │   ├── LoginPage.jsx        # Страница авторизации (с глазком пароля и dev-логином)
-│   │   ├── admin/               # Страницы администратора: Dashboard, Codes, Users, Settings
-│   │   ├── teacher/             # Страницы учителя: Dashboard (Homeroom), Students, Rules
-│   │   ├── student/             # Страницы ученика: Dashboard, History
-│   │   └── components/          # Общие UI-компоненты: CommonRankingTable (рейтинги 6-8, 9-12 и классов), Layout, Navigation
-│   ├── routes/
-│   │   └── routes.jsx           # Конфигурация роутов и ProtectedRoute по ролям
-│   ├── services/
-│   │   └── api.js               # Axios instance (интерцепторы авторизации, Telegram InitData и авто-повтора)
-│   ├── store/
-│   │   ├── authStore.js         # Сессия, JWT токен, текущий пользователь и роль
-│   │   ├── adminStore.js        # Управление пользователями, кодами, историей школы
-│   │   ├── teacherStore.js      # Классы, ученики, выставление баллов
-│   │   ├── studentStore.js      # Баланс и история ученика
-│   │   ├── detentionStore.js    # Управление дежурствами/отработками (Detentions)
-│   │   ├── interventionStore.js # Вмешательства / кураторские действия
-│   │   └── commonStore.js       # Общее состояние UI, ученики, классы, рейтинги (студентов и средних баллов классов)
-│   └── utils/
-│       ├── devHelpers.js        # Хелперы моков и локального тестирования
-│       ├── telegramCheck.js     # Проверка Telegram среды и парсинг InitData
-│       └── url.js               # API URL эндпоинты
+├── index.html                   # Точка входа (подключен Telegram WebApp SDK)
+├── vite.config.js
+├── playwright.config.js         # e2e-конфиг
+├── vercel.json                  # SPA-rewrites для Vercel
+├── USER_GUIDE.md                # Ссылка на иллюстрированный гид
+├── PROJECT_HISTORY.md           # Этот файл
+├── public/guide/index.html      # Иллюстрированное руководство пользователя (/guide/index.html)
+├── e2e/
+│   ├── seed.py                  # Заполняет тестовую БД (запускать из корня бэкенда с PYTHONPATH=.)
+│   └── smoke.spec.js            # 4 e2e-сценария
+├── .github/workflows/frontend-ci.yml
+└── src/
+    ├── app/
+    │   ├── App.jsx              # Корень: инициализация Telegram/safe areas, auth один раз за загрузку
+    │   ├── LoginPage.jsx
+    │   ├── admin/               # Dashboard, Users, Codes, Settings (таймер/блокировка), Ranking, RiskRegistry
+    │   ├── teacher/             # Dashboard (homeroom), Students, Rules
+    │   ├── student/             # Dashboard (профиль, прогресс, история — один экран)
+    │   └── components/          # AssignmentTable (таблица/карточки на телефоне), CommonRankingTable,
+    │                            # ScoringCountdownWidget, TeachersStatTable, dialogs/, containers/
+    ├── components/guide/        # Встроенный пошаговый тур (GuideTour, guideSteps по ролям, GuideButton "?")
+    ├── routes/routes.jsx        # Роуты и ProtectedRoute по ролям
+    ├── services/api.js          # Axios: авторизация, initData, авто-повтор, нормализация ошибок
+    ├── store/                   # Zustand: auth, admin, teacher, student, common, scoring, guide, detention, intervention
+    └── utils/
+        ├── studentLevels.js     # Уровни и цвета
+        ├── progress.js          # Прогресс до следующего уровня, данные графика
+        ├── classNames.js        # Сопоставление классов (кириллица сохраняется: 7А ≠ 7Б)
+        ├── apiErrors.js         # Ошибки API → строка (422 приходит списком объектов)
+        ├── telegramCheck.js     # Определение Telegram и парсинг initData
+        ├── openGuide.js         # Открытие гида (в Telegram через WebApp.openLink)
+        ├── url.js               # Базовый URL API (VITE_API_URL)
+        └── __tests__/           # Vitest
+```
+
+### Бэкенд (`backend`):
+```text
+/
+├── backend/
+│   ├── main.py                  # FastAPI app, startup-миграции, запуск бота
+│   ├── models.py                # Tortoise-модели (Student, Teacher, Class, PointHistory,
+│   │                            # AdminPointHistory, DisciplineRule, SystemSetting, LoginAttempt, ...)
+│   ├── config.py
+│   ├── routes/                  # admin.py, teachers.py, students.py, common.py, webapp_auth.py
+│   ├── middleware/              # rate_limit.py, logging.py
+│   └── utils/                   # ranking_helper (ранги), scoring (блокировка/дедлайн), notify (уведомления),
+│                                # security (пароли, initData HMAC), rules_helper, quarter_export
+├── bot/                         # aiogram-бот (handlers, keyboards, middlewares)
+├── migrations/models/           # aerich
+├── tests/                       # pytest на SQLite in-memory
+├── COMPLETE_API_DOCUMENTATION.md
+└── .github/workflows/backend-ci.yml
 ```
 
 ---
@@ -89,30 +149,107 @@ VITE_DEV_STUDENT_PASS=...
 ## 🔐 4. Аутентификация, Роли и Поведение API
 
 ### Авторизация:
-1. **Telegram InitData:**
-   - Передается через заголовок `X-Telegram-Init-Data`.
-   - Если открыто внутри Telegram: логин происходит в связке с Telegram ID.
-   - Если Telegram отсутствует: предусмотрен фоллбек на JSON авторизацию (`/auth/login-json`), чтобы работало локально/в браузере при разработке.
-2. **Токен:** Хранится в `localStorage.getItem('access_token')`. Передается в заголовке `Authorization: Bearer <token>`.
-3. **Роли:**
-   - `admin` — доступ к `/admin/*` (полный контроль, экспорт HTML со встроенным превью и Share Sheet, управление юзерами, сброс паролей).
-   - `teacher` — доступ к `/teacher/*` (свой Homeroom класс, выставление баллов, история своего класса).
-   - `student` — доступ к `/student/*` (личный баланс, история, рейтинг).
+1. **Обычный браузер:** логин/пароль через `/auth/login-json`.
+2. **Telegram:** initData передаётся в заголовке `X-Telegram-Init-Data`. Эндпоинты `/auth/quick`, `/auth/telegram-login` и привязка Telegram в `/auth/login` **требуют валидную HMAC-подпись initData (по `BOT_TOKEN`) и свежий `auth_date`**. Подделать вход по чужому `telegram_id` больше нельзя.
+3. **Токен:** `localStorage` (`access_token`), заголовок `Authorization: Bearer <token>`.
+4. **Блокировка после неверных паролей** хранится в таблице `login_attempt` и переживает перезапуск сервера.
+5. **Роли:**
+   - `admin` — `/admin/*`: пользователи, правила, история школы (удаление, экспорт CSV/HTML), таймер и блокировка выставления баллов, рейтинги (`/admin/ranking`, `/ranking`).
+   - `teacher` — `/teacher/*`: свой homeroom-класс (из профиля), выставление баллов любым классам, история.
+   - `student` — `/student/*`: баланс, уровень, прогресс, история. **Рейтинг ученикам и учителям не показывается.**
+6. Списки учеников, поиск, рейтинг и правила **требуют входа**.
 
-### Система рейтингов (`CommonRankingTable`):
-- **Параллели 6–8 и 9–12 классы:** Формируются на основе полного реестра `/students`, объединенного с актуальными баллами из `/ranking`. Решена проблема отсечения учеников (ранее глобальный Top-15 бэкенда заслонял младшие классы из-за аномально высоких баллов старшеклассников). Каждая группа гарантированно отображает честный Top-10 с раскрытием всех учеников по кнопке «Показать всех».
-- **Рейтинг классов:** Отображает средний балл каждого класса (`GET /class_average_ranking` с автоматическим локальным фоллбеком расчёта средних баллов по всем студентам). Колонки: Место (#), Класс, Средний балл (округление до 1 знака).
+### Ключевые правила бизнес-логики:
+- **Блокировка выставления баллов — серверная:** `GET/POST /school/scoring-status` (POST только админ). Пока закрыто или истёк дедлайн, `POST /teacher/workflow/assign` возвращает 403. Фронт не должен «успешно» менять статус локально.
+- **История админа и учителя в разных таблицах с пересекающимися id.** В `GET/DELETE /admin/history/{id}` всегда передавай `?source=teacher|admin`.
+- **Баллы меняются атомарно** (F-выражения) во всех путях начисления и отката; после изменения баллов пересчитываются ранги (`ranking_helper.recalculate_ranks()`).
+- **Уведомления (`backend/utils/notify.py`):** ученику — сообщение о каждом начислении; классному руководителю — если ученик упал ниже 100 или в зону мер реагирования. Отправляются в фоне. Сообщение доходит только тем, кто хоть раз открывал бота.
 
 ### Важные нюансы в `src/services/api.js`:
-- **Auto-retry при сбоях (3 сек):** Для ошибок 500-599 или сетевых сбоев (пока Render просыпается из сна) настроен повтор с показом лоадера в toast.
-- **Обработка 401:** При невалидном токене генерируется событие `unauthorized`, очищающее сессию без бесконечного ретрая.
+- **Auto-retry (3 сек)** для 5xx и сетевых ошибок, пока Render просыпается. **Не удалять.**
+- **401** генерирует событие `unauthorized` и очищает сессию без ретраев.
+- **422** приходит списком объектов; он нормализуется в строку (`apiErrors.js`). Рендер «сырого» списка ронял страницу.
+- **Осторожно с циклами запросов в `useEffect`:** раньше пустой список правил/учеников вызывал бесконечные запросы и упирался в rate limit.
 
 ---
 
-## 📜 5. Полная история изменений и ключевых фиксов (Changelog & Commits)
+## 🧪 5. Тесты, CI и локальный запуск
+
+### Фронтенд:
+```bash
+npm ci
+npm run dev          # http://localhost:5173, API = VITE_API_URL или прод
+npm run lint         # должно быть 0 предупреждений
+npm test             # Vitest
+npm run build && npm run preview
+npm run test:e2e     # Playwright, нужен запущенный бэкенд и preview (см. ниже)
+```
+
+### Бэкенд:
+```bash
+python -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+pytest -q            # SQLite in-memory, Postgres не нужен
+uvicorn backend.main:app --reload
+```
+
+### Полный стек локально (как в e2e CI):
+1. Postgres: `docker run -d -p 127.0.0.1:55432:5432 -e POSTGRES_PASSWORD=... postgres:16-alpine`.
+2. Бэкенд с `DATABASE_URL=...55432...`, `RUN_BOT=false`, `NOTIFICATIONS_ENABLED=false`, `BOT_TOKEN=123:test-token`.
+3. Сид: из корня бэкенда `PYTHONPATH=. python <путь к фронту>/e2e/seed.py`.
+4. Фронт: `VITE_API_URL=http://127.0.0.1:<порт> npm run build && npx vite preview --port 4173`.
+5. Эмуляция Telegram в браузере: подписать initData тем же `BOT_TOKEN` и открыть `http://127.0.0.1:4173/#tgWebAppData=<initData>`.
+
+### CI (GitHub Actions):
+- `frontend-ci.yml`: job `checks` (lint + unit + build) → job `e2e` (поднимает Postgres и API из ветки `backend`, сид, Playwright). **e2e закреплён на `ubuntu-24.04`**: Playwright 1.55 не ставит Chromium на `ubuntu-latest` (= Ubuntu 26.04). Вернуть `ubuntu-latest` можно после обновления Playwright.
+- `backend-ci.yml`: ruff + pytest.
+
+---
+
+## ⚠️ 6. Подводные камни (Gotchas)
+
+- Telegram WebView: скачивание файлов, всплывающие окна и внешние ссылки работают иначе. Для ссылок используй `WebApp.openLink`, для экспорта — Share Sheet/фоллбеки.
+- Safe areas: используй CSS-переменные `--app-safe-top` / `--app-safe-bottom` (из Telegram insets или `env()`), а не жёсткие отступы.
+- Классы с кириллицей (`7А`, `7Б`) нельзя нормализовать удалением не-латинских символов.
+- Порядок классов фиксированный 6A → 12B (`sortClassesFixed`), не зависит от рейтинга.
+- Эндпоинт в FastAPI: не вставляй функции между декоратором `@router.post(...)` и обработчиком (баг `4b18f52`). Тест проверяет привязку роутов правил.
+- Уровни заданы в двух местах (фронт `studentLevels.js`, бэк `notify.py`).
+
+---
+
+## 📋 7. Открытые задачи (Open Items)
+
+- **Бэкапы БД не настроены.** Workflow с дампом в артефакты публичного репозитория отклонён по безопасности. Варианты: бэкапы Render (платный Postgres), приватный репозиторий, локальный `pg_dump` по расписанию.
+- **Уведомления на реальном боте ещё не проверены вручную** (локально отправка подменялась).
+- Идеи из бэклога: Undo после выставления баллов; избранные правила у учителя; импорт учеников из CSV/Excel; сброс четверти из админки (сейчас только `/reset_quarter` в боте); пинг против засыпания Render; журнал действий админа; пагинация истории и инкрементальный пересчёт рангов на сервере; переключатель RU/EN.
+- В `src/utils/telegramCheck.js` остался устаревший TODO с закомментированной проверкой Telegram — можно удалить.
+
+---
+
+## 📜 8. Полная история изменений и ключевых фиксов (Changelog & Commits)
+
+> Пометка после хеша: (F) — ветка `frontend`, (B) — `backend`. Новые записи добавляй сверху.
 
 | Хеш коммита | Дата | Тип | Описание изменения |
 | :--- | :---: | :---: | :--- |
+| **`30d5203`** (F) | 2026-11-12 | `ci(frontend)` | e2e-job закреплён на `ubuntu-24.04`: Playwright 1.55 не ставит Chromium на `ubuntu-latest` (Ubuntu 26.04). |
+| **`fa6a5a2`** (F) | 2026-11-12 | `feat(frontend)` | Карточка прогресса ученика (баллы до следующего уровня, график за четверть, суммы меритов/демеритов, шаг тура); компактные заголовки на телефоне; линтер исправлен (583 ложных предупреждения → 0); удалены 8 мёртвых файлов и неиспользуемые зависимости; Vitest unit-тесты; Playwright e2e против настоящего бэкенда в CI. |
+| **`abb05c5`** (B) | 2026-11-12 | `feat(backend)` | Уведомления в Telegram (ученику о каждом начислении, классному руководителю о падении ниже 100 / в зону мер), в фоне, `NOTIFICATIONS_ENABLED`; блокировки входа в таблице `login_attempt`. |
+| **`ddbcc51`** (F) | 2026-11-12 | `feat(frontend)` | История на телефоне — карточками; иллюстрированный гид `/guide/index.html` (ссылки со страницы входа и из тура); нормализация 422-ошибок; при создании правила тип задаёт знак баллов. |
+| **`4b18f52`** (B) | 2026-11-12 | `fix(backend)` | `POST /admin/rules` был привязан к хелперу вместо `create_rule` (422); тест на привязку роутов. |
+| **`2fbc8d6`** (B) | 2026-11-12 | `feat(backend)` | Все сообщения API и бота на английском. |
+| **`95e7416`** (F) | 2026-11-12 | `feat(frontend)` | Весь интерфейс на английском, даты в формате en-GB. |
+| **`789b7e8`** (B) | 2026-11-12 | `fix(backend)` | Тип правила следует из знака баллов; при старте исправляются старые записи. |
+| **`a6500dc`** (F) | 2026-11-12 | `feat(frontend)` | Встроенный пошаговый тур по ролям (ученик 5, учитель 8, админ 9 шагов) с подсветкой элементов, автозапуск при первом входе, кнопка «?»; цвета и знаки правил по баллам. |
+| **`722f088`** (B) | 2026-11-12 | `fix(backend)` | Проверка HMAC-подписи initData для Telegram-входа (раньше можно было войти по чужому `telegram_id`); `?source=` для истории админа; атомарное обновление баллов; пересчёт рангов при удалении учителем; эндпоинты списков требуют входа; rate limit 600/мин (`RATE_LIMIT_PER_MINUTE`). |
+| **`d983246`** (F) | 2026-11-12 | `fix(frontend)` | Работа в обычном браузере (не блокируется); выход у учителя; auth инициализируется один раз; устранены бесконечные циклы `GET /students` и `GET /rules`; удаление истории с `source`; кириллица в классах; homeroom из профиля; safe areas; lazy-loading страниц (бандл 830 → ~140 kB); доступность карточек; `VITE_API_URL`. |
+| **`a619a25`** (F) | 2026-11-09 | `fix(frontend)` | Блокировка выставления баллов полностью серверная: админ не получает ложный успех, учителя/ученики не шлют POST статуса, учитель обновляет статус перед начислением. |
+| **`7c1e8c7`** (B) | 2026-11-09 | `fix(backend)` | Восстановлены `/school/scoring-status`, модель `SystemSetting` и проверка в `/teacher/workflow/assign` (случайно удалены в `8346fd3`); тесты. |
+| **`da5defa`** (B) | 2026-11-08 | `fix(backend)` | Пароли в bcrypt (plaintext апгрейдится при входе); редактирование с пустым паролем больше не стирает пароль; пароли не возвращаются в ответах; pytest + CI. |
+| **`8d8045c`** (B) | 2026-11-08 | `fix(backend)` | Дельты рангов не сбрасываются при рестарте; починен `pyproject.toml`; переименована дублирующая миграция в `5_`. |
+| **`d4107b3`** (F) | 2026-11-08 | `fix(frontend)` | `base: "/"` (белый экран при перезагрузке вложенного роута); удалены шаблонные GitLab CI и gh-pages; пакет переименован в `meritdemerit`; `.env.example` и CI. |
+| **`96e59a1`** (F) | 2026-11-08 | `fix(frontend)` | Исправлены lint-ошибки (в т.ч. отсутствующий импорт `toast` в `teacherStore`), `npm audit fix`. |
+| **`55b8d6e`** (F) | 2026-11-02 | `chore(cleanup)` | Удалены устаревшие конфиги и pycache бэкенда из ветки `frontend`. |
 | **`ca79b89`** | 2026-11-02 | `chore(cleanup)` | Оптимизирована директория фронтенда: удалены 3447 файлов `.venv` из git-индекса ветки `frontend` без удаления с диска, удалены устаревшие `.eslintrc.cjs` и неиспользуемый `components.json`, удалены фантомные каталоги `backend/` и `migrations/` с кэшами `__pycache__`, обновлен `.gitignore`. |
 | **`a32004b`** | 2026-11-02 | `feat(student,ui)` | Объединены страницы Dashboard и History у ученика в единый компактный экран: карточка профиля + полный раздел Points History с таблицей начислений (`AssignmentTable`) и пагинацией; добавлена кнопка Log out в хэдере; скрыта нижняя панель навигации `BottomNavbar` для роли `student` (так как экран теперь один); роут `/student/history` перенаправляет на `/student/dashboard`. |
 | **`888de5c`** | 2026-11-02 | `feat(ranking,access)` | Рейтинг полностью скрыт от учеников и учителей (удалены секции рейтингов и лишние сетевые запросы из `student/DashboardPage.jsx` и `teacher/DashboardPage.jsx`); доступ к рейтингу по путям `/admin/ranking` и `/ranking` сохранён исключительно для роли администратора (`AdminRankingPage.jsx` с защитой `ProtectedRoute requiredRole="admin"` и быстрым переходом с дашборда администратора). |
@@ -160,9 +297,10 @@ VITE_DEV_STUDENT_PASS=...
 
 ---
 
-## 💡 6. Инструкция для ИИ-агентов (Guidelines for AI Agents)
+## 💡 9. Инструкция для ИИ-агентов (Guidelines for AI Agents)
 
-1. **Не сканируй весь проект зря:** Перед началом задачи прочитай этот файл `PROJECT_HISTORY.md` и при необходимости `USER_GUIDE.md`.
-2. **Учитывай Telegram окружение:** Всегда помни, что приложение работает внутри Telegram Mini App. Любые манипуляции с роутингом, всплывающими окнами, скачиванием файлов или авторизацией должны учитывать ограничения WebView и Telegram WebApp SDK (`window.Telegram.WebApp`).
-3. **Холодный старт Render:** Бэкенд расположен на бесплатном/автослип инстансе Render. В `src/services/api.js` уже есть логика повтора запросов — не удаляй её.
-4. **Обновление этого файла:** При выполнении новых фич, изменении архитектуры, роутов или API обязательно дописывай новую строчку в раздел истории изменений (Changelog) в этом файле!
+1. **Не сканируй весь проект зря:** сначала прочитай этот файл (особенно разделы 0, 4 и 6), при необходимости `USER_GUIDE.md` и `COMPLETE_API_DOCUMENTATION.md` в ветке `backend`.
+2. **Учитывай оба окружения:** приложение работает и в Telegram Mini App (ограничения WebView и `window.Telegram.WebApp`), и в обычном браузере. Роутинг, всплывающие окна, скачивание файлов и авторизацию проверяй в обоих.
+3. **Холодный старт Render:** логику повтора запросов в `src/services/api.js` не удалять.
+4. **Изменения API делай синхронно:** бэкенд (ветка `backend`) + фронт (`frontend`) + тест (pytest / Vitest / Playwright). Не ломай e2e: `e2e/seed.py` и `e2e/smoke.spec.js`.
+5. **Обновление этого файла:** при новых фичах, изменении архитектуры, роутов, API, переменных окружения или CI добавь строку в Changelog (раздел 8, сверху, с пометкой (F)/(B)) и поправь соответствующие разделы 0–7.
