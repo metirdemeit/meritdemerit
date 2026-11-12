@@ -134,13 +134,13 @@ export const useTeacherStore = create((set, get) => ({
     const scoringState = useScoringStore.getState();
     if (!scoringState.isOpen) {
       const msg = scoringState.closedReason === 'timer_expired'
-        ? 'Приём баллов закрыт: время по таймеру истекло!'
-        : 'Приём баллов временно закрыт администратором!';
+        ? 'Point assignment is closed: the deadline has passed.'
+        : 'Point assignment is temporarily closed by the administration.';
       toast.error(msg);
       throw new Error(msg);
     }
     if (scoringState.deadline && new Date(scoringState.deadline).getTime() <= Date.now()) {
-      const msg = 'Приём баллов закрыт: время по таймеру истекло!';
+      const msg = 'Point assignment is closed: the deadline has passed.';
       toast.error(msg);
       throw new Error(msg);
     }

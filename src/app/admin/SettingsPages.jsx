@@ -298,7 +298,7 @@ export function SettingsPages() {
   const ensureFullHistory = async () => {
     const store = useAdminStore.getState();
     if (store.loadingHistoryFull || (store.totalHistoryCount > 0 && store.history.length < store.totalHistoryCount) || !store.history.length) {
-      toast.loading('Загрузка полной истории школы...', { id: 'history-fetch-toast' });
+      toast.loading('Loading the full school history...', { id: 'history-fetch-toast' });
       await fetchHistory();
       toast.dismiss('history-fetch-toast');
     }
@@ -315,7 +315,7 @@ export function SettingsPages() {
   };
 
   const generateHistoryHtmlReport = (items = [], criteria = {}) => {
-    const generatedAt = new Date().toLocaleString('ru-RU', {
+    const generatedAt = new Date().toLocaleString('en-GB', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -343,19 +343,19 @@ export function SettingsPages() {
     const netBalance = meritsPoints + demeritsPoints;
 
     const activeFilters = [];
-    if (criteria.student?.trim()) activeFilters.push(`Ученик: ${escapeHtml(criteria.student.trim())}`);
-    if (criteria.schoolClass?.trim()) activeFilters.push(`Класс: ${escapeHtml(criteria.schoolClass.trim())}`);
-    if (criteria.teacher?.trim()) activeFilters.push(`Учитель/Админ: ${escapeHtml(criteria.teacher.trim())}`);
-    if (criteria.rule?.trim()) activeFilters.push(`Правило: ${escapeHtml(criteria.rule.trim())}`);
-    if (criteria.startDate) activeFilters.push(`От: ${escapeHtml(criteria.startDate)}`);
-    if (criteria.endDate) activeFilters.push(`До: ${escapeHtml(criteria.endDate)}`);
+    if (criteria.student?.trim()) activeFilters.push(`Student: ${escapeHtml(criteria.student.trim())}`);
+    if (criteria.schoolClass?.trim()) activeFilters.push(`Class: ${escapeHtml(criteria.schoolClass.trim())}`);
+    if (criteria.teacher?.trim()) activeFilters.push(`Teacher/Admin: ${escapeHtml(criteria.teacher.trim())}`);
+    if (criteria.rule?.trim()) activeFilters.push(`Rule: ${escapeHtml(criteria.rule.trim())}`);
+    if (criteria.startDate) activeFilters.push(`From: ${escapeHtml(criteria.startDate)}`);
+    if (criteria.endDate) activeFilters.push(`To: ${escapeHtml(criteria.endDate)}`);
     if (criteria.type && criteria.type !== 'all') {
-      activeFilters.push(`Тип: ${criteria.type === 'merit' ? 'Только Merit (+)' : 'Только Demerit (-)'}`);
+      activeFilters.push(`Type: ${criteria.type === 'merit' ? 'Merits only (+)' : 'Demerits only (-)'}`);
     }
 
     const filtersHtml = activeFilters.length > 0
-      ? `<div class="filters-box"><strong>Примененные фильтры:</strong> ${activeFilters.map(f => `<span class="filter-tag">${f}</span>`).join(' ')}</div>`
-      : `<div class="filters-box"><strong>Фильтры:</strong> <span class="filter-tag">Вся история школы (без ограничений)</span></div>`;
+      ? `<div class="filters-box"><strong>Filters applied:</strong> ${activeFilters.map(f => `<span class="filter-tag">${f}</span>`).join(' ')}</div>`
+      : `<div class="filters-box"><strong>Filters:</strong> <span class="filter-tag">Full school history (no filters)</span></div>`;
 
     const rowsHtml = items.map((item, idx) => {
       const isMerit = (item.points_changed || 0) > 0;
@@ -363,7 +363,7 @@ export function SettingsPages() {
       const typeLabel = isMerit ? 'Merit' : isDemerit ? 'Demerit' : 'Neutral';
       const typeClass = isMerit ? 'badge-merit' : isDemerit ? 'badge-demerit' : 'badge-neutral';
       const pointsFormatted = isMerit ? `+${item.points_changed}` : `${item.points_changed || 0}`;
-      const dateFormatted = item.created_at ? new Date(item.created_at).toLocaleString('ru-RU') : '-';
+      const dateFormatted = item.created_at ? new Date(item.created_at).toLocaleString('en-GB') : '-';
 
       return `
         <tr>
@@ -385,7 +385,7 @@ export function SettingsPages() {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MeritDemerit — Отчет по истории баллов</title>
+  <title>MeritDemerit points history report</title>
   <style>
     :root {
       --bg: #0F0E26;
@@ -552,36 +552,36 @@ export function SettingsPages() {
   <div class="header">
     <div>
       <h1>MeritDemerit System</h1>
-      <p>Полный отчет по истории начисления и списания баллов</p>
+      <p>Full report of merits and demerits</p>
     </div>
     <div class="meta-box">
-      <div>Сгенерировано: <strong>${generatedAt}</strong></div>
-      <div>Всего записей: <strong>${totalCount}</strong></div>
+      <div>Generated: <strong>${generatedAt}</strong></div>
+      <div>Total records: <strong>${totalCount}</strong></div>
     </div>
   </div>
 
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-title">Всего записей</div>
+      <div class="stat-title">Total records</div>
       <div class="stat-value">${totalCount}</div>
-      <div class="stat-sub">в текущем отчете</div>
+      <div class="stat-sub">in this report</div>
     </div>
     <div class="stat-card">
-      <div class="stat-title">Поощрения (Merit)</div>
-      <div class="stat-value" style="color: #10B981;">+${meritsPoints} б.</div>
-      <div class="stat-sub">${meritsCount} начислений</div>
+      <div class="stat-title">Merits</div>
+      <div class="stat-value" style="color: #10B981;">+${meritsPoints} pts</div>
+      <div class="stat-sub">${meritsCount} awards</div>
     </div>
     <div class="stat-card">
-      <div class="stat-title">Замечания (Demerit)</div>
-      <div class="stat-value" style="color: #EF4444;">${demeritsPoints} б.</div>
-      <div class="stat-sub">${demeritsCount} взысканий</div>
+      <div class="stat-title">Demerits</div>
+      <div class="stat-value" style="color: #EF4444;">${demeritsPoints} pts</div>
+      <div class="stat-sub">${demeritsCount} penalties</div>
     </div>
     <div class="stat-card">
-      <div class="stat-title">Итоговый баланс</div>
+      <div class="stat-title">Net balance</div>
       <div class="stat-value" style="color: ${netBalance >= 0 ? '#10B981' : '#EF4444'};">
-        ${netBalance > 0 ? `+${netBalance}` : netBalance} б.
+        ${netBalance > 0 ? `+${netBalance}` : netBalance} pts
       </div>
-      <div class="stat-sub">нетто за период</div>
+      <div class="stat-sub">net for the period</div>
     </div>
   </div>
 
@@ -592,24 +592,24 @@ export function SettingsPages() {
       <thead>
         <tr>
           <th>#</th>
-          <th>Дата и время</th>
-          <th>Ученик</th>
-          <th>Класс</th>
-          <th>Учитель / Администратор</th>
-          <th>Тип</th>
-          <th>Баллы</th>
-          <th>Правило / Причина</th>
-          <th>Комментарий</th>
+          <th>Date and time</th>
+          <th>Student</th>
+          <th>Class</th>
+          <th>Teacher / Admin</th>
+          <th>Type</th>
+          <th>Points</th>
+          <th>Rule</th>
+          <th>Comment</th>
         </tr>
       </thead>
       <tbody>
-        ${rowsHtml || '<tr><td colspan="9" style="text-align:center; padding: 32px; color: var(--text-muted);">Нет записей по заданным фильтрам</td></tr>'}
+        ${rowsHtml || '<tr><td colspan="9" style="text-align:center; padding: 32px; color: var(--text-muted);">No records match these filters</td></tr>'}
       </tbody>
     </table>
   </div>
 
   <div class="footer">
-    Сгенерировано системой MeritDemerit System · Единый реестр школы
+    Generated by MeritDemerit
   </div>
 </body>
 </html>`;
@@ -645,7 +645,7 @@ export function SettingsPages() {
           files: [file],
           title: 'Students Points History',
         });
-        toast.success(`HTML экспортирован (${itemsToExport.length} записей)`);
+        toast.success(`HTML exported (${itemsToExport.length} records)`);
         setExportDialogOpen(false);
         return;
       }
@@ -678,11 +678,11 @@ export function SettingsPages() {
       }
 
       window.setTimeout(() => URL.revokeObjectURL(url), 60000);
-      toast.success(`HTML скачан (${itemsToExport.length} записей)`);
+      toast.success(`HTML downloaded (${itemsToExport.length} records)`);
       setExportDialogOpen(false);
     } catch (err) {
       if (import.meta.env.DEV) console.error('handleDownloadHistoryHtml error', err);
-      toast.error('Не удалось скачать историю');
+      toast.error('Could not download the history');
     } finally {
       setExportingHistory(false);
     }
@@ -709,7 +709,7 @@ export function SettingsPages() {
         const headers = ['ID', 'Date', 'Student', 'Class', 'Teacher/Admin', 'Type', 'Points', 'Rule', 'Comment'];
         const rows = (itemsToExport || []).map((item) => [
           item.id,
-          item.created_at ? new Date(item.created_at).toLocaleString('ru-RU') : '',
+          item.created_at ? new Date(item.created_at).toLocaleString('en-GB') : '',
           `"${(item.student_name || '').replace(/"/g, '""')}"`,
           `"${(item.student_class || item.class_name || '').replace(/"/g, '""')}"`,
           `"${(item.teacher_name || '').replace(/"/g, '""')}"`,
@@ -731,7 +731,7 @@ export function SettingsPages() {
           files: [file],
           title: 'Students Points History CSV',
         });
-        toast.success(`CSV экспортирован (${itemsToExport.length} записей)`);
+        toast.success(`CSV exported (${itemsToExport.length} records)`);
         setExportDialogOpen(false);
         return;
       }
@@ -758,11 +758,11 @@ export function SettingsPages() {
       }
 
       window.setTimeout(() => URL.revokeObjectURL(url), 60000);
-      toast.success(`CSV скачан (${itemsToExport.length} записей)`);
+      toast.success(`CSV downloaded (${itemsToExport.length} records)`);
       setExportDialogOpen(false);
     } catch (err) {
       if (import.meta.env.DEV) console.error('handleDownloadHistoryCsv error', err);
-      toast.error('Не удалось скачать CSV');
+      toast.error('Could not download the CSV');
     } finally {
       setExportingHistory(false);
     }
@@ -906,7 +906,7 @@ export function SettingsPages() {
                     }}
                     variant="outlined"
                   >
-                    Экспорт
+                    Export
                   </Button>
                   <Button
                     size="small"
@@ -1379,14 +1379,14 @@ export function SettingsPages() {
             disabled={exportingHistory}
             sx={{ color: '#EB2B4B', textTransform: 'none', mr: 'auto' }}
           >
-            Сбросить
+            Reset
           </Button>
           <Button
             onClick={() => setExportDialogOpen(false)}
             disabled={exportingHistory}
             sx={{ color: '#B8B7D9', textTransform: 'none' }}
           >
-            Отмена
+            Cancel
           </Button>
           <Button
             onClick={() => handleDownloadHistoryCsv(exportFilters)}
@@ -1404,7 +1404,7 @@ export function SettingsPages() {
               },
             }}
           >
-            Скачать CSV
+            Download CSV
           </Button>
           <Button
             onClick={handleDownloadHistoryHtml}
@@ -1421,7 +1421,7 @@ export function SettingsPages() {
               },
             }}
           >
-            Скачать HTML
+            Download HTML
           </Button>
         </DialogActions>
       </Dialog>

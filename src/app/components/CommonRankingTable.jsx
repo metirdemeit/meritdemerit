@@ -162,7 +162,7 @@ export default function CommonRankingTable({ rankings = [] }) {
       const prevPoints = Number(prevItem?.total_points ?? prevItem?.points ?? 0);
       const myPoints = Number(myItem?.total_points ?? myItem?.points ?? 0);
       pointsToOvertake = (prevPoints - myPoints) + 1; // +1 point to overtake
-      targetStudentName = `${prevItem.first_name || ''} ${prevItem.last_name || ''}`.trim() || 'лидера';
+      targetStudentName = `${prevItem.first_name || ''} ${prevItem.last_name || ''}`.trim() || 'the leader';
     }
 
     return {
@@ -197,7 +197,7 @@ export default function CommonRankingTable({ rankings = [] }) {
           onClick={() => { setActiveGroup('6-8'); setShowFull(false); }}
           sx={btnSx(activeGroup === '6-8')}
         >
-          6–8 классы
+          Grades 6–8
         </Button>
         <Button
           startIcon={<Groups />}
@@ -205,7 +205,7 @@ export default function CommonRankingTable({ rankings = [] }) {
           onClick={() => { setActiveGroup('9-12'); setShowFull(false); }}
           sx={btnSx(activeGroup === '9-12')}
         >
-          9–12 классы
+          Grades 9–12
         </Button>
         <Button
           startIcon={<School />}
@@ -213,7 +213,7 @@ export default function CommonRankingTable({ rankings = [] }) {
           onClick={() => { setActiveGroup('classes'); setShowFull(false); }}
           sx={btnSx(activeGroup === 'classes')}
         >
-          Рейтинг классов
+          Class ranking
         </Button>
       </ButtonGroup>
 
@@ -251,11 +251,11 @@ export default function CommonRankingTable({ rankings = [] }) {
               </Box>
               <Box>
                 <Typography variant="subtitle2" sx={{ color: '#F4F4FF', fontWeight: 700 }}>
-                  Ваша позиция в рейтинге
+                  Your ranking position
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#C4A8FF', display: 'block' }}>
-                  Баллы: <strong style={{ color: '#FFFFFF' }}>{myRankInfo.points}</strong>
-                  {myRankInfo.isTop10 && ' · Вы в Топ-10 школы! 🔥'}
+                  Points: <strong style={{ color: '#FFFFFF' }}>{myRankInfo.points}</strong>
+                  {myRankInfo.isTop10 && ' · You are in the school Top 10! 🔥'}
                 </Typography>
               </Box>
             </Stack>
@@ -276,8 +276,8 @@ export default function CommonRankingTable({ rankings = [] }) {
               >
                 <TrackChanges sx={{ color: '#00D377', fontSize: 18 }} />
                 <Typography variant="caption" sx={{ color: '#E4FBEF', fontWeight: 600 }}>
-                  До #{myRankInfo.rank - 1} места ({myRankInfo.targetStudentName}):{' '}
-                  <strong style={{ color: '#00D377', fontSize: '0.85rem' }}>+{myRankInfo.pointsToOvertake} б.</strong>
+                  To reach #{myRankInfo.rank - 1} ({myRankInfo.targetStudentName}):{' '}
+                  <strong style={{ color: '#00D377', fontSize: '0.85rem' }}>+{myRankInfo.pointsToOvertake} pts</strong>
                 </Typography>
               </Box>
             )}
@@ -291,17 +291,17 @@ export default function CommonRankingTable({ rankings = [] }) {
             {isClassesTab ? (
               <TableRow>
                 <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 48 }}>#</TableCell>
-                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)' }}>Класс</TableCell>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)' }}>Class</TableCell>
                 <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 110, textAlign: 'right' }}>
-                  Средний балл
+                  Average points
                 </TableCell>
               </TableRow>
             ) : (
               <TableRow>
                 <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 48 }}>#</TableCell>
-                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)' }}>Ученик</TableCell>
-                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 65 }}>Баллы</TableCell>
-                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 56 }}>Класс</TableCell>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)' }}>Student</TableCell>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 65 }}>Points</TableCell>
+                <TableCell sx={{ color: '#b3b3b3', borderColor: 'rgba(255,255,255,0.1)', width: 56 }}>Class</TableCell>
               </TableRow>
             )}
           </TableHead>
@@ -309,7 +309,7 @@ export default function CommonRankingTable({ rankings = [] }) {
             {displayItems.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={isClassesTab ? 3 : 4} sx={{ color: '#5A5984', textAlign: 'center', py: 4, border: 0 }}>
-                  Нет данных
+                  No data
                 </TableCell>
               </TableRow>
             ) : isClassesTab ? (
@@ -349,7 +349,7 @@ export default function CommonRankingTable({ rankings = [] }) {
                       {ranking?.first_name} {ranking?.last_name}
                       {isMe && (
                         <Chip
-                          label="Вы"
+                          label="You"
                           size="small"
                           sx={{
                             ml: 1,
@@ -395,7 +395,7 @@ export default function CommonRankingTable({ rankings = [] }) {
                       },
                     }}
                   >
-                    {showFull ? 'Свернуть' : 'Показать всех'}
+                    {showFull ? 'Show less' : 'Show all'}
                   </Button>
                 </TableCell>
               </TableRow>

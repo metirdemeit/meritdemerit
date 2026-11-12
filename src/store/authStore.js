@@ -71,7 +71,7 @@ export const useAuthStore = create((set) => ({
       };
 
       set({ user: userObj, isAuthenticated: true, loading: false });
-      toast.success('Вход выполнен');
+      toast.success('Signed in');
       return true;
     } catch (err) {
       set({ loading: false });

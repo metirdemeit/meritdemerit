@@ -36,7 +36,7 @@ export default function AuthWrapper({ children }) {
   }, []);
 
   if (!ready) {
-    return <SimpleLoadingScreen message="Загрузка..." />;
+    return <SimpleLoadingScreen message="Loading..." />;
   }
 
   return <>{children}</>;

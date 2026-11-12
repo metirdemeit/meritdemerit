@@ -97,7 +97,7 @@ export default function ScoringDeadlineManager() {
 
   const handleSaveTimer = async () => {
     if (!inputDate || !inputTime) {
-      toast.error('Пожалуйста, укажите дату и время');
+      toast.error('Please set a date and time');
       return;
     }
     const [year, month, day] = inputDate.split('-').map(Number);
@@ -105,33 +105,33 @@ export default function ScoringDeadlineManager() {
     const selectedDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
 
     if (selectedDate.getTime() <= Date.now()) {
-      toast.error('Время дедлайна должно быть в будущем!');
+      toast.error('The deadline must be in the future');
       return;
     }
 
     try {
       await setTimerDeadline(selectedDate);
-      toast.success('Таймер приёма баллов успешно запущен!');
+      toast.success('Scoring timer started');
     } catch {
-      toast.error('Не удалось сохранить таймер');
+      toast.error('Could not save the timer');
     }
   };
 
   const handleCloseNow = async () => {
     try {
       await closeImmediately('manual');
-      toast.success('Приём баллов мгновенно закрыт!');
+      toast.success('Point assignment closed');
     } catch {
-      toast.error('Не удалось закрыть приём баллов');
+      toast.error('Could not close point assignment');
     }
   };
 
   const handleOpenIndefinitely = async () => {
     try {
       await openIndefinitely();
-      toast.success('Приём баллов открыт бессрочно!');
+      toast.success('Point assignment opened with no deadline');
     } catch {
-      toast.error('Не удалось открыть приём баллов');
+      toast.error('Could not open point assignment');
     }
   };
 
@@ -139,17 +139,17 @@ export default function ScoringDeadlineManager() {
   const remaining = useMemo(() => {
     if (!deadline || !isOpen) return null;
     const diff = new Date(deadline).getTime() - now;
-    if (diff <= 0) return 'Время истекло';
+    if (diff <= 0) return 'Time is up';
     const totalSec = Math.floor(diff / 1000);
     const d = Math.floor(totalSec / 86400);
     const h = Math.floor((totalSec % 86400) / 3600);
     const m = Math.floor((totalSec % 3600) / 60);
     const s = totalSec % 60;
     const parts = [];
-    if (d > 0) parts.push(`${d} дн.`);
-    parts.push(`${h} ч.`);
-    parts.push(`${m} мин.`);
-    parts.push(`${s} сек.`);
+    if (d > 0) parts.push(`${d}d`);
+    parts.push(`${h}h`);
+    parts.push(`${m}m`);
+    parts.push(`${s}s`);
     return parts.join(' ');
   }, [deadline, isOpen, now]);
 
@@ -193,10 +193,10 @@ export default function ScoringDeadlineManager() {
             </Box>
             <Box>
               <Typography variant="h6" sx={{ color: 'white', fontWeight: 700 }}>
-                Управление таймером приёма баллов
+                Scoring timer
               </Typography>
               <Typography variant="body2" sx={{ color: '#8C8AA8' }}>
-                Ограничение срока выставления баллов учителями по всей школе
+                Set a school-wide deadline for teachers to assign points
               </Typography>
             </Box>
           </Box>
@@ -206,7 +206,7 @@ export default function ScoringDeadlineManager() {
             deadline ? (
               <Chip
                 icon={<HourglassEmpty sx={{ '&&': { color: '#FCD34D' } }} />}
-                label="Активен таймер"
+                label="Timer running"
                 sx={{
                   backgroundColor: 'rgba(245, 158, 11, 0.2)',
                   color: '#FCD34D',
@@ -218,7 +218,7 @@ export default function ScoringDeadlineManager() {
             ) : (
               <Chip
                 icon={<CheckCircle sx={{ '&&': { color: '#4ADE80' } }} />}
-                label="Открыт (Бессрочно)"
+                label="Open (no deadline)"
                 sx={{
                   backgroundColor: 'rgba(34, 197, 94, 0.2)',
                   color: '#4ADE80',
@@ -231,7 +231,7 @@ export default function ScoringDeadlineManager() {
           ) : (
             <Chip
               icon={<Lock sx={{ '&&': { color: '#F87171' } }} />}
-              label="Приём закрыт"
+              label="Closed"
               sx={{
                 backgroundColor: 'rgba(239, 68, 68, 0.2)',
                 color: '#F87171',
@@ -272,27 +272,27 @@ export default function ScoringDeadlineManager() {
             <Typography variant="body2" sx={{ color: '#C4A8FF', fontWeight: 600 }}>
               {isOpen
                 ? deadline
-                  ? `Дедлайн: ${new Date(deadline).toLocaleString('ru-RU', {
+                  ? `Deadline: ${new Date(deadline).toLocaleString('en-GB', {
                       day: 'numeric',
                       month: 'long',
                       hour: '2-digit',
                       minute: '2-digit',
                     })}`
-                  : 'Приём баллов активен без ограничения по времени'
-                : 'Выставление баллов заблокировано для всех учителей'}
+                  : 'Point assignment is open with no time limit'
+                : 'Point assignment is locked for all teachers'}
             </Typography>
             {isOpen && deadline && (
               <Typography variant="caption" sx={{ color: '#F4F4FF' }}>
-                Осталось времени:{' '}
+                Time left:{' '}
                 <strong style={{ color: '#FCD34D', fontSize: '0.95rem' }}>{remaining}</strong>
               </Typography>
             )}
             {!isOpen && (
               <Typography variant="caption" sx={{ color: '#FCA5A5' }}>
-                Причина закрытия:{' '}
+                Closed because:{' '}
                 {closedReason === 'timer_expired'
-                  ? 'Истёк срок по таймеру'
-                  : 'Приостановлено администратором вручную'}
+                  ? 'the deadline passed'
+                  : 'an admin closed it manually'}
               </Typography>
             )}
           </Box>
@@ -313,7 +313,7 @@ export default function ScoringDeadlineManager() {
                 boxShadow: '0 4px 14px rgba(239, 68, 68, 0.3)',
               }}
             >
-              Закрыть приём прямо сейчас
+              Close now
             </Button>
           ) : (
             <Button
@@ -330,7 +330,7 @@ export default function ScoringDeadlineManager() {
                 boxShadow: '0 4px 14px rgba(34, 197, 94, 0.3)',
               }}
             >
-              Открыть приём бессрочно
+              Open with no deadline
             </Button>
           )}
         </Box>
@@ -339,10 +339,10 @@ export default function ScoringDeadlineManager() {
 
         {/* Form to Configure New Deadline */}
         <Typography variant="subtitle2" sx={{ color: '#FFFFFF', fontWeight: 700, mb: 1 }}>
-          Настройка нового таймера (дедлайна)
+          Set a new deadline
         </Typography>
         <Typography variant="caption" sx={{ color: '#8C8AA8', display: 'block', mb: 2 }}>
-          Укажите точную дату и время или воспользуйтесь быстрыми кнопками ниже:
+          Pick a date and time, or use a quick option:
         </Typography>
 
         {/* Quick presets */}
@@ -353,7 +353,7 @@ export default function ScoringDeadlineManager() {
             onClick={applyPresetEndOfDay}
             sx={presetBtnStyle}
           >
-            Сегодня до 23:59
+            Today until 23:59
           </Button>
           <Button
             size="small"
@@ -361,7 +361,7 @@ export default function ScoringDeadlineManager() {
             onClick={() => applyPresetHours(2)}
             sx={presetBtnStyle}
           >
-            +2 часа
+            +2 hours
           </Button>
           <Button
             size="small"
@@ -369,7 +369,7 @@ export default function ScoringDeadlineManager() {
             onClick={() => applyPresetHours(6)}
             sx={presetBtnStyle}
           >
-            +6 часов
+            +6 hours
           </Button>
           <Button
             size="small"
@@ -377,7 +377,7 @@ export default function ScoringDeadlineManager() {
             onClick={() => applyPresetHours(24)}
             sx={presetBtnStyle}
           >
-            +24 часа
+            +24 hours
           </Button>
           <Button
             size="small"
@@ -385,7 +385,7 @@ export default function ScoringDeadlineManager() {
             onClick={() => applyPresetHours(48)}
             sx={presetBtnStyle}
           >
-            +2 дня
+            +2 days
           </Button>
         </Stack>
 
@@ -395,7 +395,7 @@ export default function ScoringDeadlineManager() {
             <TextField
               fullWidth
               type="date"
-              label="Дата дедлайна"
+              label="Deadline date"
               InputLabelProps={{ shrink: true }}
               value={inputDate}
               onChange={(e) => setInputDate(e.target.value)}
@@ -406,7 +406,7 @@ export default function ScoringDeadlineManager() {
             <TextField
               fullWidth
               type="time"
-              label="Время окончания"
+              label="Deadline time"
               InputLabelProps={{ shrink: true }}
               value={inputTime}
               onChange={(e) => setInputTime(e.target.value)}
@@ -435,7 +435,7 @@ export default function ScoringDeadlineManager() {
               },
             }}
           >
-            Запустить таймер приёма баллов
+            Start the timer
           </Button>
 
           <Button
@@ -456,7 +456,7 @@ export default function ScoringDeadlineManager() {
               },
             }}
           >
-            Открыть без таймера
+            Open without a timer
           </Button>
         </Stack>
       </CardContent>

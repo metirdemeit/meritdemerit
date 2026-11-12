@@ -113,11 +113,11 @@ const AddRuleDialog = ({
 
           <Grid item xs={12}>
             <FormControl fullWidth>
-              <InputLabel sx={{ color: '#5A5984' }}>Access Level (Доступ)</InputLabel>
+              <InputLabel sx={{ color: '#5A5984' }}>Access level</InputLabel>
               <Select
                 value={formData.access_level || 'all'}
                 onChange={(e) => setFormData({ ...formData, access_level: e.target.value })}
-                label="Access Level (Доступ)"
+                label="Access level"
                 sx={{
                   color: '#F4F4FF',
                   '& .MuiOutlinedInput-notchedOutline': {
@@ -134,9 +134,9 @@ const AddRuleDialog = ({
                   },
                 }}
               >
-                <MenuItem value="all" sx={{ color: '#F4F4FF' }}>🌐 Все пользователи (Default)</MenuItem>
-                <MenuItem value="teacher" sx={{ color: '#F4F4FF' }}>👨‍🏫 Учителя и Админы</MenuItem>
-                <MenuItem value="admin" sx={{ color: '#F4F4FF' }}>🔒 Только Админы</MenuItem>
+                <MenuItem value="all" sx={{ color: '#F4F4FF' }}>🌐 Everyone (default)</MenuItem>
+                <MenuItem value="teacher" sx={{ color: '#F4F4FF' }}>👨‍🏫 Teachers and admins</MenuItem>
+                <MenuItem value="admin" sx={{ color: '#F4F4FF' }}>🔒 Admins only</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -182,7 +182,7 @@ const AddRuleDialog = ({
               }
               label={
                 <Typography variant="body2" sx={{ color: '#F4F4FF', fontWeight: 600 }}>
-                  Установить лимит использования (LimitMD)
+                  Set a usage limit
                 </Typography>
               }
             />
@@ -193,7 +193,7 @@ const AddRuleDialog = ({
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Макс. применений (Max Uses)"
+                  label="Max uses"
                   type="number"
                   value={formData.max_uses ?? 1}
                   onChange={(e) => setFormData({ ...formData, max_uses: e.target.value })}
@@ -209,15 +209,15 @@ const AddRuleDialog = ({
 
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
-                  <InputLabel sx={{ color: '#5A5984' }}>Тип сброса</InputLabel>
+                  <InputLabel sx={{ color: '#5A5984' }}>Reset type</InputLabel>
                   <Select
                     value={formData.reset_type || 'period'}
                     onChange={(e) => setFormData({ ...formData, reset_type: e.target.value })}
-                    label="Тип сброса"
+                    label="Reset type"
                     sx={{ color: '#F4F4FF' }}
                   >
-                    <MenuItem value="period" sx={{ color: '#F4F4FF' }}>Периодически</MenuItem>
-                    <MenuItem value="until_date" sx={{ color: '#F4F4FF' }}>До даты</MenuItem>
+                    <MenuItem value="period" sx={{ color: '#F4F4FF' }}>Periodic</MenuItem>
+                    <MenuItem value="until_date" sx={{ color: '#F4F4FF' }}>Until date</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -225,17 +225,17 @@ const AddRuleDialog = ({
               {formData.reset_type === 'period' && (
                 <Grid item xs={12}>
                   <FormControl fullWidth>
-                    <InputLabel sx={{ color: '#5A5984' }}>Период сброса</InputLabel>
+                    <InputLabel sx={{ color: '#5A5984' }}>Reset period</InputLabel>
                     <Select
                       value={formData.reset_period || 'weekly'}
                       onChange={(e) => setFormData({ ...formData, reset_period: e.target.value })}
-                      label="Период сброса"
+                      label="Reset period"
                       sx={{ color: '#F4F4FF' }}
                     >
-                      <MenuItem value="daily" sx={{ color: '#F4F4FF' }}>Ежедневно</MenuItem>
-                      <MenuItem value="weekly" sx={{ color: '#F4F4FF' }}>Еженедельно</MenuItem>
-                      <MenuItem value="monthly" sx={{ color: '#F4F4FF' }}>Ежемесячно</MenuItem>
-                      <MenuItem value="none" sx={{ color: '#F4F4FF' }}>Без авто-сброса</MenuItem>
+                      <MenuItem value="daily" sx={{ color: '#F4F4FF' }}>Daily</MenuItem>
+                      <MenuItem value="weekly" sx={{ color: '#F4F4FF' }}>Weekly</MenuItem>
+                      <MenuItem value="monthly" sx={{ color: '#F4F4FF' }}>Monthly</MenuItem>
+                      <MenuItem value="none" sx={{ color: '#F4F4FF' }}>No auto reset</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -245,7 +245,7 @@ const AddRuleDialog = ({
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="Дата истечения лимита"
+                    label="Limit expires on"
                     type="date"
                     InputLabelProps={{ shrink: true }}
                     value={formData.reset_date || ''}

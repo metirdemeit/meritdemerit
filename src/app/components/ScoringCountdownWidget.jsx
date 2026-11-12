@@ -106,17 +106,17 @@ export default function ScoringCountdownWidget({ variant = 'default', sx = {} })
           </Box>
           <Box>
             <Typography variant="subtitle1" sx={{ color: '#F87171', fontWeight: 700, lineHeight: 1.2 }}>
-              Приём баллов закрыт
+              Point assignment is closed
             </Typography>
             <Typography variant="caption" sx={{ color: '#FCA5A5' }}>
               {closedReason === 'timer_expired'
-                ? 'Время выставления баллов истекло по таймеру'
-                : 'Выставление баллов приостановлено администратором'}
+                ? 'The scoring deadline has passed'
+                : 'Point assignment was paused by the administration'}
             </Typography>
           </Box>
         </Stack>
         <Chip
-          label="Заблокировано"
+          label="Locked"
           size="small"
           sx={{
             backgroundColor: 'rgba(239, 68, 68, 0.25)',
@@ -172,10 +172,10 @@ export default function ScoringCountdownWidget({ variant = 'default', sx = {} })
           </Box>
           <Box>
             <Typography variant="subtitle1" sx={{ color: '#F4F4FF', fontWeight: 700, lineHeight: 1.2 }}>
-              Приём баллов активен
+              Point assignment is open
             </Typography>
             <Typography variant="caption" sx={{ color: '#A5A4C4' }}>
-              До окончания срока выставления баллов:
+              Time left to assign points:
             </Typography>
           </Box>
         </Stack>
@@ -183,13 +183,13 @@ export default function ScoringCountdownWidget({ variant = 'default', sx = {} })
         {/* Countdown units */}
         <Stack direction="row" spacing={1} alignItems="center">
           {formattedTime.days > 0 && (
-            <CountdownBox value={formattedTime.days} label="дн" />
+            <CountdownBox value={formattedTime.days} label="days" />
           )}
-          <CountdownBox value={formattedTime.hours} label="час" />
+          <CountdownBox value={formattedTime.hours} label="hrs" />
           <Typography sx={{ color: '#9266FF', fontWeight: 800, fontSize: '1.2rem' }}>:</Typography>
-          <CountdownBox value={formattedTime.minutes} label="мин" />
+          <CountdownBox value={formattedTime.minutes} label="min" />
           <Typography sx={{ color: '#9266FF', fontWeight: 800, fontSize: '1.2rem' }}>:</Typography>
-          <CountdownBox value={formattedTime.seconds} label="сек" isHighlight />
+          <CountdownBox value={formattedTime.seconds} label="sec" isHighlight />
         </Stack>
       </Paper>
     );

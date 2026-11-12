@@ -257,7 +257,7 @@ export function StudentsPage() {
   const handleAssignSubmit = async () => {
     if (!selectedStudentIds.length || !selectedRuleIds.length) return;
     if (!assignComment || !assignComment.trim()) {
-      toast.error('Комментарий обязателен при выставлении баллов');
+      toast.error('A comment is required to assign points');
       return;
     }
     setIsAssigning(true);
@@ -643,7 +643,7 @@ export function StudentsPage() {
                           }}
                         />
                         <Typography variant="caption" sx={{ color: '#8E8DAA' }}>
-                          {new Date(entry.created_at).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}
+                          {new Date(entry.created_at).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })}
                         </Typography>
                       </Box>
                     </Box>

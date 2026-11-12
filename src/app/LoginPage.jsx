@@ -39,10 +39,7 @@ export function LoginPage() {
       if (!result) throw new Error('Invalid credentials');
     } catch (err) {
       if (import.meta.env.DEV) console.error('[login]', err);
-      let msg = err?.response?.data?.detail || err?.response?.data?.message || 'Login failed. Please check your username and password.';
-      if (msg === 'Incorrect username or password') {
-        msg = 'Неверное имя пользователя или пароль';
-      }
+      const msg = err?.response?.data?.detail || err?.response?.data?.message || 'Login failed. Please check your username and password.';
       setError(msg);
       toast.error(msg);
     } finally {

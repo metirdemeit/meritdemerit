@@ -10,8 +10,8 @@ export default function GuideButton() {
       variant="outlined"
       size="small"
       onClick={start}
-      aria-label="Открыть гид по приложению"
-      title="Гид по приложению"
+      aria-label="Open the app guide"
+      title="App guide"
       sx={{
         flexShrink: 0,
         minWidth: 0,
@@ -25,7 +25,7 @@ export default function GuideButton() {
       }}
     >
       <HelpOutline fontSize="small" />
-      <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Гид</Box>
+      <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Guide</Box>
     </Button>
   );
 }

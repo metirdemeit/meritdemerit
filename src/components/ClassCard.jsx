@@ -4,7 +4,7 @@ import { clickableProps } from '../utils/a11y';
 const ClassCard = ({ classItem, onClick }) => {
   return (
     <Card
-      {...clickableProps(onClick, classItem?.name ? `Класс ${classItem.name}` : undefined)}
+      {...clickableProps(onClick, classItem?.name ? `Class ${classItem.name}` : undefined)}
       sx={{
         aspectRatio: '1 / 1',
         borderRadius: '14px',

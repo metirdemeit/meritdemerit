@@ -40,7 +40,7 @@ apiClient.interceptors.response.use(
 
     if (config && isServerErrorOrNetwork && !config._retryCount && !config.skipRetry) {
       config._retryCount = 1;
-      toast.loading('Ошибка соединения. Повторный запрос через 3 секунды...', { id: 'retry-toast', duration: 3000 });
+      toast.loading('Connection problem. Retrying in 3 seconds...', { id: 'retry-toast', duration: 3000 });
       await new Promise(resolve => setTimeout(resolve, 3000));
       return apiClient(config);
     }
@@ -51,7 +51,7 @@ apiClient.interceptors.response.use(
       }
     } else if (!error.config?.skipErrorToast) {
       toast.error(
-        error.response?.data?.detail || error.response?.data?.message || 'Ошибка сети'
+        error.response?.data?.detail || error.response?.data?.message || 'Network error'
       );
     }
 

@@ -50,7 +50,7 @@ const AssignStudentsDrawer = ({
       .reduce((acc, setIds) => acc.concat(Array.from(setIds)), []);
     if (allSelectedIds.length === 0 || !rule?.id) return;
     if (!comment.trim()) {
-      toast.error('Комментарий обязателен при выставлении баллов');
+      toast.error('A comment is required to assign points');
       return;
     }
     onSubmit && onSubmit({ student_ids: allSelectedIds, rule_ids: [rule.id], comment: comment.trim() });
@@ -107,8 +107,8 @@ const AssignStudentsDrawer = ({
             multiline
             rows={2}
             required
-            label="Комментарий (обязательно)"
-            placeholder="Введите комментарий..."
+            label="Comment (required)"
+            placeholder="Write a comment..."
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             sx={{

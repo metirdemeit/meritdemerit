@@ -28,7 +28,7 @@ export function AssignRulesDrawer({
       return;
     }
     if (!assignComment || !assignComment.trim()) {
-      toast.error('Комментарий обязателен при выставлении баллов');
+      toast.error('A comment is required to assign points');
       return;
     }
     onSubmit();
@@ -102,8 +102,8 @@ export function AssignRulesDrawer({
           multiline
           rows={3}
           required
-          label="Комментарий (обязательно)"
-          placeholder="Введите комментарий..."
+          label="Comment (required)"
+          placeholder="Write a comment..."
           value={assignComment}
           onChange={(e) => onCommentChange(e.target.value)}
           sx={{

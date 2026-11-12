@@ -9,7 +9,7 @@ import { GUIDE_STEPS, roleKey } from './guideSteps';
 const PAD = 8;          // spotlight padding around the target
 const GAP = 14;         // distance between spotlight and card
 const CARD_MAX = 380;
-const ROLE_LABEL = { student: 'Ученик', teacher: 'Учитель', admin: 'Администратор' };
+const ROLE_LABEL = { student: 'Student', teacher: 'Teacher', admin: 'Admin' };
 
 const reduceMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -191,9 +191,9 @@ export default function GuideTour() {
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
           <Typography sx={{ fontSize: '0.72rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#A98BFF', fontWeight: 600 }}>
-            {ROLE_LABEL[role]} · {step + 1} из {steps.length}
+            {ROLE_LABEL[role]} · {step + 1} of {steps.length}
           </Typography>
-          <IconButton aria-label="Закрыть гид" onClick={finish} size="small" sx={{ ml: 'auto', color: '#8E8DAA', mr: -1 }}>
+          <IconButton aria-label="Close guide" onClick={finish} size="small" sx={{ ml: 'auto', color: '#8E8DAA', mr: -1 }}>
             <Close fontSize="small" />
           </IconButton>
         </Box>
@@ -221,7 +221,7 @@ export default function GuideTour() {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {!isLast && (
             <Button onClick={finish} size="small" sx={{ color: '#8E8DAA', boxShadow: 'none', px: 1, minWidth: 0, '&:hover': { boxShadow: 'none' } }}>
-              Пропустить
+              Skip
             </Button>
           )}
           <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
@@ -231,10 +231,10 @@ export default function GuideTour() {
               variant="outlined"
               sx={{ color: '#F4F4FF', borderColor: 'rgba(146, 102, 255, 0.45)', boxShadow: 'none', '&:hover': { boxShadow: 'none', borderColor: '#9266FF' } }}
             >
-              Назад
+              Back
             </Button>
             <Button ref={nextRef} onClick={next} variant="contained" sx={{ px: 2.5 }}>
-              {isLast ? 'Готово' : 'Далее'}
+              {isLast ? 'Done' : 'Next'}
             </Button>
           </Box>
         </Box>
