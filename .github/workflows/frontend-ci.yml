@@ -25,7 +25,7 @@ jobs:
   e2e:
     # Runs the built app against the real API from the `backend` branch.
     needs: checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
       postgres:
