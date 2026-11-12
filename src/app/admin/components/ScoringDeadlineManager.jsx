@@ -1,5 +1,5 @@
 // src/app/admin/components/ScoringDeadlineManager.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -10,16 +10,13 @@ import {
   TextField,
   Chip,
   Grid,
-  Alert,
   Divider,
 } from '@mui/material';
 import {
   Timer,
   Lock,
   LockOpen,
-  Schedule,
   CheckCircle,
-  WarningAmber,
   AlarmOn,
   HourglassEmpty,
 } from '@mui/icons-material';

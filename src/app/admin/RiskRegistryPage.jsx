@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -23,7 +23,7 @@ import { useAdminStore } from '../../store/adminStore';
 import { getStudentLevel } from '../../utils/studentLevels';
 
 export default function RiskRegistryPage() {
-  const { detentions, getStudentDetentionCount } = useDetentionStore();
+  const { getStudentDetentionCount } = useDetentionStore();
   const { interventions } = useInterventionStore();
   const { students, fetchStudents } = useAdminStore();
 

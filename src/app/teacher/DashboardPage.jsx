@@ -1,5 +1,5 @@
 // src/app/teacher/DashboardPage.jsx
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -21,7 +21,7 @@ import { useCommonStore } from '../../store/commonStore';
 import DeleteConfirmationDialog from '../components/dialogs/DeleteConfirmationDialog';
 import AssignmentTable from '../components/AssignmentTable';
 import ScoringCountdownWidget from '../components/ScoringCountdownWidget';
-import { School, WarningAmber } from '@mui/icons-material';
+import { WarningAmber } from '@mui/icons-material';
 
 export function DashboardPage() {
   const { user, logout } = useAuthStore();
@@ -46,8 +46,7 @@ export function DashboardPage() {
 
   // Loading для каждой секции
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [loadingProfile, setLoadingProfile] = useState(false);
-
+  const [, setLoadingProfile] = useState(false);
 
   // Студенты закрепленного класса
   const homeroomStudents = (students || []).filter((s) => isClassMatch(s, homeroomClass));
@@ -107,7 +106,7 @@ export function DashboardPage() {
       await deleteHistoryRecord(id);
       toast.success('Assignment deleted');
       await loadHistory(); // обновляем список после удаления
-    } catch (e) {
+    } catch {
       toast.error('Failed to delete assignment');
     } finally {
       setDeletingId(null);
@@ -140,8 +139,8 @@ export function DashboardPage() {
         }}
       >
         <Container maxWidth="lg">
-          <Box display="flex" alignItems="center" mb={3}>
-            <HistoryIcon sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
+          <Box display="flex" alignItems="center">
+            <HistoryIcon sx={{ fontSize: { xs: 26, sm: 32 }, color: '#9266FF', mr: { xs: 1.5, sm: 2 } }} />
             <Box>
               <Typography variant="h5" sx={{ color: 'white', fontWeight: 400 }}>
                 Teacher Dashboard

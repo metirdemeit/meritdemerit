@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -13,6 +13,7 @@ import { Person, History as HistoryIcon } from '@mui/icons-material';
 import { useAuthStore } from '../../store/authStore';
 import GuideButton from '../../components/guide/GuideButton';
 import { getStudentLevel } from '../../utils/studentLevels';
+import StudentProgress from './components/StudentProgress';
 import { useStudentStore } from '../../store/studentStore';
 import ScoringCountdownWidget from '../components/ScoringCountdownWidget';
 import AssignmentTable from '../components/AssignmentTable';
@@ -47,7 +48,7 @@ export function DashboardPage() {
         if (!data && !user) {
           setErrorProfile('Failed to load profile');
         }
-      } catch (err) {
+      } catch {
         if (!user) {
           setErrorProfile('Failed to load profile');
         }
@@ -64,7 +65,7 @@ export function DashboardPage() {
         if (!data) {
           setErrorHistory('Failed to load history');
         }
-      } catch (err) {
+      } catch {
         setErrorHistory('Failed to load history');
       } finally {
         setLoadingHistory(false);
@@ -122,7 +123,7 @@ export function DashboardPage() {
         <Container maxWidth="lg">
           <Box display="flex" alignItems="center" justifyContent="space-between">
             <Box display="flex" alignItems="center">
-              <Person sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
+              <Person sx={{ fontSize: { xs: 26, sm: 32 }, color: '#9266FF', mr: { xs: 1.5, sm: 2 } }} />
               <Box>
                 <Typography variant="h5" sx={{ color: 'white', fontWeight: 600 }}>
                   Student Dashboard
@@ -210,6 +211,8 @@ export function DashboardPage() {
             </Box>
           </CardContent>
         </Card>
+
+        <StudentProgress points={studentPoints} history={Array.isArray(history) ? history : []} />
 
         {/* Full Points History Section */}
         <Card data-tour="student-history" sx={{ 

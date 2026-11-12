@@ -27,6 +27,9 @@ export default [
       ...react.configs['jsx-runtime'].rules,
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
+      // Without this every component used only in JSX is reported as unused.
+      'react/jsx-uses-vars': 'error',
+      'react-hooks/rules-of-hooks': 'error',
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },

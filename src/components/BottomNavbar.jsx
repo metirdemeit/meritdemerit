@@ -5,8 +5,6 @@ import {
 } from '@mui/material';
 import {
   Home,
-  Analytics,
-  SwapHoriz,
   Settings,
   AdminPanelSettings,
   Person,

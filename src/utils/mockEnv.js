@@ -66,7 +66,7 @@ if (typeof window !== 'undefined') {
       button_text_color: '#ffffff',
       secondary_bg_color: '#1a1a1a'
     }));
-  } catch (e) {
+  } catch {
     // localStorage может быть недоступен
   }
   

@@ -30,14 +30,11 @@ import {
 } from '@mui/material';
 import {
   Add,
-  EventBusy,
   CheckCircle,
   Timer,
   Warning,
   Delete,
-  Edit,
   CalendarMonth,
-  Schedule,
 } from '@mui/icons-material';
 import { useDetentionStore } from '../../../store/detentionStore';
 import { useAdminStore } from '../../../store/adminStore';
@@ -112,7 +109,7 @@ export default function DetentionManager() {
       setOpenAddDialog(false);
       setSelectedClass('');
       setFormData(defaultForm);
-    } catch (err) {
+    } catch {
       toast.error('Failed to assign detention');
     }
   };
@@ -126,7 +123,7 @@ export default function DetentionManager() {
       await addExamWeek(examForm);
       toast.success(`Exam Week "${examForm.title}" added`);
       setExamForm({ title: '', start_date: '', end_date: '' });
-    } catch (err) {
+    } catch {
       toast.error('Failed to add exam week');
     }
   };

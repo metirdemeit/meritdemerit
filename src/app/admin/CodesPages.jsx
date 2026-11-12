@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -6,27 +6,13 @@ import {
   Card,
   CardContent,
   Button,
-  Grid,
-  useTheme,
-  useMediaQuery,
   CircularProgress,
   Alert,
-  IconButton,
   List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  Chip,
 } from '@mui/material';
-import {
-  Add,
-  Edit,
-  Delete,
-  Code,
-  Rule,
-} from '@mui/icons-material';
+import { Add, Code, Rule } from '@mui/icons-material';
 import toast from 'react-hot-toast';
-import { useAuthStore } from '../../store/authStore';
+
 import { useAdminStore } from '../../store/adminStore';
 import { useCommonStore } from '../../store/commonStore';
 import CodeCard from '../../components/CodeCard';
@@ -35,8 +21,6 @@ import AssignStudentsDrawer from '../components/dialogs/AssignStudentsDrawer';
 import DeleteConfirmationDialog from '../components/dialogs/DeleteConfirmationDialog';
 
 export function CodesPages() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const {
     rules,
     fetchRules,
@@ -269,7 +253,7 @@ export function CodesPages() {
       >
         <Container maxWidth="lg">
           <Box display="flex" alignItems="center" mb={3}>
-            <Code sx={{ fontSize: 32, color: '#9c27b0', mr: 2 }} />
+            <Code sx={{ fontSize: { xs: 26, sm: 32 }, color: '#9c27b0', mr: { xs: 1.5, sm: 2 } }} />
             <Box>
               <Typography variant="h5" sx={{ color: 'white', fontWeight: 600 }}>
                 Rules Management

@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Typography,
   Container,
-  useTheme,
-  useMediaQuery,
   Button,
   ButtonGroup,
 } from '@mui/material';
@@ -13,8 +11,6 @@ import { TeachersBlog} from '../components/containers/TeachersBlog';
 import { StudentsBlog } from '../components/containers/StudentsBlog';
 
 export function UsersPage() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mode, setMode] = useState('students'); // 'students' | 'teachers'
 
   return (

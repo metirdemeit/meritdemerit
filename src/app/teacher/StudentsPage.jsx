@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -16,7 +16,13 @@ import {
   Chip,
   Stack,
 } from '@mui/material';
-import { Person, ArrowBack, School, Dashboard, History as HistoryIcon, WarningAmber } from '@mui/icons-material';
+import {
+  ArrowBack,
+  School,
+  Dashboard,
+  History as HistoryIcon,
+  WarningAmber,
+} from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { useTeacherStore } from '../../store/teacherStore';
 import { isClassMatch } from '../../utils/classNames';
@@ -34,7 +40,6 @@ export function StudentsPage() {
     assignPoints,
     profile,
     fetchProfile,
-    history: teacherHistory,
     fetchHistory: fetchTeacherHistory,
     fetchStudentFullHistory,
   } = useTeacherStore();
@@ -96,7 +101,6 @@ export function StudentsPage() {
     });
   };
 
-  const normalizeStudentName = (value) => `${value || ''}`.trim().toLowerCase().replace(/\s+/g, ' ');
 
   // Initial load
   useEffect(() => {
@@ -275,7 +279,7 @@ export function StudentsPage() {
         await fetchStudents(true);
       }
       await fetchTeacherHistory({ page: 1, size: 100 });
-    } catch (e) {
+    } catch {
       toast.error('Failed to assign points');
     } finally {
       setIsAssigning(false);
@@ -320,7 +324,6 @@ export function StudentsPage() {
     return '';
   }, [selectedStudentIds, students]);
 
-
   const homeroomStudents = useMemo(() => {
     let list = sortStudentsAlphabetically(students.filter((s) => isClassMatch(s, homeroomClass)));
     if (showRiskOnly) {
@@ -364,7 +367,7 @@ export function StudentsPage() {
         <Container maxWidth="lg">
           <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
             <Box display="flex" alignItems="center">
-              <School sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
+              <School sx={{ fontSize: { xs: 26, sm: 32 }, color: '#9266FF', mr: { xs: 1.5, sm: 2 } }} />
               <Box>
                 <Typography variant="h5" sx={{ color: 'white', fontWeight: 600 }}>
                   Students Management

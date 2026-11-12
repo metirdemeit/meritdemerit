@@ -7,7 +7,7 @@ on:
     branches: [frontend]
 
 jobs:
-  build:
+  checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -16,6 +16,77 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: Lint (errors only)
-        run: npx eslint src --quiet
+      - name: Lint (no warnings allowed)
+        run: npx eslint src --max-warnings 0
+      - name: Unit tests
+        run: npm test
       - run: npm run build
+
+  e2e:
+    # Runs the built app against the real API from the `backend` branch.
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: e2e
+          POSTGRES_DB: school
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:e2e@127.0.0.1:5432/school
+      JWT_SECRET_KEY: e2e-only-secret
+      RUN_BOT: "false"
+      NOTIFICATIONS_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          ref: backend
+          path: backend-src
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend-src/requirements.txt
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install backend
+        run: pip install -r backend-src/requirements.txt
+      - name: Seed test data
+        working-directory: backend-src
+        run: PYTHONPATH=. python ../e2e/seed.py
+      - name: Start API
+        working-directory: backend-src
+        run: |
+          nohup uvicorn backend.main:app --host 127.0.0.1 --port 8765 > ../api.log 2>&1 &
+          curl -s --retry 30 --retry-connrefused --retry-delay 1 http://127.0.0.1:8765/ > /dev/null
+
+      - run: npm ci
+      - name: Build and serve the app
+        run: |
+          VITE_API_URL=http://127.0.0.1:8765 npm run build
+          nohup npx vite preview --port 4173 --strictPort --host 127.0.0.1 > preview.log 2>&1 &
+          curl -s --retry 30 --retry-connrefused --retry-delay 1 http://127.0.0.1:4173/ > /dev/null
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end tests
+        run: npx playwright test
+
+      - name: API log
+        if: failure()
+        run: tail -n 200 api.log
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

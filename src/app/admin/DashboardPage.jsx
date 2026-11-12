@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -6,8 +6,6 @@ import {
   Card,
   CardContent,
   Avatar,
-  useTheme,
-  useMediaQuery,
   CircularProgress,
   Alert,
   Grid,
@@ -23,8 +21,6 @@ import CommonRankingTable from '../components/CommonRankingTable';
 import ScoringCountdownWidget from '../components/ScoringCountdownWidget';
 
 export function DashboardPage() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { dashboard, fetchDashboard } = useAdminStore();

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import {
   Card,
   CardContent,
@@ -37,7 +37,6 @@ export function HomeroomStatsWidget({
     : 0;
 
   const meritCount = students.filter((s) => (s.points ?? 100) >= 131).length;
-  const standardCount = students.filter((s) => (s.points ?? 100) >= 100 && (s.points ?? 100) <= 130).length;
   const demeritCount = students.filter((s) => (s.points ?? 100) < 100).length;
 
   const attentionCount = demeritCount;

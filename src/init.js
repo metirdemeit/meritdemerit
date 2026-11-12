@@ -51,15 +51,6 @@ export async function init(options) {
     if (import.meta.env.DEV) console.warn("initSDK failed:", e);
   }
 
-  // Add Eruda if needed.
-  if (options.eruda) {
-    try {
-      void import("eruda").then(({ default: eruda }) => {
-        eruda.init();
-        eruda.position({ x: window.innerWidth - 50, y: 0 });
-      });
-    } catch { /* ignore */ }
-  }
 
   // Telegram for macOS workaround
   if (options.mockForMacOS) {

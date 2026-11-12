@@ -1,25 +1,16 @@
 // src/app/components/ScoringCountdownWidget.jsx
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   Box,
   Typography,
   Chip,
   Paper,
   Stack,
-  useTheme,
-  useMediaQuery,
 } from '@mui/material';
-import {
-  TimerOutlined,
-  CheckCircleOutline,
-  LockOutlined,
-  HourglassEmpty,
-} from '@mui/icons-material';
+import { TimerOutlined, LockOutlined } from '@mui/icons-material';
 import { useScoringStore } from '../../store/scoringStore';
 
-export default function ScoringCountdownWidget({ variant = 'default', sx = {} }) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+export default function ScoringCountdownWidget({ sx = {} }) {
   const { isOpen, deadline, closedReason, fetchStatus, markExpired } = useScoringStore();
   const [now, setNow] = useState(Date.now());
 

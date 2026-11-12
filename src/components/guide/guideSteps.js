@@ -18,6 +18,12 @@ export const GUIDE_STEPS = {
     },
     {
       route: '/student/dashboard',
+      target: 'student-progress',
+      title: 'Your progress',
+      body: 'How many points you need for the next level, how your points changed over the term, and your merits and demerits in total.',
+    },
+    {
+      route: '/student/dashboard',
       target: 'student-history',
       title: 'Points history',
       body: 'Every entry shows who gave the points, for which rule, the teacher’s comment and the date. Green is a plus, red is a minus.',

@@ -1,15 +1,13 @@
-import React, { useState } from 'react';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper, 
-  TableFooter, 
+import { useState } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TableFooter,
   Button,
-  Box
 } from '@mui/material';
 import { Visibility } from '@mui/icons-material';
 
@@ -43,7 +41,7 @@ export default function TeachersStatTable({ teachersStats = [] }) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {displayStats.map((teacherStat, index) => (
+          {displayStats.map((teacherStat) => (
             <TableRow key={teacherStat.teacher_id}>
               <TableCell >
                 {teacherStat.teacher_id}

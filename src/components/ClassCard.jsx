@@ -1,4 +1,4 @@
-import { Card, Typography, Box } from '@mui/material';
+import { Card, Typography } from '@mui/material';
 import { clickableProps } from '../utils/a11y';
 
 const ClassCard = ({ classItem, onClick }) => {
@@ -38,5 +38,4 @@ const ClassCard = ({ classItem, onClick }) => {
 };
 
 export default ClassCard;
-
 

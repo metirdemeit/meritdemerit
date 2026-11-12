@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -35,7 +35,7 @@ export function RulesPage() {
 
   // Loading и ошибки по секциям
   const [loadingRules, setLoadingRules] = useState(false);
-  const [loadingClasses, setLoadingClasses] = useState(false);
+  const [, setLoadingClasses] = useState(false);
   const [errorRules, setErrorRules] = useState(null);
   const [errorClasses, setErrorClasses] = useState(null);
 
@@ -94,7 +94,7 @@ export function RulesPage() {
       toast.success('Points assigned');
       setStudentsOpen(false);
       setSelectedRule(null);
-    } catch (e) {
+    } catch {
       toast.error('Failed to assign points');
     } finally {
       setIsAssigning(false);
@@ -119,7 +119,7 @@ export function RulesPage() {
       }}>
         <Container maxWidth="lg">
           <Box display="flex" alignItems="center" mb={3}>
-            <RuleIcon sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
+            <RuleIcon sx={{ fontSize: { xs: 26, sm: 32 }, color: '#9266FF', mr: { xs: 1.5, sm: 2 } }} />
             <Box>
               <Typography variant="h5" sx={{ color: 'white', fontWeight: 400 }}>
                 Rules Management

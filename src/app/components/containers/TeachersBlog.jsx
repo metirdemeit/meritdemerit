@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -172,7 +172,6 @@ export function TeachersBlog() {
   };
 
   const teachersToShow = teachers || [];
-
 
   if (error) {
     return (

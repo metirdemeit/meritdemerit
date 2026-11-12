@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -8,8 +8,6 @@ import {
   Chip,
   Grid,
   IconButton,
-  Tooltip,
-  Alert,
   Checkbox,
   FormControlLabel,
   CircularProgress,
@@ -26,14 +24,6 @@ import { useInterventionStore } from '../../../store/interventionStore';
 import { useAdminStore } from '../../../store/adminStore';
 import toast from 'react-hot-toast';
 
-// Определить уровень вмешательства по баллам
-// Определить уровень вмешательства по баллам
-function getInterventionLevel(points) {
-  if (points <= 30) return 'counselor';
-  if (points >= 31 && points <= 40) return 'homeroom';
-  if (points >= 41 && points <= 50) return 'warning';
-  return null;
-}
 
 function getInterventionMeta(level) {
   if (level === 'warning') return {
@@ -57,8 +47,8 @@ function getInterventionMeta(level) {
 }
 
 export default function InterventionsManager() {
-  const { interventions, fetchInterventions, addIntervention, toggleParentNotified, resolveIntervention, deleteIntervention } = useInterventionStore();
-  const { students, fetchStudents } = useAdminStore();
+  const { interventions, fetchInterventions, toggleParentNotified, resolveIntervention, deleteIntervention } = useInterventionStore();
+  const { fetchStudents } = useAdminStore();
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {

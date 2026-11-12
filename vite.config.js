@@ -34,6 +34,10 @@ export default defineConfig({
     target: "esnext",
   },
   publicDir: "./public",
+  test: {
+    include: ["src/**/*.test.js"],
+    environment: "node",
+  },
   server: {
     // Exposes your dev server and makes it accessible for the devices in the same network.
     host: true,

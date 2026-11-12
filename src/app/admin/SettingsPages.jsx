@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -7,12 +7,9 @@ import {
   CardContent,
   Button,
   Grid,
-  useTheme,
-  useMediaQuery,
   CircularProgress,
   Alert,
   TextField,
-  IconButton,
   Chip,
   Collapse,
   Dialog,
@@ -28,16 +25,13 @@ import {
   Autocomplete,
 } from '@mui/material';
 import {
-  Delete,
   Settings,
   Assessment,
   History,
   TrendingUp,
   Person,
   FilterList,
-  FilterListOff,
   Search,
-  CalendarToday,
   Clear,
   FileDownload,
   TableChart,
@@ -46,7 +40,7 @@ import {
   Report,
   AlarmOn,
 } from '@mui/icons-material';
-import { useAuthStore } from '../../store/authStore';
+
 import { useAdminStore } from '../../store/adminStore';
 import { useCommonStore } from '../../store/commonStore';
 import toast from 'react-hot-toast';
@@ -59,18 +53,7 @@ import AssignmentTable from '../components/AssignmentTable';
 import TeachersStatTable from '../components/TeachersStatTable';
 import CommonRankingTable from '../components/CommonRankingTable';
 
-const parseFilterDate = (value, endOfDay = false) => {
-  if (!value) return null;
-  const [year, month, day] = value.split('-').map(Number);
-  const date = new Date(year, month - 1, day);
-  date.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
-  return date;
-};
-
 export function SettingsPages() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user } = useAuthStore();
   const {
     history,
     loadingHistoryFull,
@@ -803,7 +786,7 @@ export function SettingsPages() {
       >
         <Container maxWidth="lg">
           <Box display="flex" alignItems="center">
-            <Settings sx={{ fontSize: 32, color: '#9266FF', mr: 2 }} />
+            <Settings sx={{ fontSize: { xs: 26, sm: 32 }, color: '#9266FF', mr: { xs: 1.5, sm: 2 } }} />
             <Box>
               <Typography variant="h5" sx={{ color: 'white', fontWeight: 600 }}>
                 Settings & Analytics

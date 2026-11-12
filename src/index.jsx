@@ -61,9 +61,13 @@ const theme = createTheme({
       color: '#ffffff',
       fontWeight: 400,
     },
+    // Page titles live in the sticky headers: keep them on one line on phones.
     h5: {
       color: '#ffffff',
       fontWeight: 400,
+      fontSize: '1.2rem',
+      lineHeight: 1.25,
+      '@media (min-width:600px)': { fontSize: '1.5rem' },
     },
     h6: {
       color: '#ffffff',
@@ -182,7 +186,7 @@ async function bootstrap() {
     if (inTelegram || import.meta.env.DEV) {
       // Никогда не держим пользователя на пустом экране дольше 3 секунд.
       await Promise.race([
-        init({ debug, eruda: false, mockForMacOS: platform === "macos" }),
+        init({ debug, mockForMacOS: platform === "macos" }),
         new Promise((resolve) => setTimeout(resolve, 3000)),
       ]);
     }
