@@ -39,7 +39,7 @@ async def check_rule_limits_and_permissions(
         if is_teacher and rule.access_level == "admin":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Учителям запрещено выставлять правило '{rule.description}' (требуются права администратора).",
+                detail=f"Teachers can't use the rule '{rule.description}' (admins only).",
             )
 
         # Limit check
@@ -68,16 +68,16 @@ async def check_rule_limits_and_permissions(
 
             if total_count >= limit.max_uses:
                 period_str = (
-                    f"период ({limit.reset_period})"
+                    f"per {limit.reset_period} period"
                     if limit.reset_type == "period"
-                    else f"до {limit.reset_date}"
+                    else f"until {limit.reset_date}"
                 )
                 student_name = f"{student.first_name} {student.last_name or ''}".strip()
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=(
-                        f"Студент {student_name} достиг лимита для правила '{rule.description}' "
-                        f"(максимум {limit.max_uses} раз за {period_str})."
+                        f"{student_name} has reached the limit for the rule '{rule.description}' "
+                        f"(max {limit.max_uses} times {period_str})."
                     ),
                 )
 
@@ -108,5 +108,5 @@ async def auto_trigger_interventions(students: list[Student]):
                     level=level,
                     status="pending",
                     parent_notified=False,
-                    notes=f"Автоматически сформировано при снижении баллов до {pts}",
+                    notes=f"Created automatically when points dropped to {pts}",
                 )

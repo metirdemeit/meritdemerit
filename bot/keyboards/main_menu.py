@@ -19,7 +19,7 @@ def main_menu_keyboard():
 
     # Add a button that launches the web app
     builder.button(
-        text="📱 Открыть Merit & Demerit",
+        text="📱 Open Merit & Demerit",
         web_app=web_app_info
     )
 

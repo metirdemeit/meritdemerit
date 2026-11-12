@@ -7,8 +7,8 @@ from backend.models import SystemSetting
 
 SCORING_KEY = "scoring_status"
 
-MSG_CLOSED_BY_ADMIN = "Приём баллов закрыт администрацией школы"
-MSG_TIMER_EXPIRED = "Время выставления баллов истекло по таймеру"
+MSG_CLOSED_BY_ADMIN = "Point assignment has been closed by the school administration"
+MSG_TIMER_EXPIRED = "The deadline for assigning points has passed"
 
 
 def _now() -> datetime:

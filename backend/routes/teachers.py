@@ -114,7 +114,7 @@ async def assign_points(assignment: WorkflowAssignment, teacher: Teacher = Depen
     await ensure_scoring_open()
 
     if not assignment.comment or not assignment.comment.strip():
-        raise HTTPException(status_code=400, detail="Комментарий обязателен при выставлении баллов.")
+        raise HTTPException(status_code=400, detail="A comment is required to assign points.")
 
     # Validate rules exist
     rules = await DisciplineRule.filter(id__in=assignment.rule_ids)
@@ -201,7 +201,7 @@ async def get_teacher_history(
             student_id=record.student_id,
             teacher_name=teacher_name,
             student_name=f"{record.student.first_name} {record.student.last_name or ''}".strip(),
-            student_class=record.student.school_class.name if record.student.school_class else "Без класса",
+            student_class=record.student.school_class.name if record.student.school_class else "No class",
             rule_description=record.rule.description if record.rule else "—",
             points_changed=record.points_changed,
             comment=record.comment or "",
@@ -240,7 +240,7 @@ async def get_assignment_detail(
     return TeacherHistoryDetail(
         id=record.id,
         student_name=f"{record.student.first_name} {record.student.last_name or ''}".strip(),
-        student_class=record.student.school_class.name if record.student.school_class else "Без класса",
+        student_class=record.student.school_class.name if record.student.school_class else "No class",
         rule_description=record.rule.description if record.rule else "—",
         points_changed=record.points_changed,
         comment=record.comment or "",
@@ -295,7 +295,7 @@ async def get_student_history_for_teacher(
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    student_class_name = student.school_class.name if student.school_class else "Без класса"
+    student_class_name = student.school_class.name if student.school_class else "No class"
     student_name = f"{student.first_name} {student.last_name or ''}".strip()
 
     # 1. Teacher assignments
@@ -306,7 +306,7 @@ async def get_student_history_for_teacher(
     combined: list[tuple[datetime, StudentPointHistoryItem]] = []
 
     for r in teacher_history:
-        t_name = f"{r.teacher.first_name} {r.teacher.last_name or ''}".strip() if r.teacher else "Учитель"
+        t_name = f"{r.teacher.first_name} {r.teacher.last_name or ''}".strip() if r.teacher else "Teacher"
         rule_desc = r.rule.description if r.rule else "—"
         combined.append((
             r.created_at,
@@ -324,7 +324,7 @@ async def get_student_history_for_teacher(
         ))
 
     for r in admin_history:
-        a_name = f"{r.admin.first_name} {r.admin.last_name or ''}".strip() if getattr(r, 'admin', None) else "Администратор"
+        a_name = f"{r.admin.first_name} {r.admin.last_name or ''}".strip() if getattr(r, 'admin', None) else "Administrator"
         rule_desc = r.rule.description if r.rule else "—"
         combined.append((
             r.created_at,

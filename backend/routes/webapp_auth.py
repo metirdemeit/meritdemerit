@@ -68,8 +68,8 @@ class _LoginRateLimiter:
             remaining = int((rec.ban_until - now).total_seconds())
             mins, secs = divmod(remaining, 60)
             detail = (
-                f"Слишком много неверных попыток входа. "
-                f"Попробуйте через {mins} мин {secs} сек."
+                f"Too many failed sign-in attempts. "
+                f"Try again in {mins} min {secs} s."
             )
             raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=detail)
         # Ban expired — reset attempt counter but keep ban_count for next offence

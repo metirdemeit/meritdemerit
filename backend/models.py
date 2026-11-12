@@ -19,7 +19,7 @@ class Class(models.Model):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=10, unique=True)  # e.g., "6А", "11Б"
     def __str__(self):
-        return f"Класс {self.name}"
+        return f"Class {self.name}"
 
 
 class Student(User):

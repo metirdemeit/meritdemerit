@@ -467,7 +467,7 @@ async def _build_intervention_out(item: Intervention) -> InterventionOut:
         id=item.id,
         student_id=item.student.id,
         student_name=f"{item.student.first_name} {item.student.last_name or ''}".strip(),
-        student_class=item.student.school_class.name if item.student.school_class else "Без класса",
+        student_class=item.student.school_class.name if item.student.school_class else "No class",
         student_points=item.student.points,
         level=item.level,
         status=item.status,
@@ -721,7 +721,7 @@ def _full_name(person) -> str:
 
 def _history_item(r, source: str) -> PointHistoryResponse:
     if source == "teacher":
-        actor = _full_name(r.teacher) or "Удалённый учитель"
+        actor = _full_name(r.teacher) or "Deleted teacher"
     else:
         actor = _full_name(getattr(r, "admin", None)) or "Admin"
     return PointHistoryResponse(
@@ -740,7 +740,7 @@ def _history_item(r, source: str) -> PointHistoryResponse:
 def _get_student_class_name(record) -> str:
     if hasattr(record.student, "school_class") and record.student.school_class:
         return record.student.school_class.name
-    return "Без класса"
+    return "No class"
 
 
 def _build_combined_history(

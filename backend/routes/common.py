@@ -226,5 +226,5 @@ async def update_scoring_status(
 ):
     deadline = parse_deadline(payload.deadline)
     if payload.isOpen and deadline and deadline <= datetime.now(deadline.tzinfo):
-        raise HTTPException(status_code=400, detail="Дедлайн должен быть в будущем")
+        raise HTTPException(status_code=400, detail="The deadline must be in the future")
     return await save_scoring_status(payload.isOpen, deadline, payload.closedReason)

@@ -42,7 +42,7 @@ async def rate_limit_middleware(request: Request, call_next):
         _request_log[client_ip] = timestamps
         return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            content={"detail": "Слишком много запросов. Попробуйте через минуту."},
+            content={"detail": "Too many requests. Please try again in a minute."},
         )
 
     timestamps.append(now)

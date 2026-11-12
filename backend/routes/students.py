@@ -100,7 +100,7 @@ async def get_student_history(
     combined: list[dict] = []
 
     for record in teacher_history:
-        teacher_name = "Удаленный учитель"
+        teacher_name = "Deleted teacher"
         if record.teacher:
             teacher_name = f"{record.teacher.first_name} {record.teacher.last_name or ''}".strip()
         rule_desc = record.rule.description if record.rule else "—"
@@ -116,7 +116,7 @@ async def get_student_history(
         })
 
     for record in admin_history:
-        admin_name = "Администратор"
+        admin_name = "Administrator"
         if record.admin:
             admin_name = f"{record.admin.first_name} {record.admin.last_name or ''}".strip()
         rule_desc = record.rule.description if record.rule else "—"
@@ -155,7 +155,7 @@ async def get_assignment_detail(
         if record.student_id != student.id:
             raise HTTPException(status_code=403, detail="You can only view your own assignments")
         
-        teacher_name = "Удаленный учитель"
+        teacher_name = "Deleted teacher"
         if record.teacher:
             teacher_name = f"{record.teacher.first_name} {record.teacher.last_name or ''}".strip()
 
@@ -179,7 +179,7 @@ async def get_assignment_detail(
         if admin_record.student_id != student.id:
             raise HTTPException(status_code=403, detail="You can only view your own assignments")
         
-        admin_name = "Администратор"
+        admin_name = "Administrator"
         if admin_record.admin:
             admin_name = f"{admin_record.admin.first_name} {admin_record.admin.last_name or ''}".strip()
 
